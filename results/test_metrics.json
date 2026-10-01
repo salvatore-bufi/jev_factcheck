@@ -1,0 +1,355 @@
+{
+  "reported_at": "2026-09-28T10:15:03.498454+00:00",
+  "frozen_at": "2026-09-28T09:32:41.253676+00:00",
+  "candidate": "min_support_checks",
+  "threshold": 0.3,
+  "selected": {
+    "n": 29320,
+    "balanced_accuracy": 0.8320228083197312,
+    "accuracy": 0.8283424283765348,
+    "roc_auc": 0.9043184146172072,
+    "supported_recall": 0.8254204625087597,
+    "unsupported_recall": 0.8386251541307028,
+    "macro_balanced_accuracy": 0.7908576121429456,
+    "by_source": {
+      "AggreFact-CNN": {
+        "n": 558,
+        "balanced_accuracy": 0.6712364744195819,
+        "accuracy": 0.9121863799283154,
+        "roc_auc": 0.7664845747102288,
+        "supported_recall": 0.9740518962075848,
+        "unsupported_recall": 0.3684210526315789
+      },
+      "AggreFact-XSum": {
+        "n": 558,
+        "balanced_accuracy": 0.7746481588586851,
+        "accuracy": 0.7724014336917563,
+        "roc_auc": 0.854880791722897,
+        "supported_recall": 0.6701754385964912,
+        "unsupported_recall": 0.8791208791208791
+      },
+      "ClaimVerify": {
+        "n": 1088,
+        "balanced_accuracy": 0.7726791035602409,
+        "accuracy": 0.8299632352941176,
+        "roc_auc": 0.8681812208841471,
+        "supported_recall": 0.899873257287706,
+        "unsupported_recall": 0.6454849498327759
+      },
+      "ExpertQA": {
+        "n": 3702,
+        "balanced_accuracy": 0.5936020381241192,
+        "accuracy": 0.5513236088600756,
+        "roc_auc": 0.6431162431548747,
+        "supported_recall": 0.5237293840457758,
+        "unsupported_recall": 0.6634746922024624
+      },
+      "FactCheck-GPT": {
+        "n": 1566,
+        "balanced_accuracy": 0.7817539781870195,
+        "accuracy": 0.8563218390804598,
+        "roc_auc": 0.8989149383157519,
+        "supported_recall": 0.6382978723404256,
+        "unsupported_recall": 0.9252100840336135
+      },
+      "Lfqa": {
+        "n": 1911,
+        "balanced_accuracy": 0.88954425862984,
+        "accuracy": 0.8916797488226059,
+        "roc_auc": 0.9630099707539607,
+        "supported_recall": 0.9018733273862622,
+        "unsupported_recall": 0.8772151898734177
+      },
+      "RAGTruth": {
+        "n": 16371,
+        "balanced_accuracy": 0.8693876908887179,
+        "accuracy": 0.8662268645776068,
+        "roc_auc": 0.9398173846788516,
+        "supported_recall": 0.8656469341809032,
+        "unsupported_recall": 0.8731284475965327
+      },
+      "Reveal": {
+        "n": 1710,
+        "balanced_accuracy": 0.9140648854961833,
+        "accuracy": 0.9029239766081871,
+        "roc_auc": 0.9711765267175573,
+        "supported_recall": 0.935,
+        "unsupported_recall": 0.8931297709923665
+      },
+      "TofuEval-MediaS": {
+        "n": 726,
+        "balanced_accuracy": 0.7565065905465536,
+        "accuracy": 0.8608815426997245,
+        "roc_auc": 0.8156326085131391,
+        "supported_recall": 0.9548736462093863,
+        "unsupported_recall": 0.5581395348837209
+      },
+      "TofuEval-MeetB": {
+        "n": 772,
+        "balanced_accuracy": 0.8185316184351554,
+        "accuracy": 0.8950777202072538,
+        "roc_auc": 0.8961414790996783,
+        "supported_recall": 0.9437299035369775,
+        "unsupported_recall": 0.6933333333333334
+      },
+      "Wice": {
+        "n": 358,
+        "balanced_accuracy": 0.8574789364263049,
+        "accuracy": 0.8854748603351955,
+        "roc_auc": 0.9407119670277565,
+        "supported_recall": 0.7837837837837838,
+        "unsupported_recall": 0.9311740890688259
+      }
+    }
+  },
+  "baseline": {
+    "n": 29320,
+    "balanced_accuracy": 0.8088433111811402,
+    "accuracy": 0.8707708049113233,
+    "roc_auc": 0.905150664382177,
+    "supported_recall": 0.9199369306236861,
+    "unsupported_recall": 0.6977496917385944,
+    "macro_balanced_accuracy": 0.76184822808802,
+    "by_source": {
+      "AggreFact-CNN": {
+        "n": 558,
+        "balanced_accuracy": 0.6353608572329026,
+        "accuracy": 0.9175627240143369,
+        "roc_auc": 0.7796862415519837,
+        "supported_recall": 0.9900199600798403,
+        "unsupported_recall": 0.2807017543859649
+      },
+      "AggreFact-XSum": {
+        "n": 558,
+        "balanced_accuracy": 0.7326392905340273,
+        "accuracy": 0.7347670250896058,
+        "roc_auc": 0.822575669944091,
+        "supported_recall": 0.8315789473684211,
+        "unsupported_recall": 0.6336996336996337
+      },
+      "ClaimVerify": {
+        "n": 1088,
+        "balanced_accuracy": 0.6940138442039583,
+        "accuracy": 0.7987132352941176,
+        "roc_auc": 0.8572639681913942,
+        "supported_recall": 0.926489226869455,
+        "unsupported_recall": 0.46153846153846156
+      },
+      "ExpertQA": {
+        "n": 3702,
+        "balanced_accuracy": 0.6047968943747609,
+        "accuracy": 0.7042139384116693,
+        "roc_auc": 0.6450533451269245,
+        "supported_recall": 0.7691013126893302,
+        "unsupported_recall": 0.44049247606019154
+      },
+      "FactCheck-GPT": {
+        "n": 1566,
+        "balanced_accuracy": 0.8252637225102807,
+        "accuracy": 0.8339719029374202,
+        "roc_auc": 0.8972968442696229,
+        "supported_recall": 0.8085106382978723,
+        "unsupported_recall": 0.8420168067226891
+      },
+      "Lfqa": {
+        "n": 1911,
+        "balanced_accuracy": 0.8212547567158617,
+        "accuracy": 0.8451072736787022,
+        "roc_auc": 0.950539753158911,
+        "supported_recall": 0.9589652096342551,
+        "unsupported_recall": 0.6835443037974683
+      },
+      "RAGTruth": {
+        "n": 16371,
+        "balanced_accuracy": 0.828828739981835,
+        "accuracy": 0.9252336448598131,
+        "roc_auc": 0.9373559506414955,
+        "supported_recall": 0.9429214673553171,
+        "unsupported_recall": 0.7147360126083531
+      },
+      "Reveal": {
+        "n": 1710,
+        "balanced_accuracy": 0.8916603053435115,
+        "accuracy": 0.8526315789473684,
+        "roc_auc": 0.9661498091603054,
+        "supported_recall": 0.965,
+        "unsupported_recall": 0.8183206106870229
+      },
+      "TofuEval-MediaS": {
+        "n": 726,
+        "balanced_accuracy": 0.7015783729325833,
+        "accuracy": 0.8443526170798898,
+        "roc_auc": 0.8270558727226933,
+        "supported_recall": 0.9729241877256317,
+        "unsupported_recall": 0.43023255813953487
+      },
+      "TofuEval-MeetB": {
+        "n": 772,
+        "balanced_accuracy": 0.8028831725616292,
+        "accuracy": 0.9106217616580311,
+        "roc_auc": 0.9114898177920685,
+        "supported_recall": 0.9790996784565916,
+        "unsupported_recall": 0.6266666666666667
+      },
+      "Wice": {
+        "n": 358,
+        "balanced_accuracy": 0.8420505525768684,
+        "accuracy": 0.8128491620111732,
+        "roc_auc": 0.9090163037531459,
+        "supported_recall": 0.918918918918919,
+        "unsupported_recall": 0.7651821862348178
+      }
+    }
+  },
+  "calibrated_baseline": {
+    "n": 29320,
+    "balanced_accuracy": 0.8283353365644256,
+    "accuracy": 0.8085948158253752,
+    "roc_auc": 0.905150664382177,
+    "supported_recall": 0.7929222144358795,
+    "unsupported_recall": 0.8637484586929717,
+    "macro_balanced_accuracy": 0.7805380185976865,
+    "by_source": {
+      "AggreFact-CNN": {
+        "n": 558,
+        "balanced_accuracy": 0.7031200756381972,
+        "accuracy": 0.899641577060932,
+        "roc_auc": 0.7796862415519837,
+        "supported_recall": 0.9500998003992016,
+        "unsupported_recall": 0.45614035087719296
+      },
+      "AggreFact-XSum": {
+        "n": 558,
+        "balanced_accuracy": 0.7429149797570851,
+        "accuracy": 0.7401433691756273,
+        "roc_auc": 0.822575669944091,
+        "supported_recall": 0.6140350877192983,
+        "unsupported_recall": 0.8717948717948718
+      },
+      "ClaimVerify": {
+        "n": 1088,
+        "balanced_accuracy": 0.7793850223177385,
+        "accuracy": 0.8170955882352942,
+        "roc_auc": 0.8572639681913942,
+        "supported_recall": 0.8631178707224335,
+        "unsupported_recall": 0.6956521739130435
+      },
+      "ExpertQA": {
+        "n": 3702,
+        "balanced_accuracy": 0.6053765975796126,
+        "accuracy": 0.5578065910318747,
+        "roc_auc": 0.6450533451269245,
+        "supported_recall": 0.5267586671154494,
+        "unsupported_recall": 0.6839945280437757
+      },
+      "FactCheck-GPT": {
+        "n": 1566,
+        "balanced_accuracy": 0.7461357947434293,
+        "accuracy": 0.8505747126436781,
+        "roc_auc": 0.8972968442696229,
+        "supported_recall": 0.5452127659574468,
+        "unsupported_recall": 0.9470588235294117
+      },
+      "Lfqa": {
+        "n": 1911,
+        "balanced_accuracy": 0.8731382468185052,
+        "accuracy": 0.8676085818942961,
+        "roc_auc": 0.950539753158911,
+        "supported_recall": 0.8412132024977699,
+        "unsupported_recall": 0.9050632911392406
+      },
+      "RAGTruth": {
+        "n": 16371,
+        "balanced_accuracy": 0.870434943096166,
+        "accuracy": 0.8388614012583226,
+        "roc_auc": 0.9373559506414955,
+        "supported_recall": 0.8330684677526156,
+        "unsupported_recall": 0.9078014184397163
+      },
+      "Reveal": {
+        "n": 1710,
+        "balanced_accuracy": 0.8982251908396947,
+        "accuracy": 0.9052631578947369,
+        "roc_auc": 0.9661498091603054,
+        "supported_recall": 0.885,
+        "unsupported_recall": 0.9114503816793893
+      },
+      "TofuEval-MediaS": {
+        "n": 726,
+        "balanced_accuracy": 0.7506821425572999,
+        "accuracy": 0.8305785123966942,
+        "roc_auc": 0.8270558727226933,
+        "supported_recall": 0.9025270758122743,
+        "unsupported_recall": 0.5988372093023255
+      },
+      "TofuEval-MeetB": {
+        "n": 772,
+        "balanced_accuracy": 0.8362593783494106,
+        "accuracy": 0.866580310880829,
+        "roc_auc": 0.9114898177920685,
+        "supported_recall": 0.8858520900321544,
+        "unsupported_recall": 0.7866666666666666
+      },
+      "Wice": {
+        "n": 358,
+        "balanced_accuracy": 0.7802458328774118,
+        "accuracy": 0.8268156424581006,
+        "roc_auc": 0.9090163037531459,
+        "supported_recall": 0.6576576576576577,
+        "unsupported_recall": 0.902834008097166
+      }
+    }
+  },
+  "truncated_documents": 8,
+  "paced_latency_seconds": {
+    "50": 1.773500847500145,
+    "90": 1.8815432040007183,
+    "95": 2.062742204299184,
+    "99": 2.6304836331803334
+  },
+  "http_latency_seconds": {
+    "50": 0.3219546699997409,
+    "90": 0.6351893840000232,
+    "95": 1.0288228120499752,
+    "99": 1.590149650000386
+  },
+  "usage": {
+    "input_tokens": 35304971,
+    "output_tokens": 1700560
+  },
+  "retries": 0,
+  "estimated_input_cost_usd": 1.4828087820000002,
+  "document_cluster_bootstrap_95ci": {
+    "primary": [
+      0.7765880733785722,
+      0.8043676263300419
+    ],
+    "baseline": [
+      0.7491435738009348,
+      0.7733833587141954
+    ],
+    "paired_delta": [
+      0.021245338017461857,
+      0.03755739694157199
+    ],
+    "valid_repeats": 1000,
+    "repeats": 1000
+  },
+  "versus_calibrated_baseline_95ci": {
+    "primary": [
+      0.7765880733785722,
+      0.8043676263300419
+    ],
+    "baseline": [
+      0.7659473984996793,
+      0.7920355757518297
+    ],
+    "paired_delta": [
+      0.003096919277937621,
+      0.018044563548866764
+    ],
+    "valid_repeats": 1000,
+    "repeats": 1000
+  },
+  "exact_pairs_also_in_observed_development": 7
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-09-28T09:54:46.773522+00:00",
+  "family": "source_class_balanced_logistic_regression",
+  "base_model": "jev-1.13.0",
+  "features": [
+    "support_simple",
+    "support_strict",
+    "no_unsupported_detail",
+    "support_binary",
+    "support_ternary",
+    "no_contradicted_detail"
+  ],
+  "transform": "clipped_logit",
+  "clip": 0.001,
+  "C": 0.01,
+  "solver": "lbfgs",
+  "max_iter": 5000,
+  "tol": 1e-09,
+  "coefficients": [
+    0.1402595221870447,
+    0.22322286393058263,
+    0.07836749510493399,
+    0.09283808954011001,
+    0.019332076666651658,
+    -0.008309924599098779
+  ],
+  "intercept": -0.19936888581823073,
+  "threshold": 0.55,
+  "positive_rule": "score > threshold",
+  "training_phase": "tune",
+  "training_rows": 2299,
+  "training_files_sha256": {
+    "data/tune.jsonl": "892d8c694ed7a8cefc6847cbc42b16165bd788fb4b0a07de29ee872c24170062",
+    "results/tune_v1_predictions.jsonl": "ecfbda44beb324f3b86428f54487e46dbe0707efa9761aac73d5c3698d0e0b35"
+  },
+  "sample_weight": "n_train / (2 * n_sources * count_train(source,label))",
+  "hyperparameter_and_threshold_selection": "5-fold document-group OOF on tune only",
+  "selection_data_read_before_serialization": false,
+  "numpy_version": "2.3.5",
+  "sklearn_version": "1.8.0"
+}

@@ -1,0 +1,83 @@
+{
+  "sha": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+  "siblings": [
+    {
+      "rfilename": ".gitattributes"
+    },
+    {
+      "rfilename": "README.md"
+    },
+    {
+      "rfilename": "data/dev-00000-of-00001.parquet"
+    },
+    {
+      "rfilename": "data/test-00000-of-00001.parquet"
+    },
+    {
+      "rfilename": "performance.png"
+    }
+  ],
+  "cardData": {
+    "language": [
+      "en"
+    ],
+    "license": "cc-by-nd-4.0",
+    "size_categories": [
+      "10K<n<100K"
+    ],
+    "configs": [
+      {
+        "config_name": "default",
+        "data_files": [
+          {
+            "split": "dev",
+            "path": "data/dev-*"
+          },
+          {
+            "split": "test",
+            "path": "data/test-*"
+          }
+        ]
+      }
+    ],
+    "dataset_info": {
+      "features": [
+        {
+          "name": "dataset",
+          "dtype": "string"
+        },
+        {
+          "name": "doc",
+          "dtype": "string"
+        },
+        {
+          "name": "claim",
+          "dtype": "string"
+        },
+        {
+          "name": "label",
+          "dtype": "int64"
+        },
+        {
+          "name": "contamination_identifier",
+          "dtype": "string"
+        }
+      ],
+      "splits": [
+        {
+          "name": "dev",
+          "num_bytes": 94376345,
+          "num_examples": 30420
+        },
+        {
+          "name": "test",
+          "num_bytes": 88297787,
+          "num_examples": 29320
+        }
+      ],
+      "download_size": 52751341,
+      "dataset_size": 182674132
+    },
+    "extra_gated_prompt": "By clicking \u201cAccess repository\u201d below, you confirm your understanding that this resource is permitted for use as an evaluation benchmark. Data in the  benchmark should not be used in pretraining or fine-tuning any NLP models."
+  }
+}

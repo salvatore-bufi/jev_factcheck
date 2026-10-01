@@ -1,0 +1,41 @@
+# Local credentials and Python environments
+.env
+.env.*
+!.env.example
+.aws/
+.venv*/
+venv/
+
+# Python caches and local scratch files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+*.log
+*.part
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# Downloaded datasets and model weights; keep pinned Hub metadata
+/data/*
+!/data/hub_metadata.json
+./lytang___llm-aggre_fact/*
+
+# Keep Jev reports, metrics, provenance, frozen configuration and test answers.
+# The test cache lets collaborators verify results without new inference.
+/results/*predictions.jsonl
+!/results/test_predictions.jsonl
+/results/*errors.jsonl
+/results/*manifest.jsonl
+/results/validation_error_analysis/review_sample.jsonl
+/results/validation_error_analysis/error_manifest.jsonl
+/results/runs/
+
+# FactCG: HF model cache and original Lightning checkpoint
+/FactCG/cache/
+/FactCG/ckpt/*
+!/FactCG/ckpt/.gitkeep

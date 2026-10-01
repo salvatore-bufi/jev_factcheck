@@ -1,0 +1,18 @@
+{
+  "AggreFact-CNN:1": 98,
+  "AggreFact-XSum:0": 143,
+  "AggreFact-XSum:1": 158,
+  "ClaimVerify:0": 52,
+  "ClaimVerify:1": 442,
+  "ExpertQA:0": 591,
+  "ExpertQA:1": 2644,
+  "FactCheck-GPT:0": 914,
+  "FactCheck-GPT:1": 41,
+  "Lfqa:0": 21,
+  "Lfqa:1": 51,
+  "RAGTruth:0": 1038,
+  "RAGTruth:1": 11144,
+  "Reveal:0": 984,
+  "Reveal:1": 143,
+  "Wice:0": 34
+}

@@ -1,0 +1,544 @@
+{
+  "audited_at": "2026-09-28T10:18:17.405075+00:00",
+  "audit_method": "Independent recomputation with sklearn.metrics.balanced_accuracy_score on each of the eleven sources, followed by an unweighted arithmetic mean. Did not import benchmark scoring code; no API/network calls or individual test examples/labels/errors displayed.",
+  "scikit_learn_version": "1.8.0",
+  "status": "pass",
+  "checks": {
+    "test_rows_equal_29320": true,
+    "prediction_rows_equal_29320": true,
+    "prediction_ids_unique": true,
+    "prediction_ids_complete_exact_test_indices": true,
+    "original_freeze_bytes_match_test_access_hash": true,
+    "freeze_time_matches_access_record": true,
+    "freeze_precedes_test_access": true,
+    "test_access_precedes_download_completion": true,
+    "dataset_revisions_match": true,
+    "test_parquet_hash_matches_download": true,
+    "test_parquet_bytes_match_download": true,
+    "final_pack_matches_frozen_pack": true,
+    "final_pack_exactly_three_questions": true,
+    "candidate_is_original_min_support_checks": true,
+    "threshold_is_original_0_30": true,
+    "decision_rule_is_strict_greater_than": true,
+    "all_models_match_freeze": true,
+    "all_pack_hashes_match_freeze": true,
+    "all_frozen_core_code_hashes_match": true,
+    "all_frozen_development_hashes_match": true,
+    "all_input_hashes_match_independently_reconstructed_frozen_preprocessing": true,
+    "all_cached_scores_match_independently_reconstructed_answer_scores": true,
+    "all_answer_keys_and_types_match_three_frozen_questions": true,
+    "truncation_count_matches_report": true,
+    "request_state_contains_only_document_and_claim": true,
+    "request_payload_contains_only_model_state_questions": true,
+    "request_questions_use_frozen_pack": true,
+    "request_contains_no_label_or_source_metadata_fields": true,
+    "pack_instructions_contain_no_source_dataset_names": true,
+    "eleven_sources_present": true,
+    "binary_label_domain": true,
+    "all_primary_and_baseline_metrics_match_report": true,
+    "reported_candidate_threshold_and_freeze_match": true,
+    "exact_development_pair_overlap_count_matches_report": true,
+    "leaderboard_audit_contains_all_39_models": true,
+    "leaderboard_maximum_is_77_4": true,
+    "leaderboard_each_model_has_eleven_dataset_scores": true
+  },
+  "row_coverage": {
+    "test_rows": 29320,
+    "prediction_rows": 29320,
+    "unique_prediction_ids": 29320,
+    "sources": 11
+  },
+  "provenance": {
+    "frozen_at": "2026-09-28T09:32:41.253676+00:00",
+    "test_access_started_at": "2026-09-28T09:33:02.753401+00:00",
+    "freeze_before_test_access_seconds": 21.499725,
+    "model": "jev-1.13.0",
+    "dataset_revision": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+    "frozen_file_sha256": "79ea2da2111c2e5c636a14421b093f3d27ece3a3efe22cbb54672c202eeef818",
+    "pack_canonical_sha256": "4030237cf2d18c83fd6f59fc8a102cddb86a34fc4165ca702b437ff2d942ba5d",
+    "test_predictions_sha256": "1b49d38e489eb5b38923a45df98ff8b55833f09eeab40e93be0592a6029212bb",
+    "test_parquet_sha256": "ba6976c3da990a9d7b11670efaf4e3c93c1bd0530061ec742afd6b2d5bce698c",
+    "test_metrics_sha256": "301fa39309e3a4aff01cd49ebfda4af55db190792be8665824c798b10e8da1b2",
+    "core_code_hashes": {
+      "bench.py": {
+        "expected": "4fbc10d7a682c6774d44337c95221abad307469e2cec2996a0d46335d8a8c462",
+        "actual": "4fbc10d7a682c6774d44337c95221abad307469e2cec2996a0d46335d8a8c462"
+      },
+      "metrics.py": {
+        "expected": "f40d503d097e2075dc67b45583419ecd3eadd2f191d5e443ca287fbee06ddfe7",
+        "actual": "f40d503d097e2075dc67b45583419ecd3eadd2f191d5e443ca287fbee06ddfe7"
+      },
+      "analyze.py": {
+        "expected": "efb6b2a19d7ba565f0c05d9973535322c98b9ba8f96a55b3b786e4fcb43f8be3",
+        "actual": "efb6b2a19d7ba565f0c05d9973535322c98b9ba8f96a55b3b786e4fcb43f8be3"
+      },
+      "fetch_data.py": {
+        "expected": "313689cc2c5b2834fa573347b376cf2ae6a415460b2509248c643866daff29d1",
+        "actual": "313689cc2c5b2834fa573347b376cf2ae6a415460b2509248c643866daff29d1"
+      }
+    },
+    "development_data_hashes": {
+      "selection.jsonl": {
+        "expected": "056b59643790d6076f1cb1086324acdfe97a3efeed56a6842e50157fb2f3f6d5",
+        "actual": "056b59643790d6076f1cb1086324acdfe97a3efeed56a6842e50157fb2f3f6d5"
+      },
+      "tune.jsonl": {
+        "expected": "892d8c694ed7a8cefc6847cbc42b16165bd788fb4b0a07de29ee872c24170062",
+        "actual": "892d8c694ed7a8cefc6847cbc42b16165bd788fb4b0a07de29ee872c24170062"
+      }
+    }
+  },
+  "request_structure": {
+    "payload_keys": [
+      "model",
+      "state",
+      "questions"
+    ],
+    "state_keys": [
+      "document",
+      "claim"
+    ],
+    "questions": [
+      "support_simple",
+      "unsupported_detail",
+      "contradicted_detail"
+    ],
+    "evidence_scope": "Frozen client source, its matching SHA-256, all cached input/pack/model hashes, and independently reconstructed state; no packet capture exists to audit transport separately."
+  },
+  "independent_metrics": {
+    "selected": {
+      "n": 29320,
+      "balanced_accuracy": 0.8320228083197312,
+      "accuracy": 0.8283424283765348,
+      "roc_auc": 0.9043184146172072,
+      "supported_recall": 0.8254204625087597,
+      "unsupported_recall": 0.8386251541307028,
+      "by_source": {
+        "AggreFact-CNN": {
+          "n": 558,
+          "balanced_accuracy": 0.6712364744195819,
+          "accuracy": 0.9121863799283154,
+          "roc_auc": 0.7664845747102288,
+          "supported_recall": 0.9740518962075848,
+          "unsupported_recall": 0.3684210526315789
+        },
+        "AggreFact-XSum": {
+          "n": 558,
+          "balanced_accuracy": 0.7746481588586851,
+          "accuracy": 0.7724014336917563,
+          "roc_auc": 0.854880791722897,
+          "supported_recall": 0.6701754385964912,
+          "unsupported_recall": 0.8791208791208791
+        },
+        "ClaimVerify": {
+          "n": 1088,
+          "balanced_accuracy": 0.7726791035602409,
+          "accuracy": 0.8299632352941176,
+          "roc_auc": 0.8681812208841471,
+          "supported_recall": 0.899873257287706,
+          "unsupported_recall": 0.6454849498327759
+        },
+        "ExpertQA": {
+          "n": 3702,
+          "balanced_accuracy": 0.5936020381241192,
+          "accuracy": 0.5513236088600756,
+          "roc_auc": 0.6431162431548747,
+          "supported_recall": 0.5237293840457758,
+          "unsupported_recall": 0.6634746922024624
+        },
+        "FactCheck-GPT": {
+          "n": 1566,
+          "balanced_accuracy": 0.7817539781870195,
+          "accuracy": 0.8563218390804598,
+          "roc_auc": 0.8989149383157519,
+          "supported_recall": 0.6382978723404256,
+          "unsupported_recall": 0.9252100840336135
+        },
+        "Lfqa": {
+          "n": 1911,
+          "balanced_accuracy": 0.88954425862984,
+          "accuracy": 0.8916797488226059,
+          "roc_auc": 0.9630099707539607,
+          "supported_recall": 0.9018733273862622,
+          "unsupported_recall": 0.8772151898734177
+        },
+        "RAGTruth": {
+          "n": 16371,
+          "balanced_accuracy": 0.8693876908887179,
+          "accuracy": 0.8662268645776068,
+          "roc_auc": 0.9398173846788516,
+          "supported_recall": 0.8656469341809032,
+          "unsupported_recall": 0.8731284475965327
+        },
+        "Reveal": {
+          "n": 1710,
+          "balanced_accuracy": 0.9140648854961833,
+          "accuracy": 0.9029239766081871,
+          "roc_auc": 0.9711765267175573,
+          "supported_recall": 0.935,
+          "unsupported_recall": 0.8931297709923665
+        },
+        "TofuEval-MediaS": {
+          "n": 726,
+          "balanced_accuracy": 0.7565065905465536,
+          "accuracy": 0.8608815426997245,
+          "roc_auc": 0.8156326085131391,
+          "supported_recall": 0.9548736462093863,
+          "unsupported_recall": 0.5581395348837209
+        },
+        "TofuEval-MeetB": {
+          "n": 772,
+          "balanced_accuracy": 0.8185316184351554,
+          "accuracy": 0.8950777202072538,
+          "roc_auc": 0.8961414790996783,
+          "supported_recall": 0.9437299035369775,
+          "unsupported_recall": 0.6933333333333334
+        },
+        "Wice": {
+          "n": 358,
+          "balanced_accuracy": 0.8574789364263049,
+          "accuracy": 0.8854748603351955,
+          "roc_auc": 0.9407119670277565,
+          "supported_recall": 0.7837837837837838,
+          "unsupported_recall": 0.9311740890688259
+        }
+      },
+      "macro_balanced_accuracy": 0.7908576121429456
+    },
+    "baseline": {
+      "n": 29320,
+      "balanced_accuracy": 0.8088433111811402,
+      "accuracy": 0.8707708049113233,
+      "roc_auc": 0.905150664382177,
+      "supported_recall": 0.9199369306236861,
+      "unsupported_recall": 0.6977496917385944,
+      "by_source": {
+        "AggreFact-CNN": {
+          "n": 558,
+          "balanced_accuracy": 0.6353608572329026,
+          "accuracy": 0.9175627240143369,
+          "roc_auc": 0.7796862415519837,
+          "supported_recall": 0.9900199600798403,
+          "unsupported_recall": 0.2807017543859649
+        },
+        "AggreFact-XSum": {
+          "n": 558,
+          "balanced_accuracy": 0.7326392905340273,
+          "accuracy": 0.7347670250896058,
+          "roc_auc": 0.822575669944091,
+          "supported_recall": 0.8315789473684211,
+          "unsupported_recall": 0.6336996336996337
+        },
+        "ClaimVerify": {
+          "n": 1088,
+          "balanced_accuracy": 0.6940138442039583,
+          "accuracy": 0.7987132352941176,
+          "roc_auc": 0.8572639681913942,
+          "supported_recall": 0.926489226869455,
+          "unsupported_recall": 0.46153846153846156
+        },
+        "ExpertQA": {
+          "n": 3702,
+          "balanced_accuracy": 0.6047968943747609,
+          "accuracy": 0.7042139384116693,
+          "roc_auc": 0.6450533451269245,
+          "supported_recall": 0.7691013126893302,
+          "unsupported_recall": 0.44049247606019154
+        },
+        "FactCheck-GPT": {
+          "n": 1566,
+          "balanced_accuracy": 0.8252637225102807,
+          "accuracy": 0.8339719029374202,
+          "roc_auc": 0.8972968442696229,
+          "supported_recall": 0.8085106382978723,
+          "unsupported_recall": 0.8420168067226891
+        },
+        "Lfqa": {
+          "n": 1911,
+          "balanced_accuracy": 0.8212547567158617,
+          "accuracy": 0.8451072736787022,
+          "roc_auc": 0.950539753158911,
+          "supported_recall": 0.9589652096342551,
+          "unsupported_recall": 0.6835443037974683
+        },
+        "RAGTruth": {
+          "n": 16371,
+          "balanced_accuracy": 0.828828739981835,
+          "accuracy": 0.9252336448598131,
+          "roc_auc": 0.9373559506414955,
+          "supported_recall": 0.9429214673553171,
+          "unsupported_recall": 0.7147360126083531
+        },
+        "Reveal": {
+          "n": 1710,
+          "balanced_accuracy": 0.8916603053435115,
+          "accuracy": 0.8526315789473684,
+          "roc_auc": 0.9661498091603054,
+          "supported_recall": 0.965,
+          "unsupported_recall": 0.8183206106870229
+        },
+        "TofuEval-MediaS": {
+          "n": 726,
+          "balanced_accuracy": 0.7015783729325833,
+          "accuracy": 0.8443526170798898,
+          "roc_auc": 0.8270558727226933,
+          "supported_recall": 0.9729241877256317,
+          "unsupported_recall": 0.43023255813953487
+        },
+        "TofuEval-MeetB": {
+          "n": 772,
+          "balanced_accuracy": 0.8028831725616292,
+          "accuracy": 0.9106217616580311,
+          "roc_auc": 0.9114898177920685,
+          "supported_recall": 0.9790996784565916,
+          "unsupported_recall": 0.6266666666666667
+        },
+        "Wice": {
+          "n": 358,
+          "balanced_accuracy": 0.8420505525768684,
+          "accuracy": 0.8128491620111732,
+          "roc_auc": 0.9090163037531459,
+          "supported_recall": 0.918918918918919,
+          "unsupported_recall": 0.7651821862348178
+        }
+      },
+      "macro_balanced_accuracy": 0.76184822808802
+    },
+    "calibrated_baseline": {
+      "n": 29320,
+      "balanced_accuracy": 0.8283353365644256,
+      "accuracy": 0.8085948158253752,
+      "roc_auc": 0.905150664382177,
+      "supported_recall": 0.7929222144358795,
+      "unsupported_recall": 0.8637484586929717,
+      "by_source": {
+        "AggreFact-CNN": {
+          "n": 558,
+          "balanced_accuracy": 0.7031200756381972,
+          "accuracy": 0.899641577060932,
+          "roc_auc": 0.7796862415519837,
+          "supported_recall": 0.9500998003992016,
+          "unsupported_recall": 0.45614035087719296
+        },
+        "AggreFact-XSum": {
+          "n": 558,
+          "balanced_accuracy": 0.7429149797570851,
+          "accuracy": 0.7401433691756273,
+          "roc_auc": 0.822575669944091,
+          "supported_recall": 0.6140350877192983,
+          "unsupported_recall": 0.8717948717948718
+        },
+        "ClaimVerify": {
+          "n": 1088,
+          "balanced_accuracy": 0.7793850223177385,
+          "accuracy": 0.8170955882352942,
+          "roc_auc": 0.8572639681913942,
+          "supported_recall": 0.8631178707224335,
+          "unsupported_recall": 0.6956521739130435
+        },
+        "ExpertQA": {
+          "n": 3702,
+          "balanced_accuracy": 0.6053765975796126,
+          "accuracy": 0.5578065910318747,
+          "roc_auc": 0.6450533451269245,
+          "supported_recall": 0.5267586671154494,
+          "unsupported_recall": 0.6839945280437757
+        },
+        "FactCheck-GPT": {
+          "n": 1566,
+          "balanced_accuracy": 0.7461357947434293,
+          "accuracy": 0.8505747126436781,
+          "roc_auc": 0.8972968442696229,
+          "supported_recall": 0.5452127659574468,
+          "unsupported_recall": 0.9470588235294117
+        },
+        "Lfqa": {
+          "n": 1911,
+          "balanced_accuracy": 0.8731382468185052,
+          "accuracy": 0.8676085818942961,
+          "roc_auc": 0.950539753158911,
+          "supported_recall": 0.8412132024977699,
+          "unsupported_recall": 0.9050632911392406
+        },
+        "RAGTruth": {
+          "n": 16371,
+          "balanced_accuracy": 0.870434943096166,
+          "accuracy": 0.8388614012583226,
+          "roc_auc": 0.9373559506414955,
+          "supported_recall": 0.8330684677526156,
+          "unsupported_recall": 0.9078014184397163
+        },
+        "Reveal": {
+          "n": 1710,
+          "balanced_accuracy": 0.8982251908396947,
+          "accuracy": 0.9052631578947369,
+          "roc_auc": 0.9661498091603054,
+          "supported_recall": 0.885,
+          "unsupported_recall": 0.9114503816793893
+        },
+        "TofuEval-MediaS": {
+          "n": 726,
+          "balanced_accuracy": 0.7506821425572999,
+          "accuracy": 0.8305785123966942,
+          "roc_auc": 0.8270558727226933,
+          "supported_recall": 0.9025270758122743,
+          "unsupported_recall": 0.5988372093023255
+        },
+        "TofuEval-MeetB": {
+          "n": 772,
+          "balanced_accuracy": 0.8362593783494106,
+          "accuracy": 0.866580310880829,
+          "roc_auc": 0.9114898177920685,
+          "supported_recall": 0.8858520900321544,
+          "unsupported_recall": 0.7866666666666666
+        },
+        "Wice": {
+          "n": 358,
+          "balanced_accuracy": 0.7802458328774118,
+          "accuracy": 0.8268156424581006,
+          "roc_auc": 0.9090163037531459,
+          "supported_recall": 0.6576576576576577,
+          "unsupported_recall": 0.902834008097166
+        }
+      },
+      "macro_balanced_accuracy": 0.7805380185976865
+    }
+  },
+  "comparison_with_test_metrics_json": {
+    "selected": {
+      "maximum_absolute_difference": 0,
+      "matches_within_1e_12": true
+    },
+    "baseline": {
+      "maximum_absolute_difference": 0,
+      "matches_within_1e_12": true
+    },
+    "calibrated_baseline": {
+      "maximum_absolute_difference": 0,
+      "matches_within_1e_12": true
+    }
+  },
+  "exact_development_overlap_sensitivity": {
+    "excluded_rows": 7,
+    "included_rows": 29313,
+    "selected": {
+      "n": 29313,
+      "balanced_accuracy": 0.8320645023981601,
+      "accuracy": 0.8283355507795176,
+      "roc_auc": 0.9043667982866366,
+      "supported_recall": 0.8253745728555156,
+      "unsupported_recall": 0.8387544319408047,
+      "by_source": {
+        "AggreFact-CNN": {
+          "n": 558,
+          "balanced_accuracy": 0.6712364744195819,
+          "accuracy": 0.9121863799283154,
+          "roc_auc": 0.7664845747102288,
+          "supported_recall": 0.9740518962075848,
+          "unsupported_recall": 0.3684210526315789
+        },
+        "AggreFact-XSum": {
+          "n": 558,
+          "balanced_accuracy": 0.7746481588586851,
+          "accuracy": 0.7724014336917563,
+          "roc_auc": 0.854880791722897,
+          "supported_recall": 0.6701754385964912,
+          "unsupported_recall": 0.8791208791208791
+        },
+        "ClaimVerify": {
+          "n": 1088,
+          "balanced_accuracy": 0.7726791035602409,
+          "accuracy": 0.8299632352941176,
+          "roc_auc": 0.8681812208841471,
+          "supported_recall": 0.899873257287706,
+          "unsupported_recall": 0.6454849498327759
+        },
+        "ExpertQA": {
+          "n": 3702,
+          "balanced_accuracy": 0.5936020381241192,
+          "accuracy": 0.5513236088600756,
+          "roc_auc": 0.6431162431548747,
+          "supported_recall": 0.5237293840457758,
+          "unsupported_recall": 0.6634746922024624
+        },
+        "FactCheck-GPT": {
+          "n": 1566,
+          "balanced_accuracy": 0.7817539781870195,
+          "accuracy": 0.8563218390804598,
+          "roc_auc": 0.8989149383157519,
+          "supported_recall": 0.6382978723404256,
+          "unsupported_recall": 0.9252100840336135
+        },
+        "Lfqa": {
+          "n": 1911,
+          "balanced_accuracy": 0.88954425862984,
+          "accuracy": 0.8916797488226059,
+          "roc_auc": 0.9630099707539607,
+          "supported_recall": 0.9018733273862622,
+          "unsupported_recall": 0.8772151898734177
+        },
+        "RAGTruth": {
+          "n": 16371,
+          "balanced_accuracy": 0.8693876908887179,
+          "accuracy": 0.8662268645776068,
+          "roc_auc": 0.9398173846788516,
+          "supported_recall": 0.8656469341809032,
+          "unsupported_recall": 0.8731284475965327
+        },
+        "Reveal": {
+          "n": 1703,
+          "balanced_accuracy": 0.9139111112834613,
+          "accuracy": 0.903112155020552,
+          "roc_auc": 0.9713773834406859,
+          "supported_recall": 0.934010152284264,
+          "unsupported_recall": 0.8938120702826585
+        },
+        "TofuEval-MediaS": {
+          "n": 726,
+          "balanced_accuracy": 0.7565065905465536,
+          "accuracy": 0.8608815426997245,
+          "roc_auc": 0.8156326085131391,
+          "supported_recall": 0.9548736462093863,
+          "unsupported_recall": 0.5581395348837209
+        },
+        "TofuEval-MeetB": {
+          "n": 772,
+          "balanced_accuracy": 0.8185316184351554,
+          "accuracy": 0.8950777202072538,
+          "roc_auc": 0.8961414790996783,
+          "supported_recall": 0.9437299035369775,
+          "unsupported_recall": 0.6933333333333334
+        },
+        "Wice": {
+          "n": 358,
+          "balanced_accuracy": 0.8574789364263049,
+          "accuracy": 0.8854748603351955,
+          "roc_auc": 0.9407119670277565,
+          "supported_recall": 0.7837837837837838,
+          "unsupported_recall": 0.9311740890688259
+        }
+      },
+      "macro_balanced_accuracy": 0.7908436326690619
+    },
+    "change_in_macro_percentage_points": -0.001397947388370735,
+    "interpretation": "Sensitivity only. The primary official full-split result retains all 29,320 rows; deleting benchmark records is not the official score."
+  },
+  "leaderboard_comparison": {
+    "cached_audit_path": "references/leaderboard_audit.json",
+    "all_models_compared": 39,
+    "maximum_model": "Bespoke-Minicheck-7B",
+    "maximum_published_score": 77.4,
+    "jev_full_test_macro_score_percent": 79.08576121429456,
+    "jev_one_decimal_display": 79.1,
+    "approximate_difference_from_published_maximum_percentage_points": 1.6857612142945584,
+    "numerically_above_published_maximum": true,
+    "target_80_percent_met": false,
+    "gap_to_80_percentage_points": 0.9142387857054359,
+    "protocol_caveat": "Jev questions, combination, and threshold were development-selected/calibrated. The cached official leaderboard protocol is zero-shot. This is a numerically higher full-test dev-tuned result, not a like-for-like zero-shot SOTA result or an official leaderboard submission. The 77.4 published maximum is rounded, so its exact unrounded difference is unavailable."
+  },
+  "evaluation_history": "The original frozen checker was fixed before test access. User-requested interim aggregates and a stratified pilot were inspected before the complete run resumed. Cached development calibrators were investigated after interim observations and rejected; every final prediction and the final decision rule match the unchanged original freeze. Disclose the interim observations; do not describe this as an uninterrupted evaluation with no interim inspection.",
+  "limitations": [
+    "Hash provenance verifies retained local artifacts, not unknown remote model pretraining or benchmark contamination.",
+    "The official comparison models have no paired predictions here; no paired significance claim against the leaderboard maximum is established."
+  ]
+}

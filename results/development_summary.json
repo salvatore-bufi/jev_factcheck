@@ -1,0 +1,15 @@
+{
+  "created_at": "2026-09-28T09:33:45.913547+00:00",
+  "tune_n": 2299,
+  "selection_n": 2221,
+  "candidate_trials": 14,
+  "initial_questions": 7,
+  "revision_questions": 3,
+  "winner": "min_support_checks",
+  "threshold": 0.3,
+  "winner_tune_macro_ba": 0.7858232141740055,
+  "winner_selection_macro_ba": 0.7861917798720829,
+  "combined_dev_fit_macro_ba": 0.7851418123486854,
+  "baseline_tuned_threshold": 0.84,
+  "test_status": "not yet evaluated"
+}

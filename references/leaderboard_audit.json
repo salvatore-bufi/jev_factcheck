@@ -1,0 +1,871 @@
+{
+  "audit_created_at_utc": "2026-09-28T09:54:23.024315+00:00",
+  "leaderboard_url": "https://llm-aggrefact.github.io/",
+  "scope": "All 39 models in the official page scoresData payload, evaluated across all 11 published dataset score columns; not only the 11 models selected by default in the UI.",
+  "available_model_count": 39,
+  "default_selected_model_count": 11,
+  "dataset_count": 11,
+  "datasets": [
+    "CNN",
+    "XSum",
+    "MediaS",
+    "MeetB",
+    "WiCE",
+    "REVEAL",
+    "ClaimVerify",
+    "FactCheck",
+    "ExpertQA",
+    "LFQA",
+    "RAGTruth"
+  ],
+  "maximum": {
+    "model": "Bespoke-Minicheck-7B",
+    "size": "7B",
+    "model_url": "https://huggingface.co/bespokelabs/Bespoke-Minicheck-7B",
+    "score_full_11_displayed": 77.4,
+    "mean_of_published_rounded_dataset_scores": 77.4090909090909,
+    "dataset_scores": {
+      "CNN": 65.5,
+      "XSum": 77.8,
+      "MediaS": 76,
+      "MeetB": 78.3,
+      "WiCE": 83,
+      "REVEAL": 88,
+      "ClaimVerify": 75.3,
+      "FactCheck": 77.7,
+      "ExpertQA": 59.2,
+      "LFQA": 86.7,
+      "RAGTruth": 84
+    }
+  },
+  "metric": {
+    "name": "Macro average of per-dataset balanced accuracy",
+    "unit": "percentage points",
+    "per_dataset_definition": "100 * (recall_for_label_0 + recall_for_label_1) / 2",
+    "aggregation": "Arithmetic mean of the balanced accuracy of each of the 11 source datasets, with equal dataset weight. This is not pooled balanced accuracy across all records.",
+    "display_precision_decimals": 1,
+    "frontend_behavior": "Average is dynamically recomputed over selected dataset columns using numeric cells, then rounded to one decimal. All 11 dataset columns were included in this audit.",
+    "rounding_caveat": "77.40909090909092 is the mean of already rounded published dataset scores, not a recovered unrounded evaluation score. The official displayed maximum is 77.4."
+  },
+  "protocol": {
+    "leaderboard_setting": "zero-shot",
+    "official_blog_quote": "Systems on this leaderboard are benchmarked in a zero-shot fashion.",
+    "blog_url": "https://llm-aggrefact.github.io/blog",
+    "default_classifier_threshold": 0.5,
+    "threshold_source": "https://raw.githubusercontent.com/Liyan06/MiniCheck/main/benchmark_evaluation_demo.ipynb",
+    "dev_calibration": "The blog discusses per-dataset threshold tuning as a practical option that can improve results, while identifying listed systems as zero-shot. A model or threshold chosen using this benchmark development data must be labeled dev-tuned/dev-calibrated and is not a like-for-like zero-shot leaderboard entry.",
+    "code_evidence": "The official notebook loads the test split, evaluates balanced_accuracy_score independently for each dataset, multiplies by 100, then averages those dataset scores. Notebook code was inspected but not executed.",
+    "full_benchmark_vs_sample": "A validation score, partial dataset subset, or sampled test score does not establish the full 11-dataset test benchmark score. A full benchmark result requires all required test examples with the same scoring protocol; this audit fetched no benchmark records or labels."
+  },
+  "comparison_guidance": "To claim a leaderboard improvement, use the complete official evaluation protocol and disclose dev tuning. Compare to the official 77.4 reported score; do not assert an exact fractional improvement from rounded aggregate numbers alone.",
+  "sources": [
+    {
+      "url": "https://llm-aggrefact.github.io/",
+      "fetched_at_utc": "2026-09-28T09:52:17.767803+00:00",
+      "sha256": "b72ab22ae101f34d298481e0a9f6620134f75fe91b1cdf31777914d00ca47980",
+      "bytes": 78438
+    },
+    {
+      "url": "https://llm-aggrefact.github.io/_next/static/chunks/app/page-bcaff6a888eff26e.js",
+      "fetched_at_utc": "2026-09-28T09:52:41.194032+00:00",
+      "sha256": "e5d3219b484138bac7167ce3f74068380a509c50e4689f29870ab0311ea98158",
+      "bytes": 23612
+    },
+    {
+      "url": "https://llm-aggrefact.github.io/blog",
+      "fetched_at_utc": "2026-09-28T09:52:41.257234+00:00",
+      "sha256": "34d7950124f221a40a3d74e2bc00176dd2e356621ce473cd43fcc893d4a7f846",
+      "bytes": 32878
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Liyan06/MiniCheck/main/benchmark_evaluation_demo.ipynb",
+      "fetched_at_utc": "2026-09-28T09:52:41.446628+00:00",
+      "sha256": "19e7dc41081017379b53d2a1b3d107bbea8d45b2c96aa0386dfc37aeae2d9f29",
+      "bytes": 6523
+    }
+  ],
+  "ranked_models": [
+    {
+      "model": "Bespoke-Minicheck-7B",
+      "size": "7B",
+      "model_url": "https://huggingface.co/bespokelabs/Bespoke-Minicheck-7B",
+      "score_full_11_displayed": 77.4,
+      "mean_of_published_rounded_dataset_scores": 77.4090909090909,
+      "dataset_scores": {
+        "CNN": 65.5,
+        "XSum": 77.8,
+        "MediaS": 76,
+        "MeetB": 78.3,
+        "WiCE": 83,
+        "REVEAL": 88,
+        "ClaimVerify": 75.3,
+        "FactCheck": 77.7,
+        "ExpertQA": 59.2,
+        "LFQA": 86.7,
+        "RAGTruth": 84
+      }
+    },
+    {
+      "model": "Claude-3.5 Sonnet",
+      "size": "-",
+      "model_url": "https://www.anthropic.com/news/claude-3-5-sonnet",
+      "score_full_11_displayed": 77.2,
+      "mean_of_published_rounded_dataset_scores": 77.2090909090909,
+      "dataset_scores": {
+        "CNN": 67.6,
+        "XSum": 75.1,
+        "MediaS": 73.4,
+        "MeetB": 84.6,
+        "WiCE": 77.7,
+        "REVEAL": 89.1,
+        "ClaimVerify": 71.4,
+        "FactCheck": 77.8,
+        "ExpertQA": 60.9,
+        "LFQA": 85.6,
+        "RAGTruth": 86.1
+      }
+    },
+    {
+      "model": "Granite Guardian 3.3",
+      "size": "8B",
+      "model_url": "https://huggingface.co/ibm-granite/granite-guardian-3.3-8b",
+      "score_full_11_displayed": 76.5,
+      "mean_of_published_rounded_dataset_scores": 76.49090909090908,
+      "dataset_scores": {
+        "CNN": 67,
+        "XSum": 74.9,
+        "MediaS": 74,
+        "MeetB": 78.6,
+        "WiCE": 76.6,
+        "REVEAL": 89.6,
+        "ClaimVerify": 75.9,
+        "FactCheck": 76.1,
+        "ExpertQA": 59.6,
+        "LFQA": 86.9,
+        "RAGTruth": 82.2
+      }
+    },
+    {
+      "model": "Mistral-Large 2",
+      "size": "123B",
+      "model_url": "https://huggingface.co/mistralai/Mistral-Large-Instruct-2407",
+      "score_full_11_displayed": 76.5,
+      "mean_of_published_rounded_dataset_scores": 76.48181818181818,
+      "dataset_scores": {
+        "CNN": 64.8,
+        "XSum": 74.7,
+        "MediaS": 69.6,
+        "MeetB": 84.2,
+        "WiCE": 80.3,
+        "REVEAL": 87.7,
+        "ClaimVerify": 71.8,
+        "FactCheck": 74.5,
+        "ExpertQA": 60.8,
+        "LFQA": 87,
+        "RAGTruth": 85.9
+      }
+    },
+    {
+      "model": "gpt-4-turbo-preview",
+      "size": "-",
+      "model_url": "https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4",
+      "score_full_11_displayed": 76.2,
+      "mean_of_published_rounded_dataset_scores": 76.16363636363636,
+      "dataset_scores": {
+        "CNN": 66.7,
+        "XSum": 76.5,
+        "MediaS": 71.4,
+        "MeetB": 79.9,
+        "WiCE": 80.4,
+        "REVEAL": 87.8,
+        "ClaimVerify": 67.6,
+        "FactCheck": 79.9,
+        "ExpertQA": 59.2,
+        "LFQA": 83.1,
+        "RAGTruth": 85.3
+      }
+    },
+    {
+      "model": "gpt-4o-2024-05-13",
+      "size": "-",
+      "model_url": "https://platform.openai.com/docs/models/gpt-4o",
+      "score_full_11_displayed": 75.9,
+      "mean_of_published_rounded_dataset_scores": 75.91818181818181,
+      "dataset_scores": {
+        "CNN": 68.1,
+        "XSum": 76.8,
+        "MediaS": 71.4,
+        "MeetB": 79.8,
+        "WiCE": 78.5,
+        "REVEAL": 86.5,
+        "ClaimVerify": 69,
+        "FactCheck": 77.5,
+        "ExpertQA": 59.6,
+        "LFQA": 83.6,
+        "RAGTruth": 84.3
+      }
+    },
+    {
+      "model": "FactCG-DeBERTa-L",
+      "size": "0.4B",
+      "model_url": "https://github.com/derenlei/FactCG",
+      "score_full_11_displayed": 75.6,
+      "mean_of_published_rounded_dataset_scores": 75.62727272727273,
+      "dataset_scores": {
+        "CNN": 70.1,
+        "XSum": 73.9,
+        "MediaS": 72.3,
+        "MeetB": 74.3,
+        "WiCE": 74.2,
+        "REVEAL": 88.4,
+        "ClaimVerify": 78.5,
+        "FactCheck": 72.1,
+        "ExpertQA": 59.1,
+        "LFQA": 86.7,
+        "RAGTruth": 82.3
+      }
+    },
+    {
+      "model": "Qwen2.5-72B-Instruct",
+      "size": "72B",
+      "model_url": "https://huggingface.co/Qwen/Qwen2.5-72B-Instruct",
+      "score_full_11_displayed": 75.6,
+      "mean_of_published_rounded_dataset_scores": 75.57272727272728,
+      "dataset_scores": {
+        "CNN": 63.6,
+        "XSum": 73,
+        "MediaS": 71.9,
+        "MeetB": 80.4,
+        "WiCE": 80.2,
+        "REVEAL": 88.9,
+        "ClaimVerify": 70,
+        "FactCheck": 77,
+        "ExpertQA": 60.1,
+        "LFQA": 84.3,
+        "RAGTruth": 81.9
+      }
+    },
+    {
+      "model": "Llama-3.1-70B-Instruct",
+      "size": "70B",
+      "model_url": "https://huggingface.co/meta-llama/Meta-Llama-3.1-70B-Instruct",
+      "score_full_11_displayed": 75.1,
+      "mean_of_published_rounded_dataset_scores": 75.14545454545454,
+      "dataset_scores": {
+        "CNN": 65.7,
+        "XSum": 72.5,
+        "MediaS": 72.9,
+        "MeetB": 81,
+        "WiCE": 73.9,
+        "REVEAL": 86.4,
+        "ClaimVerify": 70.3,
+        "FactCheck": 78.6,
+        "ExpertQA": 58.5,
+        "LFQA": 83.8,
+        "RAGTruth": 83
+      }
+    },
+    {
+      "model": "MiniCheck-Flan-T5-L",
+      "size": "0.8B",
+      "model_url": "https://huggingface.co/lytang/MiniCheck-Flan-T5-Large",
+      "score_full_11_displayed": 75.0,
+      "mean_of_published_rounded_dataset_scores": 75.0,
+      "dataset_scores": {
+        "CNN": 69.9,
+        "XSum": 74.3,
+        "MediaS": 73.6,
+        "MeetB": 77.3,
+        "WiCE": 72.2,
+        "REVEAL": 86.2,
+        "ClaimVerify": 74.6,
+        "FactCheck": 74.7,
+        "ExpertQA": 59,
+        "LFQA": 85.2,
+        "RAGTruth": 78
+      }
+    },
+    {
+      "model": "Claude-3 Opus",
+      "size": "-",
+      "model_url": "https://www.anthropic.com/news/claude-3-family",
+      "score_full_11_displayed": 74.8,
+      "mean_of_published_rounded_dataset_scores": 74.83636363636364,
+      "dataset_scores": {
+        "CNN": 65.2,
+        "XSum": 72.4,
+        "MediaS": 74.1,
+        "MeetB": 82.4,
+        "WiCE": 75,
+        "REVEAL": 83.8,
+        "ClaimVerify": 69.3,
+        "FactCheck": 78.8,
+        "ExpertQA": 58.8,
+        "LFQA": 81.6,
+        "RAGTruth": 81.8
+      }
+    },
+    {
+      "model": "Llama-3.3-70B-Instruct",
+      "size": "70B",
+      "model_url": "https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct",
+      "score_full_11_displayed": 74.5,
+      "mean_of_published_rounded_dataset_scores": 74.54545454545455,
+      "dataset_scores": {
+        "CNN": 68.7,
+        "XSum": 74.7,
+        "MediaS": 69.5,
+        "MeetB": 78.4,
+        "WiCE": 76.6,
+        "REVEAL": 85.5,
+        "ClaimVerify": 67.4,
+        "FactCheck": 78.5,
+        "ExpertQA": 58.3,
+        "LFQA": 79.8,
+        "RAGTruth": 82.6
+      }
+    },
+    {
+      "model": "Llama-3.1-405B-Instruct",
+      "size": "405B",
+      "model_url": "https://huggingface.co/meta-llama/Meta-Llama-3.1-405B-Instruct",
+      "score_full_11_displayed": 74.4,
+      "mean_of_published_rounded_dataset_scores": 74.37272727272727,
+      "dataset_scores": {
+        "CNN": 64.8,
+        "XSum": 75.1,
+        "MediaS": 68.6,
+        "MeetB": 81.2,
+        "WiCE": 71.8,
+        "REVEAL": 86.4,
+        "ClaimVerify": 67.5,
+        "FactCheck": 79.4,
+        "ExpertQA": 58.5,
+        "LFQA": 81.9,
+        "RAGTruth": 82.9
+      }
+    },
+    {
+      "model": "Mistral-Large",
+      "size": "-",
+      "model_url": "https://mistral.ai/news/mistral-large/",
+      "score_full_11_displayed": 74.2,
+      "mean_of_published_rounded_dataset_scores": 74.17272727272727,
+      "dataset_scores": {
+        "CNN": 58.4,
+        "XSum": 76.3,
+        "MediaS": 67.3,
+        "MeetB": 78.9,
+        "WiCE": 76.6,
+        "REVEAL": 88.4,
+        "ClaimVerify": 67.6,
+        "FactCheck": 79,
+        "ExpertQA": 60,
+        "LFQA": 81.7,
+        "RAGTruth": 81.7
+      }
+    },
+    {
+      "model": "gpt-4o-mini-2024-07-18",
+      "size": "-",
+      "model_url": "https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/",
+      "score_full_11_displayed": 74.0,
+      "mean_of_published_rounded_dataset_scores": 74.04545454545455,
+      "dataset_scores": {
+        "CNN": 61.8,
+        "XSum": 73.6,
+        "MediaS": 71.3,
+        "MeetB": 79.7,
+        "WiCE": 76.3,
+        "REVEAL": 85.8,
+        "ClaimVerify": 69.8,
+        "FactCheck": 76,
+        "ExpertQA": 58.3,
+        "LFQA": 80.3,
+        "RAGTruth": 81.6
+      }
+    },
+    {
+      "model": "Llama-3-70B-Instruct",
+      "size": "70B",
+      "model_url": "https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct",
+      "score_full_11_displayed": 73.7,
+      "mean_of_published_rounded_dataset_scores": 73.73636363636363,
+      "dataset_scores": {
+        "CNN": 63.7,
+        "XSum": 70.2,
+        "MediaS": 71.5,
+        "MeetB": 80.6,
+        "WiCE": 74.4,
+        "REVEAL": 85.9,
+        "ClaimVerify": 67.8,
+        "FactCheck": 76.2,
+        "ExpertQA": 57.8,
+        "LFQA": 82.4,
+        "RAGTruth": 80.6
+      }
+    },
+    {
+      "model": "MiniCheck-RoBERTa-L",
+      "size": "0.4B",
+      "model_url": "https://huggingface.co/lytang/MiniCheck-RoBERTa-Large",
+      "score_full_11_displayed": 73.5,
+      "mean_of_published_rounded_dataset_scores": 73.49090909090908,
+      "dataset_scores": {
+        "CNN": 63.7,
+        "XSum": 70.8,
+        "MediaS": 71.9,
+        "MeetB": 75.9,
+        "WiCE": 67.6,
+        "REVEAL": 88.8,
+        "ClaimVerify": 77.4,
+        "FactCheck": 73.3,
+        "ExpertQA": 57.4,
+        "LFQA": 84.4,
+        "RAGTruth": 77.2
+      }
+    },
+    {
+      "model": "MiniCheck-DeBERTa-L",
+      "size": "0.4B",
+      "model_url": "https://huggingface.co/lytang/MiniCheck-DeBERTa-v3-Large",
+      "score_full_11_displayed": 73.1,
+      "mean_of_published_rounded_dataset_scores": 73.10000000000001,
+      "dataset_scores": {
+        "CNN": 64.2,
+        "XSum": 71,
+        "MediaS": 69.3,
+        "MeetB": 72.7,
+        "WiCE": 69.4,
+        "REVEAL": 87.3,
+        "ClaimVerify": 75.6,
+        "FactCheck": 73,
+        "ExpertQA": 58.9,
+        "LFQA": 83.9,
+        "RAGTruth": 78.8
+      }
+    },
+    {
+      "model": "Qwen2.5-7B-Instruct",
+      "size": "7B",
+      "model_url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct",
+      "score_full_11_displayed": 72.8,
+      "mean_of_published_rounded_dataset_scores": 72.82727272727273,
+      "dataset_scores": {
+        "CNN": 54.6,
+        "XSum": 69.9,
+        "MediaS": 71.5,
+        "MeetB": 75.2,
+        "WiCE": 76.3,
+        "REVEAL": 86.9,
+        "ClaimVerify": 70.1,
+        "FactCheck": 74.9,
+        "ExpertQA": 61,
+        "LFQA": 84.2,
+        "RAGTruth": 76.5
+      }
+    },
+    {
+      "model": "QwQ-32B-Preview",
+      "size": "32B",
+      "model_url": "https://huggingface.co/Qwen/QwQ-32B-Preview",
+      "score_full_11_displayed": 71.8,
+      "mean_of_published_rounded_dataset_scores": 71.77272727272727,
+      "dataset_scores": {
+        "CNN": 57,
+        "XSum": 71.6,
+        "MediaS": 69.3,
+        "MeetB": 78.5,
+        "WiCE": 72.3,
+        "REVEAL": 86.2,
+        "ClaimVerify": 67.7,
+        "FactCheck": 75.6,
+        "ExpertQA": 60,
+        "LFQA": 78.9,
+        "RAGTruth": 72.4
+      }
+    },
+    {
+      "model": "HHEM-2.1-open",
+      "size": "0.1B",
+      "model_url": "https://huggingface.co/vectara/hallucination_evaluation_model",
+      "score_full_11_displayed": 71.8,
+      "mean_of_published_rounded_dataset_scores": 71.76363636363637,
+      "dataset_scores": {
+        "CNN": 62.8,
+        "XSum": 67.8,
+        "MediaS": 67.2,
+        "MeetB": 71,
+        "WiCE": 75.9,
+        "REVEAL": 86.6,
+        "ClaimVerify": 73.9,
+        "FactCheck": 71.8,
+        "ExpertQA": 58.4,
+        "LFQA": 84.1,
+        "RAGTruth": 69.9
+      }
+    },
+    {
+      "model": "Mixtral-8x22B",
+      "size": "176B",
+      "model_url": "https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1",
+      "score_full_11_displayed": 71.5,
+      "mean_of_published_rounded_dataset_scores": 71.49090909090908,
+      "dataset_scores": {
+        "CNN": 57.3,
+        "XSum": 70.3,
+        "MediaS": 69,
+        "MeetB": 78.5,
+        "WiCE": 69.5,
+        "REVEAL": 85.8,
+        "ClaimVerify": 63.8,
+        "FactCheck": 79.5,
+        "ExpertQA": 57.4,
+        "LFQA": 76.5,
+        "RAGTruth": 78.8
+      }
+    },
+    {
+      "model": "Claude-2.1",
+      "size": "-",
+      "model_url": "https://www.anthropic.com/news/claude-2-1",
+      "score_full_11_displayed": 71.1,
+      "mean_of_published_rounded_dataset_scores": 71.11818181818181,
+      "dataset_scores": {
+        "CNN": 59.9,
+        "XSum": 66.4,
+        "MediaS": 69.2,
+        "MeetB": 72.3,
+        "WiCE": 64.3,
+        "REVEAL": 88.2,
+        "ClaimVerify": 69.7,
+        "FactCheck": 79.3,
+        "ExpertQA": 59.8,
+        "LFQA": 78.2,
+        "RAGTruth": 75
+      }
+    },
+    {
+      "model": "AlignScore",
+      "size": "0.4B",
+      "model_url": "https://github.com/yuh-zha/AlignScore",
+      "score_full_11_displayed": 70.5,
+      "mean_of_published_rounded_dataset_scores": 70.48181818181818,
+      "dataset_scores": {
+        "CNN": 52.4,
+        "XSum": 71.4,
+        "MediaS": 69.2,
+        "MeetB": 72.6,
+        "WiCE": 66,
+        "REVEAL": 85.3,
+        "ClaimVerify": 69.6,
+        "FactCheck": 74.3,
+        "ExpertQA": 58.3,
+        "LFQA": 84.5,
+        "RAGTruth": 71.7
+      }
+    },
+    {
+      "model": "Llama-3.1-8B-Instruct",
+      "size": "8B",
+      "model_url": "https://huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "score_full_11_displayed": 70.3,
+      "mean_of_published_rounded_dataset_scores": 70.27272727272727,
+      "dataset_scores": {
+        "CNN": 54.7,
+        "XSum": 68.5,
+        "MediaS": 71.1,
+        "MeetB": 75.5,
+        "WiCE": 72,
+        "REVEAL": 83.5,
+        "ClaimVerify": 66.5,
+        "FactCheck": 72.3,
+        "ExpertQA": 57.8,
+        "LFQA": 77.5,
+        "RAGTruth": 73.6
+      }
+    },
+    {
+      "model": "GPT-3.5-Turbo",
+      "size": "-",
+      "model_url": "https://platform.openai.com/docs/models/gpt-3-5-turbo",
+      "score_full_11_displayed": 70.1,
+      "mean_of_published_rounded_dataset_scores": 70.14545454545454,
+      "dataset_scores": {
+        "CNN": 63.2,
+        "XSum": 72.4,
+        "MediaS": 66.8,
+        "MeetB": 73.4,
+        "WiCE": 68.5,
+        "REVEAL": 84.7,
+        "ClaimVerify": 65.2,
+        "FactCheck": 70.8,
+        "ExpertQA": 57.2,
+        "LFQA": 73.8,
+        "RAGTruth": 75.6
+      }
+    },
+    {
+      "model": "SummaC-ZS",
+      "size": "0.1B",
+      "model_url": "https://github.com/tingofurro/summac/",
+      "score_full_11_displayed": 67.7,
+      "mean_of_published_rounded_dataset_scores": 67.68181818181819,
+      "dataset_scores": {
+        "CNN": 51.1,
+        "XSum": 61.5,
+        "MediaS": 69.5,
+        "MeetB": 71,
+        "WiCE": 62.8,
+        "REVEAL": 85.3,
+        "ClaimVerify": 69.7,
+        "FactCheck": 75.2,
+        "ExpertQA": 55.2,
+        "LFQA": 77.6,
+        "RAGTruth": 65.6
+      }
+    },
+    {
+      "model": "Tülu-3-70B",
+      "size": "70B",
+      "model_url": "https://huggingface.co/allenai/Llama-3.1-Tulu-3-70B",
+      "score_full_11_displayed": 67.6,
+      "mean_of_published_rounded_dataset_scores": 67.64545454545454,
+      "dataset_scores": {
+        "CNN": 58.3,
+        "XSum": 66.4,
+        "MediaS": 62.7,
+        "MeetB": 70.6,
+        "WiCE": 64.6,
+        "REVEAL": 82.5,
+        "ClaimVerify": 62.2,
+        "FactCheck": 76.5,
+        "ExpertQA": 55.7,
+        "LFQA": 70.8,
+        "RAGTruth": 73.8
+      }
+    },
+    {
+      "model": "Mistral-8x7B",
+      "size": "56B",
+      "model_url": "https://mistral.ai/technology/#models",
+      "score_full_11_displayed": 67.4,
+      "mean_of_published_rounded_dataset_scores": 67.4090909090909,
+      "dataset_scores": {
+        "CNN": 55,
+        "XSum": 65.5,
+        "MediaS": 68.5,
+        "MeetB": 73.3,
+        "WiCE": 63.8,
+        "REVEAL": 80.8,
+        "ClaimVerify": 64.3,
+        "FactCheck": 75.1,
+        "ExpertQA": 56.3,
+        "LFQA": 70.8,
+        "RAGTruth": 68.1
+      }
+    },
+    {
+      "model": "PaLM2-Bison",
+      "size": "-",
+      "model_url": "https://blog.google/technology/ai/google-palm-2-ai-large-language-model/",
+      "score_full_11_displayed": 66.1,
+      "mean_of_published_rounded_dataset_scores": 66.12727272727273,
+      "dataset_scores": {
+        "CNN": 52.4,
+        "XSum": 59,
+        "MediaS": 68.3,
+        "MeetB": 73.6,
+        "WiCE": 63.4,
+        "REVEAL": 84.2,
+        "ClaimVerify": 60.5,
+        "FactCheck": 76.4,
+        "ExpertQA": 56.6,
+        "LFQA": 71.4,
+        "RAGTruth": 61.6
+      }
+    },
+    {
+      "model": "Gemini-Pro",
+      "size": "-",
+      "model_url": "https://deepmind.google/technologies/gemini/pro/",
+      "score_full_11_displayed": 65.4,
+      "mean_of_published_rounded_dataset_scores": 65.43636363636364,
+      "dataset_scores": {
+        "CNN": 49.4,
+        "XSum": 60.6,
+        "MediaS": 63.8,
+        "MeetB": 65.8,
+        "WiCE": 65.8,
+        "REVEAL": 85.5,
+        "ClaimVerify": 61.8,
+        "FactCheck": 76.8,
+        "ExpertQA": 56.8,
+        "LFQA": 75.9,
+        "RAGTruth": 57.6
+      }
+    },
+    {
+      "model": "DAE",
+      "size": "0.1B",
+      "model_url": "https://github.com/tagoyal/factuality-datasets",
+      "score_full_11_displayed": 65.0,
+      "mean_of_published_rounded_dataset_scores": 64.95454545454545,
+      "dataset_scores": {
+        "CNN": 50.8,
+        "XSum": 59.1,
+        "MediaS": 65.1,
+        "MeetB": 69.5,
+        "WiCE": 58.5,
+        "REVEAL": 81.3,
+        "ClaimVerify": 64,
+        "FactCheck": 72.5,
+        "ExpertQA": 56.2,
+        "LFQA": 72.2,
+        "RAGTruth": 65.3
+      }
+    },
+    {
+      "model": "Qwen2.5-0.5B-Instruct",
+      "size": "0.5B",
+      "model_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct",
+      "score_full_11_displayed": 64.2,
+      "mean_of_published_rounded_dataset_scores": 64.17272727272727,
+      "dataset_scores": {
+        "CNN": 55.5,
+        "XSum": 62.9,
+        "MediaS": 60,
+        "MeetB": 64.7,
+        "WiCE": 65.9,
+        "REVEAL": 85.8,
+        "ClaimVerify": 61.4,
+        "FactCheck": 68.9,
+        "ExpertQA": 56.8,
+        "LFQA": 72.4,
+        "RAGTruth": 51.6
+      }
+    },
+    {
+      "model": "InternLM2.5-7B-chat",
+      "size": "7B",
+      "model_url": "https://huggingface.co/internlm/internlm2_5-7b-chat",
+      "score_full_11_displayed": 63.6,
+      "mean_of_published_rounded_dataset_scores": 63.56363636363637,
+      "dataset_scores": {
+        "CNN": 58.4,
+        "XSum": 57.9,
+        "MediaS": 62.5,
+        "MeetB": 68,
+        "WiCE": 63.7,
+        "REVEAL": 77.3,
+        "ClaimVerify": 59.8,
+        "FactCheck": 67.5,
+        "ExpertQA": 55.2,
+        "LFQA": 64.9,
+        "RAGTruth": 64
+      }
+    },
+    {
+      "model": "Tülu-3-8B",
+      "size": "8B",
+      "model_url": "https://huggingface.co/allenai/Llama-3.1-Tulu-3-8B",
+      "score_full_11_displayed": 63.2,
+      "mean_of_published_rounded_dataset_scores": 63.21818181818182,
+      "dataset_scores": {
+        "CNN": 51,
+        "XSum": 58.5,
+        "MediaS": 63.4,
+        "MeetB": 67.7,
+        "WiCE": 58.7,
+        "REVEAL": 81.8,
+        "ClaimVerify": 63.2,
+        "FactCheck": 68.6,
+        "ExpertQA": 56.2,
+        "LFQA": 68.5,
+        "RAGTruth": 57.8
+      }
+    },
+    {
+      "model": "T5-NLI-Mixed",
+      "size": "11B",
+      "model_url": "https://huggingface.co/google/t5_xxl_true_nli_mixture",
+      "score_full_11_displayed": 61.1,
+      "mean_of_published_rounded_dataset_scores": 61.10909090909092,
+      "dataset_scores": {
+        "CNN": 54.6,
+        "XSum": 52.3,
+        "MediaS": 59.1,
+        "MeetB": 55.3,
+        "WiCE": 55.3,
+        "REVEAL": 87.2,
+        "ClaimVerify": 59.5,
+        "FactCheck": 69,
+        "ExpertQA": 55.6,
+        "LFQA": 61.8,
+        "RAGTruth": 62.5
+      }
+    },
+    {
+      "model": "SummaC-CV",
+      "size": "0.1B",
+      "model_url": "https://github.com/tingofurro/summac/",
+      "score_full_11_displayed": 61.0,
+      "mean_of_published_rounded_dataset_scores": 61.01818181818182,
+      "dataset_scores": {
+        "CNN": 65.2,
+        "XSum": 54.5,
+        "MediaS": 63.7,
+        "MeetB": 62.8,
+        "WiCE": 54.3,
+        "REVEAL": 67.7,
+        "ClaimVerify": 70.9,
+        "FactCheck": 53.4,
+        "ExpertQA": 54.9,
+        "LFQA": 62.1,
+        "RAGTruth": 61.7
+      }
+    },
+    {
+      "model": "Llama-3.2-3B-Instruct",
+      "size": "3B",
+      "model_url": "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct",
+      "score_full_11_displayed": 60.0,
+      "mean_of_published_rounded_dataset_scores": 60.01818181818182,
+      "dataset_scores": {
+        "CNN": 51.5,
+        "XSum": 60.5,
+        "MediaS": 53.1,
+        "MeetB": 52.5,
+        "WiCE": 58.5,
+        "REVEAL": 81.9,
+        "ClaimVerify": 62.3,
+        "FactCheck": 62.6,
+        "ExpertQA": 55.8,
+        "LFQA": 58.5,
+        "RAGTruth": 63
+      }
+    },
+    {
+      "model": "Llama-3.2-1B-Instruct",
+      "size": "1B",
+      "model_url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+      "score_full_11_displayed": 50.3,
+      "mean_of_published_rounded_dataset_scores": 50.26363636363636,
+      "dataset_scores": {
+        "CNN": 50.1,
+        "XSum": 50.9,
+        "MediaS": 50,
+        "MeetB": 50.2,
+        "WiCE": 49.7,
+        "REVEAL": 50.4,
+        "ClaimVerify": 50.5,
+        "FactCheck": 50.2,
+        "ExpertQA": 49.9,
+        "LFQA": 50.1,
+        "RAGTruth": 50.9
+      }
+    }
+  ],
+  "ranking_note": "Models are ordered by arithmetic means computed from published rounded per-dataset cells. The official UI sorts rounded one-decimal averages and may order ties alphabetically; recomputed sub-decimal differences are not official unrounded rankings.",
+  "data_access": "Read only official public leaderboard aggregate scores, public protocol prose, and public evaluation notebook source. No benchmark records/labels were downloaded, no evaluation was run, and no credentials or local .env files were read."
+}

@@ -1,0 +1,18 @@
+# Jev claim checking experiment
+
+Registered before benchmark inference, 2026-09-28.
+
+- Dataset: `lytang/LLM-AggreFact`, revision `981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4`.
+- Development data only during question/parameter tuning. Do not fetch, preview, search, or inspect test records before freezing the configuration.
+- Task: predict whether the supplied document supports the entire claim. Label 1 means supported. No external retrieval. Send only document and claim to Jev; never send labels, dataset/source names, or contamination identifiers.
+- Pin `jev-1.13.0`; use the official `https://api.typesafe.ai/v1/systemone` endpoint. The documented API has no temperature or decoding knobs. Tune question instructions/criteria, primitive type, score combination and classification threshold.
+- Context handling, fixed using development lengths before the main run: documents up to 80,000 characters are passed unchanged. Longer documents keep the first 60,000 and last 20,000 characters, with an explicit omission marker. Record truncation; do not silently drop API failures. Jev's tokenizer is not published here, so this is a conservative character cap, not an exact token limit.
+- Split development documents deterministically by hash into tuning (60%) and selection (40%) pools. Sample up to 110 examples per source/label in each pool using a fixed seed; documents cannot cross pools. Preserve row indices in manifests.
+- Compare a small initial pack of seven questions and predefined simple score combinations. Inspect only tuning errors; allow one additional question revision round. Lock the candidate shortlist (at most three) before observing selection predictions. Select using source-macro balanced accuracy on the selection pool; ties favor fewer questions, then the tuning score.
+- Fit each threshold on tuning only, on a fixed grid from 0.01 through 0.99 plus 0.5. Positive prediction is strictly `score > threshold`. After selection, refit only the selected threshold on the combined observed development rows.
+- Primary metric: the unweighted mean of balanced accuracy within each constituent source. Also report pooled balanced accuracy, accuracy, ROC AUC, source-level results, token use, failures and latency. This is a development-tuned experiment, not the zero-shot leaderboard protocol.
+- Final evaluation: freeze the exact question pack, extraction/composition rule, threshold, preprocessing, dataset revision and code hashes before accessing the test file. Evaluate the full official test split once. Report an untuned direct-support baseline at 0.5 alongside the selected checker. No changes in response to test metrics/errors. Do not display test text or individual errors.
+- Before observing selection results, also register a threshold-calibrated direct-support baseline: fit its threshold on the same combined observed development rows and freeze it. This secondary comparison separates improvements from question selection and threshold calibration. Use paired document-cluster bootstrap intervals (1,000 replicates, seed 42) within source; they condition on the frozen fitted checker and do not include prompt-search uncertainty.
+- API work is bounded to an estimated US$10 in input charges at the documented $0.042 per million input tokens. Outputs are free. Keep append-only response caches, retry transient failures with backoff, and never substitute a label for failed calls. Record partial coverage if completion is blocked.
+
+Sources: [benchmark notes](benchmark_notes.md), [Jev API](https://docs.typesafe.ai/api), [models and pricing](https://docs.typesafe.ai/models).

@@ -1,0 +1,36 @@
+{
+  "stages": [
+    {
+      "stage": "tune_v1",
+      "logged_responses": 2299,
+      "input_tokens": 4356336,
+      "output_tokens": 377962,
+      "estimated_input_usd": 0.18296611200000001
+    },
+    {
+      "stage": "tune_v2",
+      "logged_responses": 2299,
+      "input_tokens": 3330982,
+      "output_tokens": 160930,
+      "estimated_input_usd": 0.139901244
+    },
+    {
+      "stage": "selection",
+      "logged_responses": 2221,
+      "input_tokens": 3885442,
+      "output_tokens": 333905,
+      "estimated_input_usd": 0.163188564
+    },
+    {
+      "stage": "test",
+      "logged_responses": 29320,
+      "input_tokens": 35304971,
+      "output_tokens": 1700560,
+      "estimated_input_usd": 1.4828087820000002
+    }
+  ],
+  "total_logged_responses": 36139,
+  "total_estimated_input_usd": 1.9688647020000003,
+  "pilot_usage_counted_in_test": true,
+  "note": "Successful saved calls; pilot copies excluded from double-counting. Up to32 in-flight calls at interruption may have been billed without saved usage."
+}

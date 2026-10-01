@@ -1,0 +1,64 @@
+{
+  "variant": "Secondary source-aware diagnostic; requires known source identity at decision time",
+  "threshold_fit": "tuning rows only",
+  "validation": "reused selection data, not new held-out validation",
+  "by_source": {
+    "AggreFact-CNN": {
+      "threshold": 0.78,
+      "tune_ba": 0.7778270509977827,
+      "selection_ba": 0.8025252525252525
+    },
+    "AggreFact-XSum": {
+      "threshold": 0.29,
+      "tune_ba": 0.7318181818181818,
+      "selection_ba": 0.7363636363636363
+    },
+    "ClaimVerify": {
+      "threshold": 0.75,
+      "tune_ba": 0.8272727272727273,
+      "selection_ba": 0.8323676323676323
+    },
+    "ExpertQA": {
+      "threshold": 0.51,
+      "tune_ba": 0.6136363636363636,
+      "selection_ba": 0.5590909090909091
+    },
+    "FactCheck-GPT": {
+      "threshold": 0.11,
+      "tune_ba": 0.8136363636363636,
+      "selection_ba": 0.8159311562224183
+    },
+    "Lfqa": {
+      "threshold": 0.5,
+      "tune_ba": 0.9181818181818182,
+      "selection_ba": 0.9045454545454545
+    },
+    "RAGTruth": {
+      "threshold": 0.19,
+      "tune_ba": 0.8909090909090909,
+      "selection_ba": 0.8454545454545455
+    },
+    "Reveal": {
+      "threshold": 0.31,
+      "tune_ba": 0.9454545454545455,
+      "selection_ba": 0.9090909090909091
+    },
+    "TofuEval-MediaS": {
+      "threshold": 0.68,
+      "tune_ba": 0.8045454545454545,
+      "selection_ba": 0.7935828877005348
+    },
+    "TofuEval-MeetB": {
+      "threshold": 0.61,
+      "tune_ba": 0.8090909090909091,
+      "selection_ba": 0.8045454545454546
+    },
+    "Wice": {
+      "threshold": 0.21,
+      "tune_ba": 0.8815047021943574,
+      "selection_ba": 0.8552631578947368
+    }
+  },
+  "selection_macro_ba": 0.8053419087092256,
+  "test_evaluated": false
+}

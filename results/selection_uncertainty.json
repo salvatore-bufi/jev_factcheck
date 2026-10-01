@@ -1,0 +1,21 @@
+{
+  "selected": "min_support_checks",
+  "runner_up": "support_binary",
+  "paired_document_cluster_bootstrap_95ci": {
+    "primary": [
+      0.7659722752275798,
+      0.8049238037965614
+    ],
+    "baseline": [
+      0.763744322599069,
+      0.8011338879523577
+    ],
+    "paired_delta": [
+      -0.0078022971195821885,
+      0.013967418086920447
+    ],
+    "valid_repeats": 1000,
+    "repeats": 1000
+  },
+  "note": "Diagnostic uncertainty after freeze; no changes to selected checker."
+}

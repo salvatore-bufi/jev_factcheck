@@ -1,0 +1,387 @@
+{
+  "created_at": "2026-09-30T08:27:37.992487+00:00",
+  "scope": "Internal selection sample from official development split; cached predictions only.",
+  "inputs": {
+    "rows": {
+      "path": "data/selection.jsonl",
+      "sha256": "056b59643790d6076f1cb1086324acdfe97a3efeed56a6842e50157fb2f3f6d5"
+    },
+    "predictions": {
+      "path": "results/selection_predictions.jsonl",
+      "sha256": "39f7af37da0f347a4775ae8588cc19740780ffe66515c8c2d73b1571a86f07b2"
+    },
+    "pack": {
+      "path": "results/selection_pack.json",
+      "sha256": "0e35fd15df35083138a5f8fc2f12310484fc8a279abcf6017da781337554ce34"
+    },
+    "freeze": {
+      "path": "results/frozen.json",
+      "sha256": "79ea2da2111c2e5c636a14421b093f3d27ece3a3efe22cbb54672c202eeef818"
+    },
+    "annotations": {
+      "path": "results/validation_error_analysis/review_annotations.jsonl",
+      "sha256": "527c8a4510fb16d06605805ad29233db1e81857bda4d02892a4efbc5c645a525"
+    }
+  },
+  "model": "jev-1.13.0",
+  "candidate": "min_support_checks",
+  "threshold": 0.3,
+  "checks": "Complete unique dev IDs, input hashes, pack hashes, matching frozen questions/model, frozen code hashes, and independent score reconstruction passed.",
+  "pooled": {
+    "TP": 950,
+    "TN": 832,
+    "FN": 200,
+    "FP": 239,
+    "n": 2221,
+    "tpr": 0.8260869565217391,
+    "fpr": 0.223155929038282,
+    "balanced_accuracy": 0.8014655137417286,
+    "accuracy": 0.8023412877082395
+  },
+  "by_source": {
+    "AggreFact-CNN": {
+      "TP": 104,
+      "FN": 6,
+      "TN": 9,
+      "FP": 9,
+      "n": 128,
+      "tpr": 0.9454545454545454,
+      "fpr": 0.5,
+      "balanced_accuracy": 0.7227272727272727,
+      "accuracy": 0.8828125
+    },
+    "AggreFact-XSum": {
+      "TN": 97,
+      "TP": 65,
+      "FP": 13,
+      "FN": 45,
+      "n": 220,
+      "tpr": 0.5909090909090909,
+      "fpr": 0.11818181818181818,
+      "balanced_accuracy": 0.7363636363636363,
+      "accuracy": 0.7363636363636363
+    },
+    "ClaimVerify": {
+      "FN": 6,
+      "TP": 104,
+      "FP": 36,
+      "TN": 55,
+      "n": 201,
+      "tpr": 0.9454545454545454,
+      "fpr": 0.3956043956043956,
+      "balanced_accuracy": 0.7749250749250749,
+      "accuracy": 0.7910447761194029
+    },
+    "ExpertQA": {
+      "TN": 73,
+      "FN": 51,
+      "TP": 59,
+      "FP": 37,
+      "n": 220,
+      "tpr": 0.5363636363636364,
+      "fpr": 0.33636363636363636,
+      "balanced_accuracy": 0.6000000000000001,
+      "accuracy": 0.6
+    },
+    "FactCheck-GPT": {
+      "TN": 105,
+      "FN": 33,
+      "TP": 70,
+      "FP": 5,
+      "n": 213,
+      "tpr": 0.6796116504854369,
+      "fpr": 0.045454545454545456,
+      "balanced_accuracy": 0.8170785525154458,
+      "accuracy": 0.8215962441314554
+    },
+    "Lfqa": {
+      "TN": 92,
+      "FP": 18,
+      "TP": 100,
+      "FN": 10,
+      "n": 220,
+      "tpr": 0.9090909090909091,
+      "fpr": 0.16363636363636364,
+      "balanced_accuracy": 0.8727272727272727,
+      "accuracy": 0.8727272727272727
+    },
+    "RAGTruth": {
+      "FP": 16,
+      "TP": 97,
+      "TN": 94,
+      "FN": 13,
+      "n": 220,
+      "tpr": 0.8818181818181818,
+      "fpr": 0.14545454545454545,
+      "balanced_accuracy": 0.8681818181818182,
+      "accuracy": 0.8681818181818182
+    },
+    "Reveal": {
+      "FN": 7,
+      "TN": 97,
+      "TP": 103,
+      "FP": 13,
+      "n": 220,
+      "tpr": 0.9363636363636364,
+      "fpr": 0.11818181818181818,
+      "balanced_accuracy": 0.9090909090909092,
+      "accuracy": 0.9090909090909091
+    },
+    "TofuEval-MediaS": {
+      "FN": 4,
+      "TN": 43,
+      "TP": 106,
+      "FP": 59,
+      "n": 212,
+      "tpr": 0.9636363636363636,
+      "fpr": 0.5784313725490197,
+      "balanced_accuracy": 0.692602495543672,
+      "accuracy": 0.7028301886792453
+    },
+    "TofuEval-MeetB": {
+      "TN": 87,
+      "TP": 102,
+      "FN": 8,
+      "FP": 23,
+      "n": 220,
+      "tpr": 0.9272727272727272,
+      "fpr": 0.20909090909090908,
+      "balanced_accuracy": 0.8590909090909091,
+      "accuracy": 0.8590909090909091
+    },
+    "Wice": {
+      "TN": 80,
+      "TP": 40,
+      "FN": 17,
+      "FP": 10,
+      "n": 147,
+      "tpr": 0.7017543859649122,
+      "fpr": 0.1111111111111111,
+      "balanced_accuracy": 0.7953216374269005,
+      "accuracy": 0.8163265306122449
+    }
+  },
+  "macro_balanced_accuracy": 0.7861917798720829,
+  "fn_blockers": {
+    "no_unsupported_detail": 133,
+    "support_simple + no_unsupported_detail": 48,
+    "support_simple + no_unsupported_detail + no_contradicted_detail": 11,
+    "support_simple + no_contradicted_detail": 2,
+    "support_simple": 2,
+    "no_contradicted_detail": 2,
+    "no_unsupported_detail + no_contradicted_detail": 2
+  },
+  "high_confidence_errors": {
+    "FP_score_ge_0.70": 89,
+    "FN_score_le_0.10": 71
+  },
+  "truncated_rows": 4,
+  "truncated_errors": 1,
+  "without_detail_gate_changes": {
+    "additional_FP": 285,
+    "additional_TP": 133
+  },
+  "decimal_boundary_cases": [
+    {
+      "id": "dev:10672",
+      "dataset": "ExpertQA",
+      "label": 1,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:13076",
+      "dataset": "Lfqa",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:13642",
+      "dataset": "Lfqa",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:14735",
+      "dataset": "Lfqa",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:1550",
+      "dataset": "TofuEval-MediaS",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:19834",
+      "dataset": "RAGTruth",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:3644",
+      "dataset": "TofuEval-MeetB",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:4948",
+      "dataset": "Wice",
+      "label": 1,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:537",
+      "dataset": "AggreFact-XSum",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:5412",
+      "dataset": "Reveal",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:6427",
+      "dataset": "Reveal",
+      "label": 1,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:6914",
+      "dataset": "ClaimVerify",
+      "label": 1,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:7044",
+      "dataset": "ClaimVerify",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:7476",
+      "dataset": "ClaimVerify",
+      "label": 0,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    },
+    {
+      "id": "dev:9222",
+      "dataset": "FactCheck-GPT",
+      "label": 1,
+      "float_score": 0.30000000000000004,
+      "decimal_score": "0.3"
+    }
+  ],
+  "diagnostic_counterfactuals": {
+    "without_detail_gate": {
+      "macro_balanced_accuracy": 0.7139123626208245,
+      "pooled": {
+        "TP": 1083,
+        "FN": 67,
+        "TN": 547,
+        "FP": 524,
+        "n": 2221,
+        "tpr": 0.9417391304347826,
+        "fpr": 0.4892623716153128,
+        "balanced_accuracy": 0.7262383794097349,
+        "accuracy": 0.7339036470058532
+      }
+    },
+    "decimal_boundary": {
+      "macro_balanced_accuracy": 0.7880505517992231,
+      "pooled": {
+        "TP": 945,
+        "FN": 205,
+        "TN": 842,
+        "FP": 229,
+        "n": 2221,
+        "tpr": 0.8217391304347826,
+        "fpr": 0.2138188608776844,
+        "balanced_accuracy": 0.8039601347785491,
+        "accuracy": 0.8045925258892391
+      }
+    }
+  },
+  "review": {
+    "n": 88,
+    "distinct_documents": 82,
+    "sampling": "Four errors per source and direction, SHA-256 ordering with fixed prefix.",
+    "hash_prefix": "jev-validation-errors-20260930:",
+    "FP": 44,
+    "FN": 44,
+    "coverage": "Full reference inspected for 87 cases; abstract and targeted style-related sections for case 24. No independent second annotator.",
+    "counts_are_sample_descriptions_not_population_estimates": true,
+    "clusters": {
+      "missing_evidence": {
+        "name": "Unstated details or incomplete evidence",
+        "FN": 15,
+        "FP": 2,
+        "n": 17
+      },
+      "label_conflict": {
+        "name": "Strong apparent label/evidence conflicts",
+        "FN": 4,
+        "FP": 1,
+        "n": 5
+      },
+      "identity_reference": {
+        "name": "Entities, attribution and unresolved references",
+        "FP": 14,
+        "FN": 1,
+        "n": 15
+      },
+      "scope_status": {
+        "name": "Scope, qualifiers and event status",
+        "FP": 10,
+        "FN": 13,
+        "n": 23
+      },
+      "paraphrase_synthesis": {
+        "name": "Paraphrase and combining evidence",
+        "FP": 12,
+        "FN": 7,
+        "n": 19
+      },
+      "ambiguous": {
+        "name": "Broad interpretive claim; unresolved",
+        "FP": 1,
+        "n": 1
+      },
+      "numeric_precision": {
+        "name": "Numbers, units and precision",
+        "FN": 4,
+        "FP": 4,
+        "n": 8
+      }
+    },
+    "assessments": {
+      "evidence_gap": 17,
+      "label_review": 14,
+      "likely_model_error": 24,
+      "ambiguous": 32,
+      "unresolved": 1
+    }
+  },
+  "limitations": [
+    "Selection was already used in model selection and threshold fitting; this is diagnostic development analysis, not fresh validation.",
+    "Manual clusters can overlap conceptually; one dominant category is assigned per case.",
+    "Reasons are evidence-based hypotheses, not model-generated explanations or internal reasoning traces.",
+    "Original gold labels and frozen implementation remain unchanged. No new threshold or question was selected."
+  ]
+}

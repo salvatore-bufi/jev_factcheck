@@ -1,0 +1,20 @@
+{
+  "created_at": "2026-09-28T09:22:46.120148+00:00",
+  "dataset_revision": "981dfd0bd8e58e7238a9ab92b2e6ea44bce918e4",
+  "dev_sha256": "ca9a5bda9561bbc6f7327ef81ab41727fa10e96f96e9dc74ef32ba3af3c1d8a8",
+  "packages": {
+    "requests": "2.32.5",
+    "numpy": "2.3.5",
+    "pyarrow": "23.0.1",
+    "scikit-learn": "1.8.0"
+  },
+  "development_files": {
+    "selection.jsonl": "056b59643790d6076f1cb1086324acdfe97a3efeed56a6842e50157fb2f3f6d5",
+    "tune.jsonl": "892d8c694ed7a8cefc6847cbc42b16165bd788fb4b0a07de29ee872c24170062"
+  },
+  "test_accessed": false,
+  "credential_policy": "JEV_API_KEY environment override, then local .env, then ../uncertainty/.env; key is never written to artifacts or logs",
+  "tuning_sample_size": 2299,
+  "selection_sample_size": 2221,
+  "rate_limit_policy": "Paced requests; retry transient HTTP errors and connection failures up to five attempts; final evaluation uses at most 18 requests/sec"
+}
