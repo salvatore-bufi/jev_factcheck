@@ -1,0 +1,8 @@
+# Runs in the existing "factcheck" conda environment (Python 3.12, CUDA GPU).
+vllm>=0.28
+llm2jev>=0.6.1        # reference prompt/scoring for the typed-decision interface
+transformers>=5.14
+pyarrow
+scikit-learn
+numpy
+requests

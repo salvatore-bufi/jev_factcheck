@@ -24,7 +24,7 @@ __pycache__/
 /data/*
 !/data/hub_metadata.json
 ./lytang___llm-aggre_fact/*
-
+./results/*
 # Keep Jev reports, metrics, provenance, frozen configuration and test answers.
 # The test cache lets collaborators verify results without new inference.
 /results/*predictions.jsonl

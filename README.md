@@ -45,6 +45,7 @@ Balanced accuracy (%) per source; **Average gives equal weight to all 11 sources
 | Model | Size | Average | CNN | XSum | MediaS | MeetB | WiCE | REVEAL | ClaimVerify | FactCheck | ExpertQA | LFQA | RAGTruth |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | **jev-1.13.0 (ours; dev-tuned)** | — | **79.09** | 67.12 | 77.46 | 75.65 | 81.85 | 85.75 | 91.41 | 77.27 | 78.18 | 59.36 | 88.95 | 86.94 |
+| FactCG-DeBERTa-v3-Large (ours; zero-shot) | 0.4B | 75.64 | 71.13 | 73.92 | 72.33 | 74.32 | 74.44 | 88.19 | 78.06 | 72.06 | 59.01 | 86.70 | 81.85 |
 | Bespoke-Minicheck-7B | 7B | 77.4 | 65.5 | 77.8 | 76.0 | 78.3 | 83.0 | 88.0 | 75.3 | 77.7 | 59.2 | 86.7 | 84.0 |
 | Claude-3.5 Sonnet | - | 77.2 | 67.6 | 75.1 | 73.4 | 84.6 | 77.7 | 89.1 | 71.4 | 77.8 | 60.9 | 85.6 | 86.1 |
 | Granite Guardian 3.3 | 8B | 76.5 | 67.0 | 74.9 | 74.0 | 78.6 | 76.6 | 89.6 | 75.9 | 76.1 | 59.6 | 86.9 | 82.2 |
@@ -100,6 +101,7 @@ Balanced accuracy (%) per source; **Average gives equal weight to all 11 sources
 | `analyze_validation_errors.py` | Offline audit of selection-pool errors. Output: [results/validation_error_analysis/](results/validation_error_analysis/report.md). |
 | `check_claim.py` | Check one document/claim with the frozen checker. |
 | `FactCG/` | Self-hosted FactCG-DeBERTa-v3-Large classifier. `FactCG/benchmark.py` runs it on the test split (see below); `test_benchmark.py` is its offline test. The Italian-language docs and `main.py` belong to the module's original repository and are not used here. |
+| `jpt-9b/` | JPT-9B (`kirp/jpt-9b`) evaluated in-process with vLLM under the frozen Jev rule; see its README. |
 | `evaluate.py` | Reusable runner for any System One model, data file or question pack (see below). |
 | `test_bench.py`, `test_metrics.py`, `test_evaluate.py` | Offline tests (synthetic data, mocked HTTP). |
 | `packs/` | Question packs for `evaluate.py`: `claim_support.json` (frozen three-question rule), `binary_support.json` (one choice question). |
