@@ -44,3 +44,6 @@ __pycache__/
 /winnow-12b/src/
 /winnow-12b/cuda-libs/
 /winnow-12b/runtime/
+
+# Winnow bf16: converted checkpoint (24 GB)
+/winnow-12b-bf16/model/
