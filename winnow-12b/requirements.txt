@@ -1,0 +1,7 @@
+# Client side only (the factcheck conda env is enough); the server is built by setup.sh.
+requests
+pyarrow
+scikit-learn
+numpy
+cmake            # installed by setup.sh if missing
+# plus, in the same env, the CUDA 13 libraries and nvcc (pip: nvidia-cuda-nvcc, nvidia-cuda-runtime, nvidia-cublas, nvidia-nccl-cu13)

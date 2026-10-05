@@ -103,6 +103,7 @@ Balanced accuracy (%) per source; **Average gives equal weight to all 11 sources
 | `FactCG/` | Self-hosted FactCG-DeBERTa-v3-Large classifier. `FactCG/benchmark.py` runs it on the test split (see below); `test_benchmark.py` is its offline test. The Italian-language docs and `main.py` belong to the module's original repository and are not used here. |
 | `jpt-9b/` | JPT-9B (`kirp/jpt-9b`) evaluated in-process with vLLM under the frozen Jev rule; see its README. |
 | `rune-26b/` | Rune 26B-A4B v3 (`surogate/rune-26b-a4b-GGUF`) evaluated with vLLM and CPU weight offload under the frozen Jev rule; see its README (about 20 hours on a 24 GB GPU). |
+| `winnow-12b/` | Winnow-12B (NVFP4 GGUF) evaluated through its own llama.cpp-based `/v1/systemone` server under the frozen Jev rule; see its README (about 2 hours). |
 | `evaluate.py` | Reusable runner for any System One model, data file or question pack (see below). |
 | `test_bench.py`, `test_metrics.py`, `test_evaluate.py` | Offline tests (synthetic data, mocked HTTP). |
 | `packs/` | Question packs for `evaluate.py`: `claim_support.json` (frozen three-question rule), `binary_support.json` (one choice question). |
