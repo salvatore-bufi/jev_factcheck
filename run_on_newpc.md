@@ -4,8 +4,22 @@ Gives JPT-9B, Rune-26B, Winnow-12B (NVFP4) and Winnow-12B-bf16 their own thresho
 
 ## Before starting
 
+- Packages (versions used for the test runs; `llm2jev` builds JPT-9B's prompts, so keep it at exactly 0.6.1):
+
+  ```sh
+  pip install llm2jev==0.6.1 "vllm==0.28.0" "transformers==5.14.1" gguf==0.19.0 safetensors
+  pip install -r requirements.txt
+  ```
+
 - The dev split must be in `./lytang___llm-aggre_fact` (the same Hugging Face cache folder as the test split).
-- Model weights in `~/.cache/huggingface/hub`: `kirp/jpt-9b` at revision `b447cc7` (pinned in the script), `surogate/rune-26b-a4b-GGUF`, `EldanRing/Winnow-12B`. For Winnow-bf16, run `python winnow-12b-bf16/convert.py` once.
+- Model weights in `~/.cache/huggingface/hub`. The benchmarks run with `HF_HUB_OFFLINE=1` and never download, so fetch them once (about 18 + 49 + 43 GB). JPT-9B must be fetched at the revision the script pins, or the offline load fails:
+
+  ```sh
+  hf download kirp/jpt-9b --revision b447cc7ee105c0a76a22f8fde8ecf05074dc8be0
+  hf download surogate/rune-26b-a4b-GGUF
+  hf download EldanRing/Winnow-12B
+  python winnow-12b-bf16/convert.py         # once: Winnow GGUF -> bf16 safetensors in winnow-12b-bf16/model/
+  ```
 
 ## Steps
 
@@ -13,6 +27,7 @@ Gives JPT-9B, Rune-26B, Winnow-12B (NVFP4) and Winnow-12B-bf16 their own thresho
 python dev_split.py                       # rebuilds data/tune.jsonl + data/selection.jsonl; stops if the hashes differ from Jev's
 
 # development runs (resumable; each writes results/runs/<model>-dev/)
+# --split dev is required: without it the script scores the full test split again
 python jpt-9b/benchmark.py --split dev --gpu 0
 python winnow-12b-bf16/benchmark.py --split dev --gpu 1
 python rune-26b/benchmark.py --split dev --gpu 0,1 --tensor-parallel 2 --cpu-offload-gb 0
