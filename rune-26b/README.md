@@ -38,6 +38,20 @@ Rerun the same command to resume after an interruption: finished rows are skippe
 - **Model:** read from `~/.cache/huggingface/hub` (`HF_HUB_OFFLINE=1`).
 - **Memory options:** `--cpu-offload-gb` (36), `--max-model-len` (24576), `--max-num-seqs` (32), `--max-batched-tokens` (16384), `--gpu-util` (0.92), `--window` (128 rows per batch), `--gpu ID`. A prompt longer than `--max-model-len` is printed as a failure and excluded, and the report is then marked incomplete; it is never shortened silently or given an invented score. These settings are the ones that worked: a 32768-token context or larger batches left too little GPU memory for the KV cache.
 
+## Development threshold
+
+The 0.30 threshold was fitted to Jev. To give this model its own threshold the way Jev got one, score Jev's 4,520 development rows (the tune and selection pools, rebuilt from the local dev split and verified against the hashes in `results/frozen.json` by [`dev_split.py`](../dev_split.py)), then fit and apply with [`calibrate_transfer.py`](../calibrate_transfer.py):
+
+```sh
+python rune-26b/benchmark.py --split dev            # development rows only -> results/runs/rune-26b-dev/
+python calibrate_transfer.py fit                    # threshold from the dev cache; reads no test data
+python calibrate_transfer.py apply                  # once: fitted threshold on the existing test cache
+```
+
+`apply` scores the existing test cache (no new inference) and writes `results/runs/rune-26b/report_dev_threshold.json` and `results/runs/dev_threshold_summary.md`; `report.json` keeps the frozen-0.30 result. Only the threshold is fitted; the temperature stays at the default.
+
+On two 45 GB GPUs (for example the L40S pair) the bf16 weights fit without offload: `--gpu 0,1 --tensor-parallel 2 --cpu-offload-gb 0`.
+
 ## Output
 
 In `results/runs/rune-26b/` (git-ignored): `answers.jsonl` (the cache: option logits per question and prompt tokens), `report.json` and `table_row.md`, a ready-made row such as `| Rune-26B-A4B-v3 (ours; fixed Jev rule) | 26B-A4B | <avg> | <11 sources> |`. Smoke runs go to `results/runs/rune-26b-limit<N>/` and are labelled as non-benchmark.

@@ -45,6 +45,9 @@ os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
 from metrics import metrics  # noqa: E402
 
 MODEL = "kirp/jpt-9b"
+# Revision the test run used, pinned so later Hub commits cannot change the weights between runs.
+# (9fda2c7, 2026-10-04, changed only the model card; its weight files are identical.)
+REVISION = "b447cc7ee105c0a76a22f8fde8ecf05074dc8be0"
 NAME = "JPT-9B"
 SIZE = "9B"
 TEMPERATURE = 1.087           # fixed by the model card; fit once on a held-out split
@@ -85,11 +88,15 @@ def read_table(path):
     return pq.read_table(path)
 
 
-def load_rows(path, limit):
-    rows = read_table(Path(path)).to_pylist()
-    for i, row in enumerate(rows):
-        row["id"] = f"test:{i}"
-        row.pop("contamination_identifier", None)
+def load_rows(path, limit, split="test"):
+    if split == "dev":   # Jev's verified tune + selection pools (dev_split.py); ids are dev:<row>
+        from dev_split import load_dev_rows
+        rows = load_dev_rows()[0]
+    else:
+        rows = read_table(Path(path)).to_pylist()
+        for i, row in enumerate(rows):
+            row["id"] = f"test:{i}"
+            row.pop("contamination_identifier", None)
     if limit:
         # Deterministic pseudo-random subset (hash order) so a smoke test spans several sources.
         order = sorted(range(len(rows)), key=lambda i: hashlib.sha256(rows[i]["id"].encode()).hexdigest())
@@ -135,17 +142,17 @@ class Scorer:
 
         self.render, self.answer, self.softmax = render, answer, softmax
         try:
-            self.processor = AutoProcessor.from_pretrained(MODEL)
+            self.processor = AutoProcessor.from_pretrained(MODEL, revision=REVISION)
             self.processor.apply_chat_template
         except (OSError, ValueError, AttributeError, ImportError):
-            self.processor = AutoTokenizer.from_pretrained(MODEL)
+            self.processor = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
         self.tok = getattr(self.processor, "tokenizer", self.processor)
         # Same probe llm2jev runs at start-up: labels must be single tokens after "Answer:".
         _, probe, _ = render(self.processor, "x", {"q": {"type": "noul"}}, ["A", "B"], "chat")
         self.labels, self.ids = find_labels(self.tok, probe["q"][0])
         self.pack = json.loads(PACK.read_text())["questions"]
         self.max_len = args.max_model_len
-        self.llm = LLM(model=MODEL, dtype="bfloat16", max_model_len=args.max_model_len,
+        self.llm = LLM(model=MODEL, revision=REVISION, tokenizer_revision=REVISION, dtype="bfloat16", max_model_len=args.max_model_len,
                        gpu_memory_utilization=args.gpu_util, enable_prefix_caching=True,
                        limit_mm_per_prompt={"image": 0, "video": 0},   # text only: skip the vision tower budget
                        max_logprobs=20, seed=0, max_num_seqs=args.max_num_seqs,
@@ -247,6 +254,9 @@ def main():
     p.add_argument("--data", default=str(default_data),
                    help="test.parquet, a HF datasets cache llm-aggre_fact-test.arrow, or the cache directory")
     p.add_argument("--output", default=str(ROOT / "results/runs/jpt-9b"))
+    p.add_argument("--split", choices=["test", "dev"], default="test",
+                   help="test (default) or dev: Jev's 4,520 development rows, for fitting a threshold; "
+                        "output goes to <output>-dev")
     p.add_argument("--limit", type=int, default=0, help="score a deterministic subset (0 = all rows)")
     p.add_argument("--threshold", type=float, default=THRESHOLD,
                    help="decision threshold (default: the frozen 0.30); rescoring the cache is free, but do not "
@@ -267,16 +277,21 @@ def main():
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     os.environ.setdefault("HF_HUB_OFFLINE", "1")   # weights come from the local cache
 
-    data = resolve_data(args.data)
+    data = resolve_data(args.data) if args.split == "test" else None
     out_dir = Path(args.output)
+    if args.split == "dev":   # a development run must never share a cache or report with the test run
+        out_dir = out_dir.with_name(out_dir.name + "-dev")
     if args.limit:   # a smoke test must never share a cache or report with a full run
         out_dir = out_dir.with_name(out_dir.name + f"-limit{args.limit}")
     identity = {
         "model": MODEL, "temperature": TEMPERATURE, "max_doc_chars": args.max_doc_chars,
         "pack_sha256": hashlib.sha256(PACK.read_bytes()).hexdigest(), "limit": args.limit,
-        "data_sha256": hashlib.sha256(data.read_bytes()).hexdigest(),
+        "data_sha256": hashlib.sha256(data.read_bytes()).hexdigest() if data else None,
     }
-    rows = load_rows(data, args.limit)
+    rows = load_rows(data, args.limit, args.split)
+    if args.split == "dev":
+        from dev_split import load_dev_rows
+        identity.update(split="dev", data_sha256=load_dev_rows()[1])
     cache_path = out_dir / "answers.jsonl"
     done = read_cache(cache_path, identity)
 
@@ -289,12 +304,17 @@ def main():
         raise SystemExit("No cached answers; run without --offline")
     complete = all(r["id"] in done for r in rows)
     report, row_md = build_report(rows, done, args, identity, complete)
+    if args.split == "dev":
+        report["split"] = "dev"
+        report["setting"] = "development split (Jev's tune + selection rows); not a benchmark score"
     (out_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     header = "| Model | Size | Average | " + " | ".join(COLUMNS) + " |"
     status = "" if complete else (f"\n\n**Incomplete: {report['rows_scored']}/{report['rows_total']} rows scored; "
                                   "not a benchmark score.**")
     if args.limit:
         status += "\n\n**Subset run (--limit): not a benchmark score.**"
+    if args.split == "dev":
+        status += "\n\n**Development split: for threshold fitting, not a benchmark score.**"
     (out_dir / "table_row.md").write_text(header + "\n|---|---:|---:|" + "---:|" * len(COLUMNS) + "\n" + row_md + status + "\n")
     print(header)
     print(row_md + status)

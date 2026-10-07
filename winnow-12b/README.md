@@ -36,6 +36,20 @@ If interrupted (Ctrl-C), rerun the same command: finished rows are skipped. The 
 - **Model:** `serve.sh` reads the GGUF from the Hugging Face cache (`MODEL_DIR=... ./serve.sh` to use another folder containing `gguf/Winnow-12B-NVFP4.gguf`).
 - **Options:** `serve.sh` honours `GPU` (default 0), `PORT` (8091), `CONTEXT` (32k). `benchmark.py` has `--url`, `--workers` (4), `--window`, `--timeout`.
 
+## Development threshold
+
+The 0.30 threshold was fitted to Jev. To give this model its own threshold the way Jev got one, score Jev's 4,520 development rows (the tune and selection pools, rebuilt from the local dev split and verified against the hashes in `results/frozen.json` by [`dev_split.py`](../dev_split.py)), then fit and apply with [`calibrate_transfer.py`](../calibrate_transfer.py):
+
+```sh
+python winnow-12b/benchmark.py --split dev            # development rows only -> results/runs/winnow-12b-dev/
+python calibrate_transfer.py fit                    # threshold from the dev cache; reads no test data
+python calibrate_transfer.py apply                  # once: fitted threshold on the existing test cache
+```
+
+`apply` scores the existing test cache (no new inference) and writes `results/runs/winnow-12b/report_dev_threshold.json` and `results/runs/dev_threshold_summary.md`; `report.json` keeps the frozen-0.30 result. Only the threshold is fitted; the temperature stays at the default.
+
+The server must be running (`serve.sh`), as for the test run; on a new machine rebuild it first with `setup.sh`.
+
 ## Output
 
 In `results/runs/winnow-12b/` (git-ignored): `answers.jsonl` (the cache), `report.json` and `table_row.md`, a ready-made row such as `| Winnow-12B-NVFP4 (ours; fixed Jev rule) | 12B | <avg> | <11 sources> |`. Smoke runs go to `results/runs/winnow-12b-limit<N>/` and are labelled as non-benchmark.

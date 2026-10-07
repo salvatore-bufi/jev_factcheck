@@ -98,11 +98,15 @@ def read_table(path):
     return pq.read_table(path)
 
 
-def load_rows(path, limit):
-    rows = read_table(Path(path)).to_pylist()
-    for i, row in enumerate(rows):
-        row["id"] = f"test:{i}"
-        row.pop("contamination_identifier", None)
+def load_rows(path, limit, split="test"):
+    if split == "dev":   # Jev's verified tune + selection pools (dev_split.py); ids are dev:<row>
+        from dev_split import load_dev_rows
+        rows = load_dev_rows()[0]
+    else:
+        rows = read_table(Path(path)).to_pylist()
+        for i, row in enumerate(rows):
+            row["id"] = f"test:{i}"
+            row.pop("contamination_identifier", None)
     if limit:
         # Deterministic pseudo-random subset (hash order) so a smoke test spans several sources.
         order = sorted(range(len(rows)), key=lambda i: hashlib.sha256(rows[i]["id"].encode()).hexdigest())
@@ -283,6 +287,9 @@ def main():
     p.add_argument("--data", default=str(default_data),
                    help="test.parquet, a HF datasets cache llm-aggre_fact-test.arrow, or the cache directory")
     p.add_argument("--output", default=str(ROOT / "results/runs/winnow-12b-bf16"))
+    p.add_argument("--split", choices=["test", "dev"], default="test",
+                   help="test (default) or dev: Jev's 4,520 development rows, for fitting a threshold; "
+                        "output goes to <output>-dev")
     p.add_argument("--limit", type=int, default=0, help="score a deterministic subset (0 = all rows)")
     p.add_argument("--temperature", type=float, default=TEMPERATURE,
                    help="decision temperature of the option softmax (default 1, Winnow's own); rescoring the "
@@ -306,8 +313,10 @@ def main():
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
-    data = resolve_data(args.data)
+    data = resolve_data(args.data) if args.split == "test" else None
     out_dir = Path(args.output)
+    if args.split == "dev":   # a development run must never share a cache or report with the test run
+        out_dir = out_dir.with_name(out_dir.name + "-dev")
     if args.limit:   # a smoke test must never share a cache or report with a full run
         out_dir = out_dir.with_name(out_dir.name + f"-limit{args.limit}")
     index = MODEL_DIR / "model.safetensors.index.json"
@@ -316,9 +325,12 @@ def main():
         "weights_index_sha256": hashlib.sha256(index.read_bytes()).hexdigest() if index.exists() else None,
         "prompt_sha256": hashlib.sha256((SYSTEM_PREFIX + BOUNDARY).encode()).hexdigest(),
         "pack_sha256": hashlib.sha256(PACK.read_bytes()).hexdigest(), "limit": args.limit,
-        "data_sha256": hashlib.sha256(data.read_bytes()).hexdigest(),
+        "data_sha256": hashlib.sha256(data.read_bytes()).hexdigest() if data else None,
     }
-    rows = load_rows(data, args.limit)
+    rows = load_rows(data, args.limit, args.split)
+    if args.split == "dev":
+        from dev_split import load_dev_rows
+        identity.update(split="dev", data_sha256=load_dev_rows()[1])
     cache_path = out_dir / "answers.jsonl"
     done = read_cache(cache_path, identity)
 
@@ -331,6 +343,9 @@ def main():
         raise SystemExit("No cached answers; run without --offline")
     complete = all(r["id"] in done for r in rows)
     report, row_md = build_report(rows, done, args, identity, complete)
+    if args.split == "dev":
+        report["split"] = "dev"
+        report["setting"] = "development split (Jev's tune + selection rows); not a benchmark score"
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     header = "| Model | Size | Average | " + " | ".join(COLUMNS) + " |"
@@ -338,6 +353,8 @@ def main():
                                   "not a benchmark score.**")
     if args.limit:
         status += "\n\n**Subset run (--limit): not a benchmark score.**"
+    if args.split == "dev":
+        status += "\n\n**Development split: for threshold fitting, not a benchmark score.**"
     (out_dir / "table_row.md").write_text(header + "\n|---|---:|---:|" + "---:|" * len(COLUMNS) + "\n" + row_md + status + "\n")
     print(header)
     print(row_md + status)

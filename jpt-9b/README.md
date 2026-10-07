@@ -30,6 +30,20 @@ If interrupted (Ctrl-C), rerun the same command: finished rows are skipped. The 
 - **Model:** read from `~/.cache/huggingface/hub` (`HF_HUB_OFFLINE=1` is set).
 - **Memory options:** `--max-model-len` (32768), `--max-num-seqs` (32), `--max-batched-tokens` (8192), `--gpu-util` (0.92), `--window` (64 rows per batch), `--gpu ID`. A prompt longer than `--max-model-len` is recorded as a failure, printed and excluded; the report is then marked incomplete. It is never shortened silently or given an invented score.
 
+## Development threshold
+
+The 0.30 threshold was fitted to Jev. To give this model its own threshold the way Jev got one, score Jev's 4,520 development rows (the tune and selection pools, rebuilt from the local dev split and verified against the hashes in `results/frozen.json` by [`dev_split.py`](../dev_split.py)), then fit and apply with [`calibrate_transfer.py`](../calibrate_transfer.py):
+
+```sh
+python jpt-9b/benchmark.py --split dev            # development rows only -> results/runs/jpt-9b-dev/
+python calibrate_transfer.py fit                    # threshold from the dev cache; reads no test data
+python calibrate_transfer.py apply                  # once: fitted threshold on the existing test cache
+```
+
+`apply` scores the existing test cache (no new inference) and writes `results/runs/jpt-9b/report_dev_threshold.json` and `results/runs/dev_threshold_summary.md`; `report.json` keeps the frozen-0.30 result. Only the threshold is fitted; the temperature stays at the default.
+
+The weights are pinned to revision `b447cc7`, the one the test run used, so later Hub commits cannot change them between the `dev` and `test` runs. The next revision (`9fda2c7`, 2026-10-04) changed only the model card; its weight files have the same hashes.
+
 ## Output
 
 In `results/runs/jpt-9b/` (git-ignored): `answers.jsonl` (the cache: per-question yes-probabilities and prompt tokens), `report.json` (per-source and pooled metrics) and `table_row.md`, a ready-made row such as `| JPT-9B (ours; fixed Jev rule) | 9B | <avg> | <11 sources> |` in the table's format. Smoke runs go to `results/runs/jpt-9b-limit1/` and are labelled as non-benchmark.

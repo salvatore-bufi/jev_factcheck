@@ -41,6 +41,18 @@ The bf16 weights take 22.2 GiB, and the KV cache for a long context adds about 8
 
 Other options: `--max-num-seqs` (32), `--max-batched-tokens` (16384), `--gpu-util` (0.92), `--window` (128 rows per batch). The script sets `VLLM_USE_FLASHINFER_SAMPLER=0`, because without `nvcc` FlashInfer's sampler would try to compile CUDA at start-up; it never samples (one greedy token, label logprobs only).
 
+## Development threshold
+
+The 0.30 threshold was fitted to Jev. To give this model its own threshold the way Jev got one, score Jev's 4,520 development rows (the tune and selection pools, rebuilt from the local dev split and verified against the hashes in `results/frozen.json` by [`dev_split.py`](../dev_split.py)), then fit and apply with [`calibrate_transfer.py`](../calibrate_transfer.py):
+
+```sh
+python winnow-12b-bf16/benchmark.py --split dev            # development rows only -> results/runs/winnow-12b-bf16-dev/
+python calibrate_transfer.py fit                    # threshold from the dev cache; reads no test data
+python calibrate_transfer.py apply                  # once: fitted threshold on the existing test cache
+```
+
+`apply` scores the existing test cache (no new inference) and writes `results/runs/winnow-12b-bf16/report_dev_threshold.json` and `results/runs/dev_threshold_summary.md`; `report.json` keeps the frozen-0.30 result. Only the threshold is fitted; the temperature stays at the default.
+
 ## Output
 
 In `results/runs/winnow-12b-bf16/` (git-ignored): `answers.jsonl` (the cache), `report.json` and `table_row.md`, a ready-made row such as `| Winnow-12B-BF16 (ours; fixed Jev rule) | 12B | <avg> | <11 sources> |`. Smoke runs go to `results/runs/winnow-12b-bf16-limit<N>/` and are labelled as non-benchmark.
