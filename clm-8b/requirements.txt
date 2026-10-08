@@ -1,0 +1,8 @@
+# Runs in the existing "factcheck" conda environment (Python 3.12, CUDA GPU; the 16 GB bf16 encoder fits a 24 GB card).
+vllm>=0.28
+contrastive-lm==0.1.0     # install with: pip install --no-deps contrastive-lm==0.1.0 (reuses its text layout and head code)
+torch
+transformers
+pyarrow
+scikit-learn
+numpy

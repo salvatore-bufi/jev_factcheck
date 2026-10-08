@@ -105,6 +105,7 @@ Balanced accuracy (%) per source; **Average gives equal weight to all 11 sources
 | `rune-26b/` | Rune 26B-A4B v3 (`surogate/rune-26b-a4b-GGUF`) evaluated with vLLM and CPU weight offload under the frozen Jev rule; see its README (about 20 hours on a 24 GB GPU). |
 | `winnow-12b/` | Winnow-12B (NVFP4 GGUF) evaluated through its own llama.cpp-based `/v1/systemone` server under the frozen Jev rule; see its README (about 2 hours). |
 | `winnow-12b-bf16/` | Winnow-12B at full bf16 precision with vLLM: converts the BF16 GGUF to safetensors, then runs the frozen Jev rule; see its README (needs a 45 GB GPU for the full run). |
+| `clm-8b/` | CLM-v0.1-8B (`Contrastive-LM/CLM-v0.1-8B`: Qwen3-8B encoder + projection heads) evaluated in-process with vLLM under the frozen Jev rule; see its README (about 2 hours, estimated). |
 | `evaluate.py` | Reusable runner for any System One model, data file or question pack (see below). |
 | `test_bench.py`, `test_metrics.py`, `test_evaluate.py` | Offline tests (synthetic data, mocked HTTP). |
 | `packs/` | Question packs for `evaluate.py`: `claim_support.json` (frozen three-question rule), `binary_support.json` (one choice question). |
@@ -219,6 +220,8 @@ python FactCG/test_benchmark.py                               # offline test, no
 The first run downloads the ~1.7 GB model into `FactCG/cache/`. A GPU is strongly recommended; `--gpu ID`, `--device`, `--batch-size` and `--window` adjust execution. Outputs go to `results/runs/factcg-deberta-v3-large/` (git-ignored): `scores.jsonl` (resumable cache, tied to model, chunking, threshold and data hash), `report.json` (per-source and pooled metrics) and `table_row.md`, a ready-made row in the format of the table above. Subset runs (`--limit`) write to a separate directory and are labelled as non-benchmark. Note that the leaderboard already lists a published FactCG-DeBERTa-L row (75.6); the row produced here is our own reproduction and is labelled as such. **This model has not been run yet in this repository**, so the table contains no row for it.
 
 ## Fixed transfer evaluation: CLM-v0.1-8B
+
+> **Ready-to-run version:** `clm-8b/` runs this same model in-process with vLLM (no servers) and writes a table row; see [clm-8b/README.md](clm-8b/README.md). The server-based commands below are the original plan and have not been run.
 
 [Contrastive-LM/CLM-v0.1-8B](https://huggingface.co/Contrastive-LM/CLM-v0.1-8B) is self-hosted; its [official server](https://github.com/Contrastive-LM/CLM) exposes the same `/v1/systemone` schema on a Qwen3-8B pooling encoder. The plan is to run the existing three-question pack, minimum rule and `> 0.30` threshold **unchanged** on all 29,320 rows of `data/test.parquet`, with no CLM-specific tuning. Do not adjust the configuration using partial or final results. **This has not been run**: no NVIDIA driver was available where it was prepared, so only offline checks and a dry run were done.
 
