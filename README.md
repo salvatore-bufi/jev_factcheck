@@ -106,6 +106,7 @@ Balanced accuracy (%) per source; **Average gives equal weight to all 11 sources
 | `winnow-12b/` | Winnow-12B (NVFP4 GGUF) evaluated through its own llama.cpp-based `/v1/systemone` server under the frozen Jev rule; see its README (about 2 hours). |
 | `winnow-12b-bf16/` | Winnow-12B at full bf16 precision with vLLM: converts the BF16 GGUF to safetensors, then runs the frozen Jev rule; see its README (needs a 45 GB GPU for the full run). |
 | `clm-8b/` | CLM-v0.1-8B (`Contrastive-LM/CLM-v0.1-8B`: Qwen3-8B encoder + projection heads) evaluated in-process with vLLM under the frozen Jev rule; see its README (about 2 hours, estimated). |
+| `d1-3b/` | d1-3B (`LiquidAI/d1-3B`, 3B decision model) through its own `system_one` API with transformers, under the frozen Jev rule; see its README (about 40 minutes, estimated). |
 | `evaluate.py` | Reusable runner for any System One model, data file or question pack (see below). |
 | `test_bench.py`, `test_metrics.py`, `test_evaluate.py` | Offline tests (synthetic data, mocked HTTP). |
 | `packs/` | Question packs for `evaluate.py`: `claim_support.json` (frozen three-question rule), `binary_support.json` (one choice question). |
