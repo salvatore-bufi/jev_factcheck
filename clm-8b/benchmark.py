@@ -27,7 +27,7 @@ raw logits (scale * cosine), so --temperature (default 1) and --threshold only r
 pick either from test results.
 
 Data: data/test.parquet if present, else the Hugging Face cache directory
-./lytang___llm-aggre_fact; override with --data. Models are read from the local Hugging Face cache.
+./lytang___llm-aggre_fact; override with --data. Models are read from the local Hugging Face cache (HF_HOME / HF_HUB_CACHE are honoured).
 """
 import argparse
 from datetime import datetime, timezone
@@ -52,7 +52,14 @@ os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")   # fork + OpenMP
 from metrics import metrics  # noqa: E402
 
 ENCODER = "Qwen/Qwen3-8B"     # the encoder the heads were trained against
-HEADS_GLOB = str(Path.home() / ".cache/huggingface/hub/models--Contrastive-LM--CLM-v0.1-8B/snapshots/*/CLM_v0.1-8B.pt")
+
+def hub_cache():
+    """The Hugging Face hub cache directory (honours HF_HUB_CACHE and HF_HOME)."""
+    if os.environ.get("HF_HUB_CACHE"):
+        return Path(os.environ["HF_HUB_CACHE"]).expanduser()
+    return Path(os.environ.get("HF_HOME", Path.home() / ".cache/huggingface")).expanduser() / "hub"
+
+
 NAME = "CLM-v0.1-8B"
 SIZE = "8B"
 TEMPERATURE = 1.0             # the CLM client's default
@@ -150,10 +157,28 @@ def decide(logits_by_question, temperature):
 # ---------------------------------------------------------------- inference
 
 def find_heads(path=None):
-    path = path or (sorted(glob.glob(HEADS_GLOB)) or [None])[0]
+    path = path or (sorted(glob.glob(str(hub_cache() / "models--Contrastive-LM--CLM-v0.1-8B/snapshots/*/CLM_v0.1-8B.pt"))) or [None])[0]
     if not path or not Path(path).exists():
-        raise SystemExit("CLM_v0.1-8B.pt not found in the Hugging Face cache; run `hf download Contrastive-LM/CLM-v0.1-8B`")
+        raise SystemExit(f"CLM_v0.1-8B.pt not found under {hub_cache()}; run `hf download Contrastive-LM/CLM-v0.1-8B` "
+                         "(or pass --heads PATH)")
     return path
+
+
+def check_encoder():
+    """The run is offline, so Qwen/Qwen3-8B must already be complete in the cache: fail with a clear message."""
+    snapshots = sorted(glob.glob(str(hub_cache() / "models--Qwen--Qwen3-8B/snapshots/*")))
+    for snap in snapshots:
+        index = Path(snap) / "model.safetensors.index.json"
+        if index.exists():
+            shards = set(json.loads(index.read_text())["weight_map"].values())
+            missing = sorted(f for f in shards if not (Path(snap) / f).exists())
+            if not missing and (Path(snap) / "config.json").exists() and (Path(snap) / "tokenizer.json").exists():
+                return
+            raise SystemExit(f"{snap} is incomplete (missing {missing or 'config/tokenizer'}). "
+                             "Finish it with `hf download Qwen/Qwen3-8B`.")
+    raise SystemExit(f"The encoder Qwen/Qwen3-8B (16 GB) is not in the Hugging Face cache {hub_cache()}. CLM needs it in "
+                     "addition to the CLM heads, and this run is offline. Download it on a machine with internet and "
+                     "copy the folder models--Qwen--Qwen3-8B into that cache, or run `hf download Qwen/Qwen3-8B` here.")
 
 
 class Scorer:
@@ -317,6 +342,7 @@ def main():
     done = read_cache(cache_path, identity)
 
     if not args.offline and len(done) < len(rows):
+        check_encoder()
         scorer = Scorer(args)
         print(f"{len(rows) - len(done)} of {len(rows)} rows to score", flush=True)
         score_rows(rows, scorer, args, cache_path, identity, done)
