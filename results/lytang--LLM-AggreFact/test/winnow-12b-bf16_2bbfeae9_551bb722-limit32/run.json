@@ -141,7 +141,7 @@
       }
     ]
   },
-  "status": "running",
+  "status": "complete",
   "sessions": [
     {
       "started_at": "2026-10-13T13:00:27.595460+00:00",
@@ -170,7 +170,120 @@
         "--tag",
         ""
       ],
-      "gpu": "0"
+      "gpu": "0",
+      "load_seconds": 150.036,
+      "first_call_seconds": 13.1692,
+      "warmup_seconds": [
+        13.1692,
+        14.8641,
+        8.618,
+        7.4588
+      ],
+      "main_rows_scored": 32,
+      "main_rows_failed": 0,
+      "main_seconds": 401.953,
+      "finished_at": "2026-10-13T13:15:51.990046+00:00",
+      "telemetry": {
+        "start": {
+          "samples": 1,
+          "seconds": 0,
+          "energy_j": 0.0,
+          "power_mean_w": 23.1,
+          "power_max_w": 23.114,
+          "gpu_util_mean": 0.0,
+          "gpu_mem_peak_mb": 606,
+          "rss_peak_mb": 218.4,
+          "temp_max_c": 64,
+          "sm_clock_mean_mhz": 1650,
+          "sm_clock_min_mhz": 1650
+        },
+        "load": {
+          "samples": 671,
+          "seconds": 149.562,
+          "energy_j": 13835.6,
+          "power_mean_w": 95.8,
+          "power_max_w": 164.248,
+          "gpu_util_mean": 79.4,
+          "gpu_mem_peak_mb": 21392,
+          "rss_peak_mb": 25084.7,
+          "temp_max_c": 75,
+          "sm_clock_mean_mhz": 2420,
+          "sm_clock_min_mhz": 180
+        },
+        "warmup": {
+          "samples": 209,
+          "seconds": 43.92,
+          "energy_j": 5688.8,
+          "power_mean_w": 129.5,
+          "power_max_w": 167.025,
+          "gpu_util_mean": 98.5,
+          "gpu_mem_peak_mb": 21619,
+          "rss_peak_mb": 22597.7,
+          "temp_max_c": 75,
+          "sm_clock_mean_mhz": 2727,
+          "sm_clock_min_mhz": 1590
+        },
+        "latency": {
+          "samples": 745,
+          "seconds": 157.287,
+          "energy_j": 19614.5,
+          "power_mean_w": 124.7,
+          "power_max_w": 157.586,
+          "gpu_util_mean": 99.9,
+          "gpu_mem_peak_mb": 22339,
+          "rss_peak_mb": 22613.5,
+          "temp_max_c": 76,
+          "sm_clock_mean_mhz": 2750,
+          "sm_clock_min_mhz": 2250
+        },
+        "throughput_bs1": {
+          "samples": 496,
+          "seconds": 104.283,
+          "energy_j": 12890.2,
+          "power_mean_w": 123.6,
+          "power_max_w": 152.664,
+          "gpu_util_mean": 99.9,
+          "gpu_mem_peak_mb": 22339,
+          "rss_peak_mb": 22613.8,
+          "temp_max_c": 76,
+          "sm_clock_mean_mhz": 2753,
+          "sm_clock_min_mhz": 2460
+        },
+        "throughput_bs4": {
+          "samples": 315,
+          "seconds": 66.049,
+          "energy_j": 9282.1,
+          "power_mean_w": 140.5,
+          "power_max_w": 164.225,
+          "gpu_util_mean": 100.0,
+          "gpu_mem_peak_mb": 22353,
+          "rss_peak_mb": 22614.1,
+          "temp_max_c": 77,
+          "sm_clock_mean_mhz": 2736,
+          "sm_clock_min_mhz": 2250
+        },
+        "main": {
+          "samples": 1884,
+          "seconds": 401.727,
+          "energy_j": 46820.3,
+          "power_mean_w": 116.6,
+          "power_max_w": 170.607,
+          "gpu_util_mean": 100.0,
+          "gpu_mem_peak_mb": 23955,
+          "rss_peak_mb": 22618.4,
+          "temp_max_c": 78,
+          "sm_clock_mean_mhz": 2751,
+          "sm_clock_min_mhz": 1717
+        }
+      }
     }
-  ]
+  ],
+  "model": {
+    "weights": "/home/salvatore/Projects/jev-check-main/models/winnow-12b-bf16/model",
+    "source": "EldanRing/Winnow-12B gguf/Winnow-12B-BF16.gguf",
+    "weights_index_sha256": "ba9eba89bb1a243a672ffcd97ec2135b2f7d727ebc33df61a62e4a10802130c7",
+    "prompt": "Winnow server protocol",
+    "temperature": 1.0,
+    "cpu_offload_gb": 15.0
+  }
 }

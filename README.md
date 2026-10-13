@@ -109,7 +109,7 @@ results/<dataset>/<split>/<model>_<params hash>_<questions hash>[-limitN][-tag]/
     report.json       everything below, rebuilt from the files above
 ```
 
-`report.json` holds: balanced accuracy (macro over sources, as the LLM-AggreFact leaderboard computes it), pooled
+Every file and field is described in [README_RESULTS.md](README_RESULTS.md). `report.json` holds: balanced accuracy (macro over sources, as the LLM-AggreFact leaderboard computes it), pooled
 accuracy, ROC AUC and recalls under the decision rule; the same **per source** and **per length bucket** (claim
 characters, document characters, prompt tokens); each question's own AUC; latency percentiles (p50/p90/p95/p99) overall,
 per source and per length; throughput (rows, questions and prompt tokens per second) and the batch-size sweep; load time,
