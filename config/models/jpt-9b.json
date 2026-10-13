@@ -1,0 +1,10 @@
+{
+  "_comment": "JPT-9B on vLLM with the llm2jev prompt. temperature 1.087 is fixed by the model card; revision b447cc7 is the weights of the published runs.",
+  "revision": "b447cc7ee105c0a76a22f8fde8ecf05074dc8be0",
+  "temperature": 1.087,
+  "max_model_len": 32768,
+  "gpu_util": 0.92,
+  "max_num_seqs": 32,
+  "max_batched_tokens": 8192,
+  "batch": 64
+}

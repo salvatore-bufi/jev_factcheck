@@ -1,0 +1,16 @@
+{
+  "5147a4ec": {
+    "model": "jpt-9b",
+    "model_name": "JPT-9B",
+    "options": {
+      "revision": "b447cc7ee105c0a76a22f8fde8ecf05074dc8be0",
+      "temperature": 1.087,
+      "max_model_len": 32768,
+      "gpu_util": 0.92,
+      "max_num_seqs": 32,
+      "max_batched_tokens": 8192,
+      "batch": 64
+    },
+    "first_used": "2026-10-13T12:59:12.037363+00:00"
+  }
+}

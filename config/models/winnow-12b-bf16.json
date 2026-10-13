@@ -1,0 +1,10 @@
+{
+  "_comment": "Winnow-12B BF16 on vLLM (converted by convert.py) with the Winnow server's prompt. cpu_offload_gb 'auto' is 0 on a 45 GB card, about 15 GB on a 24 GB card.",
+  "temperature": 1.0,
+  "max_model_len": 32768,
+  "cpu_offload_gb": "auto",
+  "gpu_util": 0.92,
+  "max_num_seqs": 32,
+  "max_batched_tokens": 16384,
+  "batch": 128
+}

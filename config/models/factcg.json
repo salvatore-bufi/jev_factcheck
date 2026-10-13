@@ -1,0 +1,7 @@
+{
+  "_comment": "FactCG-DeBERTa-v3-Large baseline (ignores the questions): chunk_size words per chunk, max support probability over chunks > 0.5.",
+  "chunk_size": 550,
+  "max_length": 2048,
+  "pair_batch": 8,
+  "batch": 32
+}

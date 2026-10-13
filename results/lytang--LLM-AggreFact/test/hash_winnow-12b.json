@@ -1,0 +1,16 @@
+{
+  "dad58b5b": {
+    "model": "winnow-12b",
+    "model_name": "Winnow-12B-NVFP4",
+    "options": {
+      "port": 8091,
+      "context": "32k",
+      "workers": 4,
+      "timeout": 300.0,
+      "startup_timeout": 900.0,
+      "url": "",
+      "batch": 64
+    },
+    "first_used": "2026-10-13T13:00:02.212389+00:00"
+  }
+}

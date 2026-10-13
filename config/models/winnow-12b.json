@@ -1,0 +1,10 @@
+{
+  "_comment": "Winnow-12B NVFP4 on the authors' llama.cpp server (started by the benchmark). Temperature is the server's own (1).",
+  "port": 8091,
+  "context": "32k",
+  "workers": 4,
+  "timeout": 300.0,
+  "startup_timeout": 900.0,
+  "url": "",
+  "batch": 64
+}

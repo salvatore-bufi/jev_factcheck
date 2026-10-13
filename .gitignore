@@ -19,31 +19,35 @@ __pycache__/
 *.swp
 *~
 .DS_Store
+.claude/
 
-# Downloaded datasets and model weights; keep pinned Hub metadata
-/data/*
-!/data/hub_metadata.json
-./lytang___llm-aggre_fact/*
-./results/*
-# Keep Jev reports, metrics, provenance, frozen configuration and test answers.
-# The test cache lets collaborators verify results without new inference.
-/results/*predictions.jsonl
-!/results/test_predictions.jsonl
-/results/*errors.jsonl
-/results/*manifest.jsonl
-/results/validation_error_analysis/review_sample.jsonl
-/results/validation_error_analysis/error_manifest.jsonl
-/results/runs/
+# Datasets are downloaded or copied locally, never committed (see dataset/README.md)
+/dataset/*/
+!/dataset/README.md
 
-# FactCG: HF model cache and original Lightning checkpoint
-/FactCG/cache/
-/FactCG/ckpt/*
-!/FactCG/ckpt/.gitkeep
+# Benchmark results: keep the small summaries, ignore the bulky per-row and telemetry files
+/results/**/answers.jsonl
+/results/**/batches.jsonl
+/results/**/latency.jsonl
+/results/**/throughput.jsonl
+/results/**/telemetry.jsonl
+/results/**/failures.jsonl
+/results/**/*.lock
 
-# Winnow server: source checkout, build output and CUDA library symlinks
-/winnow-12b/src/
-/winnow-12b/cuda-libs/
-/winnow-12b/runtime/
+# Model-specific build outputs and weights
+/models/factcg/cache/
+/models/factcg/ckpt/*
+!/models/factcg/ckpt/.gitkeep
+/models/winnow-12b/src/
+/models/winnow-12b/cuda-libs/
+/models/winnow-12b/runtime/
+/models/winnow-12b-bf16/model/
 
-# Winnow bf16: converted checkpoint (24 GB)
-/winnow-12b-bf16/model/
+# Legacy Jev experiment: derived development pools and the old (untracked) per-model run caches
+/legacy/data/tune.jsonl
+/legacy/data/selection.jsonl
+/legacy/results/*predictions.jsonl
+!/legacy/results/test_predictions.jsonl
+/legacy/results/validation_error_analysis/review_sample.jsonl
+/legacy/results/validation_error_analysis/error_manifest.jsonl
+/legacy/results_runs/

@@ -1,0 +1,5 @@
+{
+  "_comment": "d1-3B through its own system_one API (transformers). The engine has no temperature: it reports probabilities only.",
+  "revision": "051bcc464b01b9f92942b364d9586b0ef5912432",
+  "batch": 64
+}
