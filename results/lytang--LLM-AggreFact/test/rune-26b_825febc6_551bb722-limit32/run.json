@@ -145,7 +145,7 @@
       }
     ]
   },
-  "status": "running",
+  "status": "complete",
   "sessions": [
     {
       "started_at": "2026-10-13T13:15:57.434281+00:00",
@@ -174,7 +174,106 @@
         "--tag",
         ""
       ],
-      "gpu": "0"
+      "gpu": "0",
+      "load_seconds": 186.327,
+      "first_call_seconds": 4.7443,
+      "warmup_seconds": [
+        4.7443,
+        7.5381,
+        2.8237,
+        2.2652
+      ],
+      "main_rows_scored": 32,
+      "main_rows_failed": 0,
+      "main_seconds": 84.824,
+      "finished_at": "2026-10-13T13:22:42.665361+00:00",
+      "telemetry": {
+        "load": {
+          "samples": 694,
+          "seconds": 171.462,
+          "energy_j": 8191.7,
+          "power_mean_w": 55.3,
+          "power_max_w": 158.367,
+          "gpu_util_mean": 36.3,
+          "gpu_mem_peak_mb": 21809,
+          "rss_peak_mb": 49124.2,
+          "temp_max_c": 73,
+          "sm_clock_mean_mhz": 1947,
+          "sm_clock_min_mhz": 180
+        },
+        "warmup": {
+          "samples": 81,
+          "seconds": 17.194,
+          "energy_j": 1867.5,
+          "power_mean_w": 108.6,
+          "power_max_w": 154.267,
+          "gpu_util_mean": 93.8,
+          "gpu_mem_peak_mb": 21810,
+          "rss_peak_mb": 22342.8,
+          "temp_max_c": 72,
+          "sm_clock_mean_mhz": 2638,
+          "sm_clock_min_mhz": 217
+        },
+        "latency": {
+          "samples": 210,
+          "seconds": 44.274,
+          "energy_j": 5212.0,
+          "power_mean_w": 117.8,
+          "power_max_w": 153.851,
+          "gpu_util_mean": 99.8,
+          "gpu_mem_peak_mb": 22354,
+          "rss_peak_mb": 22355.9,
+          "temp_max_c": 75,
+          "sm_clock_mean_mhz": 2753,
+          "sm_clock_min_mhz": 2497
+        },
+        "throughput_bs1": {
+          "samples": 194,
+          "seconds": 41.168,
+          "energy_j": 4777.2,
+          "power_mean_w": 116.1,
+          "power_max_w": 180.855,
+          "gpu_util_mean": 99.5,
+          "gpu_mem_peak_mb": 22373,
+          "rss_peak_mb": 22439.7,
+          "temp_max_c": 76,
+          "sm_clock_mean_mhz": 2745,
+          "sm_clock_min_mhz": 2302
+        },
+        "throughput_bs4": {
+          "samples": 145,
+          "seconds": 30.588,
+          "energy_j": 3049.9,
+          "power_mean_w": 99.7,
+          "power_max_w": 128.0,
+          "gpu_util_mean": 99.7,
+          "gpu_mem_peak_mb": 22358,
+          "rss_peak_mb": 22431.9,
+          "temp_max_c": 76,
+          "sm_clock_mean_mhz": 2761,
+          "sm_clock_min_mhz": 2677
+        },
+        "main": {
+          "samples": 399,
+          "seconds": 84.569,
+          "energy_j": 9133.2,
+          "power_mean_w": 108.0,
+          "power_max_w": 145.952,
+          "gpu_util_mean": 99.6,
+          "gpu_mem_peak_mb": 23368,
+          "rss_peak_mb": 22438.4,
+          "temp_max_c": 76,
+          "sm_clock_mean_mhz": 2758,
+          "sm_clock_min_mhz": 2662
+        }
+      }
     }
-  ]
+  ],
+  "model": {
+    "repo": "surogate/rune-26b-a4b-GGUF",
+    "revision": "c6b360d47895bb77bdf3805a13ee5a5557ab1921",
+    "prompt": "surogate decisions v1",
+    "temperature": 2.0,
+    "cpu_offload_gb": 36.0
+  }
 }
