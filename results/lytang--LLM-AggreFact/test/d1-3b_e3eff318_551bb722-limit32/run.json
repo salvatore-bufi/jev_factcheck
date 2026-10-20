@@ -85,51 +85,30 @@
   "environment": {
     "host": "CYS-AIL-020-ROM-UBUNTU24",
     "platform": "Linux-7.0.11-76070011-generic-x86_64-with-glibc2.39",
-    "python": "3.12.13",
+    "python": "3.14.6",
     "cpu": "Intel(R) Core(TM) Ultra 9 275HX",
     "cpu_count": 24,
     "git": {
-      "commit": "da0f39980c01b12994120abb095ac7c729dbbf14",
+      "commit": "2c6c62487d4ab7261c8641022d3e2525c0267aa4",
       "branch": "benchmark",
-      "dirty": true
+      "dirty": false
     },
     "cuda_visible_devices": "0",
     "packages": {
-      "torch": "2.13.0",
-      "transformers": "5.14.1",
-      "vllm": "0.28.0",
-      "llm2jev": "0.6.1",
-      "contrastive-lm": "0.1.0",
-      "numpy": "2.3.5",
+      "torch": "2.14.0",
+      "transformers": "5.16.1",
+      "numpy": "2.5.2",
       "pyarrow": "25.0.1",
       "scikit-learn": "1.9.0",
-      "nvidia-ml-py": "13.610.43",
-      "huggingface-hub": "1.30.0",
+      "huggingface-hub": "1.29.0",
       "safetensors": "0.8.0",
-      "gguf": "0.19.0",
       "requests": "2.34.2"
     },
-    "ram_total_gb": 65.3,
-    "gpu": {
-      "index": 0,
-      "name": "NVIDIA GeForce RTX 5090 Laptop GPU",
-      "memory_total_mb": 24463,
-      "driver": "595.84",
-      "cuda_driver": 13020,
-      "power_limit_w": 140.0,
-      "pcie_gen_max": 5,
-      "pcie_width_max": 16
-    }
+    "ram_total_gb": 65.3
   },
   "gpu_busy_at_start": {
     "compute": [],
-    "graphics": [
-      {
-        "pid": 2820,
-        "used_mb": 34,
-        "name": "cosmic-comp"
-      }
-    ]
+    "graphics": []
   },
   "status": "complete",
   "sessions": [
@@ -264,6 +243,88 @@
           "temp_max_c": 61,
           "sm_clock_mean_mhz": 2174,
           "sm_clock_min_mhz": 2040
+        }
+      }
+    },
+    {
+      "started_at": "2026-10-19T08:20:15.567468+00:00",
+      "argv": [
+        "/home/salvatore/Projects/jev-check-main/core/runner.py",
+        "--model",
+        "d1-3b",
+        "--dataset",
+        "lytang--LLM-AggreFact",
+        "--split",
+        "test",
+        "--questions",
+        "/home/salvatore/Projects/jev-check-main/config/questions/claim_support.json",
+        "--limit",
+        "32",
+        "--max-doc-chars",
+        "80000",
+        "--latency-sample",
+        "200",
+        "--throughput-sizes",
+        "1,8,32",
+        "--throughput-sample",
+        "64",
+        "--gpu",
+        "0",
+        "--tag",
+        ""
+      ],
+      "gpu": "0",
+      "load_seconds": 6.074,
+      "first_call_seconds": 0.5013,
+      "warmup_seconds": [
+        0.5013,
+        0.1129,
+        0.038,
+        0.0255
+      ],
+      "main_rows_scored": 0,
+      "main_rows_failed": 0,
+      "main_seconds": 0.0,
+      "finished_at": "2026-10-19T08:20:24.893539+00:00",
+      "telemetry": {
+        "load": {
+          "samples": 20,
+          "seconds": 5.489,
+          "energy_j": 0.0,
+          "power_mean_w": null,
+          "power_max_w": null,
+          "gpu_util_mean": null,
+          "gpu_mem_peak_mb": null,
+          "rss_peak_mb": 6714.8,
+          "temp_max_c": null,
+          "sm_clock_mean_mhz": null,
+          "sm_clock_min_mhz": null
+        },
+        "warmup": {
+          "samples": 3,
+          "seconds": 0.415,
+          "energy_j": 0.0,
+          "power_mean_w": null,
+          "power_max_w": null,
+          "gpu_util_mean": null,
+          "gpu_mem_peak_mb": null,
+          "rss_peak_mb": 2005.0,
+          "temp_max_c": null,
+          "sm_clock_mean_mhz": null,
+          "sm_clock_min_mhz": null
+        },
+        "latency": {
+          "samples": 12,
+          "seconds": 2.288,
+          "energy_j": 0.0,
+          "power_mean_w": null,
+          "power_max_w": null,
+          "gpu_util_mean": null,
+          "gpu_mem_peak_mb": null,
+          "rss_peak_mb": 2008.1,
+          "temp_max_c": null,
+          "sm_clock_mean_mhz": null,
+          "sm_clock_min_mhz": null
         }
       }
     }

@@ -60,6 +60,41 @@ python benchmark.py --model rune-26b --gpu 1 --opt rune-26b:cpu_offload_gb=18
 - **Run options.** `--batch`, `--max-doc-chars` (default 80,000, keeping 75% head and 25% tail), `--latency-sample` (200),
   `--throughput-sizes` (`1,8,32`), `--throughput-sample` (64), `--no-profile`, `--tag`.
 
+### Full test and dev runs
+
+A run covers the whole split unless `--limit` is given. LLM-AggreFact has three splits in `dataset/lytang--LLM-AggreFact/`:
+
+| `--split` | Rows | Use |
+|---|---:|---|
+| `test` (default) | 29,320 | the benchmark result (the numbers for `table.md`) |
+| `dev` | 30,420 | the full official development split |
+| `dev-jev4520` | 4,520 | the development rows Jev's 0.30 threshold was fitted on; use it to fit each model's own threshold |
+
+```sh
+# full test split, every decision model one after another on GPU 2 (FactCG is the baseline: add it if wanted)
+nohup python benchmark.py --model d1-3b jpt-9b clm-8b winnow-12b winnow-12b-bf16 rune-26b --gpu 2 \
+      --split test > test_run.log 2>&1 &
+
+# full official dev split
+nohup python benchmark.py --model d1-3b jpt-9b clm-8b winnow-12b winnow-12b-bf16 rune-26b --gpu 2 \
+      --split dev > dev_run.log 2>&1 &
+
+# only the 4,520 rows needed to fit thresholds (much shorter), then apply them to the test results
+python benchmark.py --model d1-3b jpt-9b --gpu 2 --split dev-jev4520
+python report.py --split test --calibrate-on dev-jev4520
+```
+
+- **Same command to resume.** If a long run stops (Ctrl-C, reboot, a lost SSH session), run the same command again:
+  each model skips the rows it has already scored. The latency probe and throughput sweep are done once per result folder.
+- **Calibration needs the same models and options.** `--calibrate-on` matches the dev and test folders by name, which
+  includes the params hash: run both splits with the same options.
+- **Duration.** One model's full test split takes from well under an hour (d1-3B: about 12 rows/s on an RTX 5090 Laptop
+  GPU) to many hours when the weights do not fit the GPU (Rune with CPU offload on a 24 GB card: about 0.4 rows/s, roughly
+  20 hours). `tail -f test_run.log` shows the progress; the per-model summary is printed at the end, and the comparison
+  tables are written to `results/lytang--LLM-AggreFact/<split>/summary_<hash>.md`.
+- **Test results are final.** Do not tune questions, thresholds or options on the test split: choose them on `dev` or
+  `dev-jev4520`, then run the test split once.
+
 ## Model options
 
 Each model's hyperparameters (temperature, context length, CPU offload, batch size, model and encoder revisions, ...)
