@@ -1,0 +1,13 @@
+Dataset Fact Checking List:
+  
+ -  FEVER (Fact Extraction and VERification) - 2018 185.000 affermazioni verificate contro pagine Wikipedia
+ -  HoVer (Hop-Based Verification). Questo benchmark sfida i modelli a estrarre fatti da più articoli (fino a quattro) per verificare una singola affermazione
+ - AVeriTeC (Automated VERIfication of TExtual Claims) Include 4.568 affermazioni raccolte da 50 diverse organizzazioni di fact-checking professionali
+ - LOREFACT Un testo potrebbe contenere due fatti atomici inoppugnabilmente veri, ma collegati da un'implicazione causale falsa; 
+ - FACTKG: Fact Verification via Reasoning on Knowledge Graphs - https://arxiv.org/pdf/2305.06590
+ - LIAR: Contiene 12.836 brevi affermazioni politiche, annotate manualmente - “Liar, Liar Pants on Fire”:
+A New Benchmark Dataset for Fake News Detection - https://aclanthology.org/P17-2067.pdf
+- 2026 - RealFactBench: A Benchmark for Evaluating Large Language Models in Real-World Fact-Checking
+- 2026 - CLAIMDB consists of 80 unique real-life databases covering a wide range of domains, from governance and healthcare to media, education and the natural sciences. per ovviare al problema dell'assunzione che |evidence | < context_window llm s.t. fitta tutto all'interno della cw. - each claim involves 11 tables and 4.5M records on average, reflecting the scale and complexity of real-world fact-checking.  anche qui classi: entailed, contrdicted,not enough info. Direzioni suggerite: Program of Thoughts (PoT) (Chen et al., 2023), tool-calling agents (Wang et al., 2024a; Theologitis and Suciu, 2025), and Recursive Language Models (Zhang et al., 2026)
+- 2025 - Piecing It All Together: Verifying Multi-Hop Multimodal Claims,  reason over multiple pieces of evidence from diverse sources, including text, images, and tables, and determine whether the combined multimodal evidence supports or refutes a given claim, 
+- 2026 - TSVer: A Benchmark for Fact Verification Against Time-Series Evidence - avoided claims solvable by simple look-ups or simple arithmetic operations (common in numerical datasets (Lu et al., 2023)) and instead targeted claims requiring reasoning across multiple countries, time series, and claims containing temporal and numerical ambiguities
