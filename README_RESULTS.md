@@ -324,3 +324,108 @@ Scritto da `report.py` (e alla fine di ogni `benchmark.py`) per ogni set di doma
    GPU e RAM, energia per 1.000 righe, potenza media, fallimenti.
 4. **Throughput contro dimensione del batch**.
 5. **Balanced accuracy e latenza p50 per fascia di lunghezza del documento**.
+
+---
+
+## `grid_<hash domande>.md` e `grid_<hash domande>.csv` — la grid search
+
+Scritti da `grid_search.py` nella cartella dello split (`results/<dataset>/<split>/`), uno per set di domande. Ricalcolano i
+risultati di ogni modello per **tutte le combinazioni** di regola di decisione, temperatura e soglia, partendo solo dai file
+`answers.jsonl` e `run.json` dei run: nessuna inferenza.
+
+```sh
+python grid_search.py                                                     # griglia di default
+python grid_search.py --thresholds 0.05:0.95:0.05 --temperatures default,0.5,1,1.5,2
+python grid_search.py --models jpt-9b rune-26b --rules rule,support_simple
+```
+
+Di default entrano solo i run `complete` e non `-limitN` (`--include-incomplete`, `--include-limited` per includerli).
+
+### I tre parametri
+
+| Parametro | Valori | Significato |
+|---|---|---|
+| `rule` | `rule` | la regola del set di domande (per `claim_support`: min di P(sì) di `support_simple`, 1 − P(sì) di `unsupported_detail`, 1 − P(sì) di `contradicted_detail`). Per la baseline FactCG è la sua regola propria (`factcg_support`) |
+| | `support_simple`, `unsupported_detail`, `contradicted_detail` | una sola domanda, presa nel verso in cui la usa la regola: `support_simple` come P(sì); le altre due come 1 − P(sì) (cioè "probabilità che **non** ci sia il problema") |
+| `temperature` | `default` | le probabilità salvate in `answers.jsonl`, cioè con la temperatura propria del modello (JPT 1.087, Rune 2, Winnow 1, CLM 1, d1-3B e FactCG nessuna) |
+| | un numero | probabilità ricalcolate dai logit salvati: `softmax(logits / T)`. Non esiste per i modelli senza logit (d1-3B, FactCG): quelle combinazioni mancano |
+| `threshold` | 0–1 | il claim è "supportato" se il punteggio della regola è **strettamente maggiore** della soglia |
+
+Una combinazione è quindi (modello, regola, temperatura, soglia). La ROC AUC non dipende dalla soglia: è la stessa su tutte
+le righe con uguali modello, regola e temperatura.
+
+### `grid_<hash>.md`
+
+1. **Intestazione**: dataset, split, set di domande, griglia usata, numero di combinazioni e tempo di calcolo.
+2. **Summary**: due righe per modello.
+   - `default`: regola del set, temperatura `default`, soglia del set (0,30). Coincide con `report.json` e con la tabella
+     di `summary_<hash>.md`.
+   - `best Average`: la combinazione con la media per fonte più alta. In grassetto il valore migliore di ogni colonna.
+3. **Una sezione per modello**: tutte le sue combinazioni, ordinate dalla migliore (o le prime N con `--top N`).
+
+Colonne (valori in **percentuale**):
+
+| Colonna | Significato |
+|---|---|
+| `Model`, `Setting`, `Rule`, `T`, `Threshold` | il modello e la combinazione. `Rule` scrive per esteso la regola (es. `min of 3`, `support_simple (P(yes))`, `unsupported_detail (1 - P(yes))`) |
+| `Average` | **macro balanced accuracy**: media non pesata della balanced accuracy delle 11 fonti (la metrica della classifica LLM-AggreFact, la colonna "Average" di `table.md`) |
+| `Bal. acc.` | balanced accuracy su tutte le righe insieme: (recall dei supportati + recall dei non supportati) / 2 |
+| `Accuracy` | frazione di predizioni corrette su tutte le righe (dominata dalle fonti grandi e dalla classe più frequente) |
+| `ROC AUC` | AUC del punteggio continuo su tutte le righe (indipendente dalla soglia) |
+| `Macro ROC AUC` | media delle AUC delle 11 fonti |
+| `CNN` … `RAGTruth` | balanced accuracy di ciascuna fonte, nell'ordine di `table.md` |
+
+> **Attenzione**: la riga `best` è scelta sullo stesso split su cui è misurata, quindi è una stima **ottimistica**. Serve
+> per esplorare (quale regola e quale soglia funzionano meglio per un modello), non come risultato finale: una scelta va
+> fatta su uno split di sviluppo e poi confermata sul test.
+
+### `grid_<hash>.csv`
+
+Una riga per combinazione, per tutti i modelli insieme. È il file da usare per analisi automatiche: contiene tutto ciò che
+c'è nel `.md` e di più. I valori sono **frazioni 0–1** (non percentuali); una cella vuota significa "non definito" (es.
+una fonte con una sola classe).
+
+| Colonna | Significato |
+|---|---|
+| `model` | cartella del modello in `models/` (es. `jpt-9b`) |
+| `model_name` | nome per le tabelle (es. `JPT-9B`; con `[hash parametri]` se ci sono più varianti dello stesso modello) |
+| `run` | cartella del run da cui vengono i dati (es. `jpt-9b_5147a4ec_551bb722`) |
+| `rule` | `rule` oppure l'id di una domanda (vedi sopra) |
+| `rule_definition` | la regola esatta in JSON: `combine` (`min`, `single`, ...), `inputs` (domanda e `take`: `yes` = P(sì), `no` = 1 − P(sì)) |
+| `temperature` | `default` oppure il valore numerico |
+| `threshold` | la soglia |
+| `macro_balanced_accuracy` | media non pesata della balanced accuracy per fonte (= `Average`) |
+| `balanced_accuracy`, `accuracy` | su tutte le righe insieme |
+| `roc_auc`, `macro_roc_auc` | AUC su tutte le righe e media delle AUC per fonte |
+| `supported_recall` | frazione dei claim supportati (label 1) predetti come supportati |
+| `unsupported_recall` | frazione dei claim non supportati (label 0) predetti come non supportati |
+| `bacc_<fonte>` | balanced accuracy della fonte, col nome originale del dataset (`AggreFact-CNN`, `AggreFact-XSum`, `TofuEval-MediaS`, `TofuEval-MeetB`, `Wice`, `Reveal`, `ClaimVerify`, `FactCheck-GPT`, `ExpertQA`, `Lfqa`, `RAGTruth`) |
+| `auc_<fonte>` | ROC AUC della fonte |
+
+Corrispondenza tra nomi nel CSV e colonne di `table.md`: AggreFact-CNN = CNN, AggreFact-XSum = XSum, TofuEval-MediaS =
+MediaS, TofuEval-MeetB = MeetB, Wice = WiCE, Reveal = REVEAL, FactCheck-GPT = FactCheck, Lfqa = LFQA; le altre uguali.
+
+### Leggerli in un altro repository
+
+Il CSV è autosufficiente: per analizzare la grid search altrove bastano `grid_<hash>.csv` (e, per leggibilità,
+`grid_<hash>.md`). Per risalire al contesto di un run (opzioni, GPU, versioni) servono anche `run.json` e `report.json`
+della cartella indicata nella colonna `run`, e `hash_questions.json` per il testo delle domande.
+
+```python
+import pandas as pd
+
+df = pd.read_csv("grid_551bb722.csv")
+
+# la combinazione migliore per modello, secondo la media per fonte
+best = df.loc[df.groupby("model")["macro_balanced_accuracy"].idxmax()]
+
+# la configurazione del benchmark (regola del set, temperatura propria, soglia 0.30)
+default = df[(df.rule == "rule") & (df.temperature == "default") & (df.threshold.round(2) == 0.30)]
+
+# l'effetto della soglia per un modello, con regola e temperatura fissate
+curve = df[(df.model == "jpt-9b") & (df.rule == "rule") & (df.temperature == "default")][["threshold", "macro_balanced_accuracy"]]
+```
+
+Nota su `temperature`: la colonna mescola il testo `default` e numeri, quindi pandas la legge come testo; per filtrare un
+valore numerico usare ad esempio `df.temperature == "1.5"` (i valori interi sono scritti `1.0`, `2.0`), oppure convertire
+con `pd.to_numeric(df.temperature, errors="coerce")`, che trasforma `default` in `NaN`.
