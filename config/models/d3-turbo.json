@@ -1,0 +1,8 @@
+{
+  "_comment": "d3-turbo through its own System One runtime (transformers, trust_remote_code). Temperature is the package's own (1, decision_config.json); 52 GB of bf16 weights on one GPU, no offload.",
+  "revision": "a0f3e9e59ebd1202fe1d4de1c4c0f9a986758cbb",
+  "long_context": false,
+  "question_batch": 8,
+  "verify": "fast",
+  "batch": 32
+}

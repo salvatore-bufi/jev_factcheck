@@ -18,6 +18,7 @@ does the document support the claim? The results table so far is in [table.md](t
 | [models/winnow-12b-bf16](models/winnow-12b-bf16/README.md) | Winnow-12B BF16 | 12B | vLLM, after converting the BF16 GGUF with `convert.py` |
 | [models/clm-8b](models/clm-8b/README.md) | CLM-v0.1-8B (`Contrastive-LM/CLM-v0.1-8B`) | 8B | vLLM embeddings (Qwen3-8B) + the CLM heads |
 | [models/d1-3b](models/d1-3b/README.md) | d1-3B (`LiquidAI/d1-3B`) | 3B | transformers, the model's own `system_one` API |
+| [models/d3-turbo](models/d3-turbo/README.md) | d3-turbo (`vllm-sr/d3-turbo`) | 26B | transformers, the model's own System One runtime; one GPU with 56 GiB+ |
 | [models/factcg](models/factcg/README.md) | FactCG-DeBERTa-v3-Large | 0.4B | **baseline**, not a decision model: ignores the questions |
 
 `python benchmark.py --list` prints them. Each folder's README covers its installation, protocol and caveats.
