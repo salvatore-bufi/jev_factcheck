@@ -1,0 +1,10 @@
+{
+  "_comment": "elephant-1 on its own runtime (OneJev qev @81ce62f + serve.patch, copied in models/elephant-1/qev), in-process with transformers. Block-bidirectional full attention as declared by the checkpoint; no calibration file, so temperature 1.",
+  "revision": "b3f8a93462fb1051a9de031e94a7ff380e254072",
+  "dtype": "bfloat16",
+  "head_dtype": "float32",
+  "fork_mode": "auto",
+  "max_branch_tokens": 32768,
+  "max_request_tokens": 65536,
+  "batch": 16
+}

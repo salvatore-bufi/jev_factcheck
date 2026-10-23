@@ -20,6 +20,8 @@ does the document support the claim? The results table so far is in [table.md](t
 | [models/d1-3b](models/d1-3b/README.md) | d1-3B (`LiquidAI/d1-3B`) | 3B | transformers, the model's own `system_one` API |
 | [models/d3-turbo](models/d3-turbo/README.md) | d3-turbo (`vllm-sr/d3-turbo`) | 26B | transformers, the model's own System One runtime; one GPU with 56 GiB+ |
 | [models/d3-flash](models/d3-flash/README.md) | d3-flash (`vllm-sr/d3-flash`) | 8.4B | transformers, the model's own System One runtime |
+| [models/elephant-1](models/elephant-1/README.md) | elephant-1 (`baselabs/elephant-1`) | 9B | transformers, its own runtime (OneJev `qev` + `serve.patch`, copied in the folder); block-bidirectional attention |
+| [models/knowline-4b](models/knowline-4b/README.md) | KnowLine-4B-Gen5.5 (`PelaAI/KnowLine-4B-Gen5.5`) | 4B | transformers, the model repo's own front end (`knowline_server.py`); reads short requests twice |
 | [models/startlux-9b-instant](models/startlux-9b-instant/README.md) | StartLux-Decision-v1.1-9B-Instant | 9B | the authors' server (`startlux-decide` + vLLM 0.31 in the folder's own `.venv`, from its `setup.sh`); bidirectional prompt attention |
 | [models/startlux-9b-autothink](models/startlux-9b-autothink/README.md) | StartLux-Decision-v1.1-9B-AutoThink | 9B | the authors' server; thinks when unsure (not downloaded yet) |
 | [models/startlux-27b-autothink](models/startlux-27b-autothink/README.md) | StartLux-Decision-v1.1-27B-AutoThink | 27B | the authors' server; thinks when unsure; `quantization=fp8` on 48 GB GPUs |

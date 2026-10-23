@@ -1,0 +1,7 @@
+# Runs in the benchmark's environment (Python 3.12). 18 GB of bf16 weights: a 24 GB+ GPU.
+transformers>=5.14        # block_sequence_ids in create_causal_mask (the card pins 5.19.0)
+torch
+accelerate                # the engine loads with device_map
+safetensors
+pydantic>=2               # qev.schema
+flash-linear-attention==0.5.2   # optional: GPU kernels for the Gated DeltaNet layers (else the slower PyTorch reference)

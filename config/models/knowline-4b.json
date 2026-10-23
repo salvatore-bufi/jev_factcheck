@@ -1,0 +1,12 @@
+{
+  "_comment": "KnowLine-4B-Gen5.5 through the model repo's own front end (knowline_server.py + knowline_layout.py, imported from the snapshot). Read twice on (the Gen5.5 layout); temperature 1.50 is folded into the weights, so the read-out uses 1. backend hf = transformers bf16 in process; sglang = the authors' runs (FP8 at load, needs sglang==0.5.21).",
+  "revision": "779944d2cc8ffa19cef386aee83c83bcb967ade2",
+  "backend": "hf",
+  "read_twice": true,
+  "twice_max_tokens": 3000,
+  "workers": 16,
+  "mem": 0.72,
+  "sglang_python": "",
+  "startup_timeout": 1800.0,
+  "batch": 32
+}

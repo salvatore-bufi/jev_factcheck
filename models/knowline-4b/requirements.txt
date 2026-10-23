@@ -1,0 +1,8 @@
+# Runs in the benchmark's environment (Python 3.12). About 9 GB of bf16 weights: any 16 GB+ GPU.
+transformers>=5.12        # the card's runs used 5.12.1
+torch
+accelerate                # the hf backend loads with device_map
+requests
+flash-linear-attention==0.5.2   # optional: GPU kernels for the Gated DeltaNet layers (else the slower PyTorch reference)
+# backend=sglang only (the authors' runs; not needed for the default hf backend):
+#   sglang==0.5.21

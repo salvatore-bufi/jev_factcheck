@@ -16,3 +16,11 @@ startlux-models/StartLux-Decision-v1.1-27B-Instant
 
 
 startlux-models/StartLux-Decision-v1.1-9B-AutoThink
+StartLux-Decision-v1.1-9B-Instant
+vllm-sr/d3-flash
+PelaAI/KnowLine-4B-Gen5.5
+baselabs/elephant-1
+
+
+nohup python -u benchmark.py --model d3-flash --gpu 3 > d3-flash_test.out 2>&1 &
+nohup python -u benchmark.py --model starlux-9b-instant --gpu 3 > starlux-instant_test.out 2>&1 &
