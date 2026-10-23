@@ -24,7 +24,7 @@ __pycache__/
 # Datasets are downloaded or copied locally, never committed (see dataset/README.md)
 /dataset/*/
 !/dataset/README.md
-./results/*
+/results/
 
 # Benchmark results: keep the small summaries, ignore the bulky per-row and telemetry files
 /results/**/answers.jsonl
