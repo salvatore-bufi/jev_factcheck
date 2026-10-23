@@ -13,3 +13,6 @@ starlux
 vllm-sr/d3-turbo
 startlux-models/StartLux-Decision-v1.1-27B-AutoThink
 startlux-models/StartLux-Decision-v1.1-27B-Instant
+
+
+startlux-models/StartLux-Decision-v1.1-9B-AutoThink
