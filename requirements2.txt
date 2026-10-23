@@ -1,0 +1,70 @@
+# One environment for every model of the benchmark, on vLLM 0.31.0 (Linux, NVIDIA GPU, CUDA 13 driver, Python 3.12).
+#
+#   python3.12 -m venv ~/venvs/jev_vllm031
+#   ~/venvs/jev_vllm031/bin/pip install -r requirements2.txt
+#
+# Then, in the same environment, two build steps that pip cannot express in this file (see the end of the file):
+# causal-conv1d (optional, faster d3 kernels) and the Winnow NVFP4 server (models/winnow-12b/setup.sh).
+#
+# vLLM 0.31.0 is the version the StartLux Instant plugin is validated on (it accepts only 0.19.1 and 0.31.0). It pins
+# torch 2.13.0 / torchvision 0.28.0 and needs transformers >=5.10.4,<5.18. Results from this environment are not
+# from the environment of the earlier runs (vLLM 0.30.0, transformers 5.18.0): run every model again, with a tag
+# (e.g. --tag vllm031), and check each one with --limit 32 against its earlier answers first.
+
+# ---- core: benchmark.py, core/, report.py, grid_search.py
+vllm==0.31.0
+torch==2.13.0                  # pinned by vLLM 0.31.0
+torchvision==0.28.0            # pinned by vLLM 0.31.0
+transformers==5.17.0           # vLLM 0.31.0 needs <5.18; 5.17.0 is the version the d3 cards validate
+huggingface-hub>=1.5
+safetensors>=0.6
+pyarrow
+numpy
+scikit-learn
+requests
+nvidia-ml-py                   # GPU telemetry (power, memory, clocks) and the busy-GPU check
+
+# ---- jpt-9b
+llm2jev==0.6.1                 # reference prompt/scoring; pinned: the test cache was made with 0.6.1
+
+# ---- clm-8b
+contrastive-lm==0.1.0          # text layout and projection heads; its requirements (vllm>=0.6, fastapi, uvicorn) fit
+
+# ---- winnow-12b-bf16 (convert.py)
+gguf
+
+# ---- d1-3b, d3-flash, d3-turbo (the models' own code through transformers)
+accelerate                     # the d3 runtime loads with device_map
+einops
+pillow
+flash-linear-attention==0.5.2  # GPU kernels for the Gated DeltaNet layers of d3 (else a slower PyTorch path)
+
+# ---- startlux-9b-instant, startlux-9b-autothink, startlux-27b-autothink
+# The authors' package: prompt, read-out, AutoThink loop and the vLLM plugin for Instant models. The plugin is inert
+# in every other vLLM run: it installs only when STARTLUX_PREFIX_BIDIR=1, which its launcher sets for its own servers.
+startlux-decide @ git+https://github.com/StartLuxLabs/StartLux-Decision.git@a99977d9332decc9fb27a2488b4a83b533b6cd5f
+aiohttp>=3.9
+
+# ---- factcg (baseline)
+sentencepiece
+protobuf
+nltk
+tqdm
+
+# ---- build tools: Winnow NVFP4 server (models/winnow-12b/setup.sh) and causal-conv1d
+cmake
+nvidia-cuda-nvcc>=13.0,<14     # nvcc for CUDA 13 (torch 2.13 is built for CUDA 13.0)
+nvidia-cuda-cccl>=13.0,<14     # CUDA C++ headers for those builds
+
+# ---- after `pip install -r requirements2.txt`, in the same environment:
+#
+# 1. causal-conv1d (optional; needs the GPU's toolchain, so it cannot be built in pip's isolated build):
+#      NV=$(python -c 'import nvidia; print(list(nvidia.__path__)[0])')
+#      export CUDA_HOME=$NV/cu13 PATH=$NV/cu13/bin:$PATH
+#      export CUDAFLAGS="-DCCCL_DISABLE_CTK_COMPATIBILITY_CHECK" CXXFLAGS="-DCCCL_DISABLE_CTK_COMPATIBILITY_CHECK"
+#      export TORCH_CUDA_ARCH_LIST="8.9"            # L40S; "12.0" for an RTX 5090 (shorter build)
+#      pip install causal-conv1d --no-build-isolation
+#
+# 2. Winnow-12B NVFP4: bash models/winnow-12b/setup.sh   (builds the authors' llama.cpp server once)
+#
+# 3. Check:  python benchmark.py --list   and   python tests/test_adapters.py

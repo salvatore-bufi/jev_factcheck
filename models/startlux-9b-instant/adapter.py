@@ -2,8 +2,9 @@
 
 An Instant model: one read-out per question, never a thought, with bidirectional prompt attention in the
 full-attention layers. The weights repository has no inference code, and that attention needs the package's vLLM
-plugin (vLLM 0.19.1 or 0.31.0 only), so the benchmark runs the authors' package, startlux-decide, from this folder's
-own environment (.venv, built by setup.sh). `startlux-decide serve --launch-vllm` starts one vLLM server on the
+plugin (vLLM 0.19.1 or 0.31.0 only), so the benchmark runs the authors' package, startlux-decide, from the
+benchmark's environment (requirements2.txt) or this folder's own (.venv, built by setup.sh). `startlux-decide serve
+--launch-vllm` starts one vLLM server on the
 benchmark GPU (with the plugin; the launcher stops unless the vLLM log shows it active) and the /v1/systemone server
 in front of it. The package renders the prompts ("Evidence: / Question: / Options: A) yes B) no", chat template with
 thinking off) and reads the option-letter logits at the type's temperature (decision_config.json). The adapter sends
@@ -19,6 +20,7 @@ import os
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -28,7 +30,6 @@ from core.datasets import hub_cache
 
 HERE = Path(__file__).resolve().parent
 REPO = "startlux-models/StartLux-Decision-v1.1-9B-Instant"
-SERVE = HERE / ".venv/bin/startlux-decide"
 PACKAGE_COMMIT = "a99977d9332decc9fb27a2488b4a83b533b6cd5f"   # pinned in setup.sh
 
 
@@ -42,6 +43,14 @@ def snapshot(revision):
         raise SystemExit(f"{REPO} (revision {revision or 'main'}) is not in the Hugging Face cache {hub_cache()}; "
                          f"run `hf download {REPO}`")
     return path, revision
+
+
+def serve_command():
+    """startlux-decide of this environment (requirements2.txt), else of this folder's own .venv (setup.sh)."""
+    for path in (Path(sys.executable).parent / "startlux-decide", HERE / ".venv/bin/startlux-decide"):
+        if path.exists():
+            return path
+    return None
 
 
 class Adapter(BaseAdapter):
@@ -74,11 +83,13 @@ class Adapter(BaseAdapter):
         if self.opt["url"]:
             self.url = self.opt["url"].rstrip("/")
         else:
-            if not SERVE.exists():
-                raise SystemExit(f"The StartLux environment is not set up: run {HERE / 'setup.sh'} once")
+            serve = serve_command()
+            if serve is None:
+                raise SystemExit("startlux-decide is not installed: pip install -r requirements2.txt here, "
+                                 f"or run {HERE / 'setup.sh'} once for an environment of this model alone")
             self.url = f"http://127.0.0.1:{self.opt['port']}"
             gpu = (os.environ.get("CUDA_VISIBLE_DEVICES") or "0").split(",")[0]
-            cmd = [str(SERVE), "serve", "--model", str(self.folder), "--name", self.NAME,
+            cmd = [str(serve), "serve", "--model", str(self.folder), "--name", self.NAME,
                    "--port", str(self.opt["port"]), "--launch-vllm", "--gpus", gpu,
                    "--vllm-base-port", str(self.opt["vllm_port"]), "--vllm-log-dir", str(HERE / "vllm_logs"),
                    "--max-model-len", str(self.opt["max_model_len"]),

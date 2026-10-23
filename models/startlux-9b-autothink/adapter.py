@@ -4,8 +4,9 @@ An AutoThink model, read causally: one read-out per question, and when its top p
 model writes a thought (sampled: temperature 0.6, top-p 0.95, top-k 20; up to think_budget tokens, with a loop
 detector), reads the letters again and answers (1 - mix) * first + mix * after. The weights repository has no
 inference code, and the gate, the thought and the mixture are the package's, so the benchmark runs the authors'
-package, startlux-decide, from this folder's own environment (.venv, built by setup.sh). `startlux-decide serve
---launch-vllm` starts one vLLM server on the benchmark GPU and the /v1/systemone server in front of it. The package
+package, startlux-decide, from the benchmark's environment (requirements2.txt) or this folder's own (.venv, built
+by setup.sh). `startlux-decide serve --launch-vllm` starts one vLLM server on the benchmark GPU and the
+/v1/systemone server in front of it. The package
 renders the prompts ("Evidence: / Question: / Options: A) yes B) no", chat template with thinking off) and reads the
 option-letter logits at the type's temperature (decision_config.json). The adapter sends one request per row with
 all its questions and `return_details`, and stops the servers at the end. Latency therefore includes the local HTTP
@@ -22,6 +23,7 @@ import os
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -31,7 +33,6 @@ from core.datasets import hub_cache
 
 HERE = Path(__file__).resolve().parent
 REPO = "startlux-models/StartLux-Decision-v1.1-9B-AutoThink"
-SERVE = HERE / ".venv/bin/startlux-decide"
 PACKAGE_COMMIT = "a99977d9332decc9fb27a2488b4a83b533b6cd5f"   # pinned in setup.sh
 
 
@@ -45,6 +46,14 @@ def snapshot(revision):
         raise SystemExit(f"{REPO} (revision {revision or 'main'}) is not in the Hugging Face cache {hub_cache()}; "
                          f"run `hf download {REPO}`")
     return path, revision
+
+
+def serve_command():
+    """startlux-decide of this environment (requirements2.txt), else of this folder's own .venv (setup.sh)."""
+    for path in (Path(sys.executable).parent / "startlux-decide", HERE / ".venv/bin/startlux-decide"):
+        if path.exists():
+            return path
+    return None
 
 
 class Adapter(BaseAdapter):
@@ -62,7 +71,7 @@ class Adapter(BaseAdapter):
         "startup_timeout": 1800.0,
         "url": "",                     # use an already running decision server instead of starting one
         "batch": 64,
-        "think_mode": "auto",          # auto: think when the first read-out's top probability is below gate; never; always
+        "think_mode": "auto",          # auto: think when the first top probability is below gate; never; always
         "gate": 0.6,                   # the package default (the card's published numbers use 0.9)
         "mix": 0.75,                   # final = (1 - mix) * first read-out + mix * read-out after the thought
         "think_budget": 4096,          # most thought tokens
@@ -81,11 +90,13 @@ class Adapter(BaseAdapter):
         if self.opt["url"]:
             self.url = self.opt["url"].rstrip("/")
         else:
-            if not SERVE.exists():
-                raise SystemExit(f"The StartLux environment is not set up: run {HERE / 'setup.sh'} once")
+            serve = serve_command()
+            if serve is None:
+                raise SystemExit("startlux-decide is not installed: pip install -r requirements2.txt here, "
+                                 f"or run {HERE / 'setup.sh'} once for an environment of this model alone")
             self.url = f"http://127.0.0.1:{self.opt['port']}"
             gpu = (os.environ.get("CUDA_VISIBLE_DEVICES") or "0").split(",")[0]
-            cmd = [str(SERVE), "serve", "--model", str(self.folder), "--name", self.NAME,
+            cmd = [str(serve), "serve", "--model", str(self.folder), "--name", self.NAME,
                    "--port", str(self.opt["port"]), "--launch-vllm", "--gpus", gpu,
                    "--vllm-base-port", str(self.opt["vllm_port"]), "--vllm-log-dir", str(HERE / "vllm_logs"),
                    "--max-model-len", str(self.opt["max_model_len"]),
