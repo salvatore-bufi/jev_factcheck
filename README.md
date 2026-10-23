@@ -19,6 +19,10 @@ does the document support the claim? The results table so far is in [table.md](t
 | [models/clm-8b](models/clm-8b/README.md) | CLM-v0.1-8B (`Contrastive-LM/CLM-v0.1-8B`) | 8B | vLLM embeddings (Qwen3-8B) + the CLM heads |
 | [models/d1-3b](models/d1-3b/README.md) | d1-3B (`LiquidAI/d1-3B`) | 3B | transformers, the model's own `system_one` API |
 | [models/d3-turbo](models/d3-turbo/README.md) | d3-turbo (`vllm-sr/d3-turbo`) | 26B | transformers, the model's own System One runtime; one GPU with 56 GiB+ |
+| [models/d3-flash](models/d3-flash/README.md) | d3-flash (`vllm-sr/d3-flash`) | 8.4B | transformers, the model's own System One runtime |
+| [models/startlux-9b-instant](models/startlux-9b-instant/README.md) | StartLux-Decision-v1.1-9B-Instant | 9B | the authors' server (`startlux-decide` + vLLM 0.31 in the folder's own `.venv`, from its `setup.sh`); bidirectional prompt attention |
+| [models/startlux-9b-autothink](models/startlux-9b-autothink/README.md) | StartLux-Decision-v1.1-9B-AutoThink | 9B | the authors' server; thinks when unsure (not downloaded yet) |
+| [models/startlux-27b-autothink](models/startlux-27b-autothink/README.md) | StartLux-Decision-v1.1-27B-AutoThink | 27B | the authors' server; thinks when unsure; `quantization=fp8` on 48 GB GPUs |
 | [models/factcg](models/factcg/README.md) | FactCG-DeBERTa-v3-Large | 0.4B | **baseline**, not a decision model: ignores the questions |
 
 `python benchmark.py --list` prints them. Each folder's README covers its installation, protocol and caveats.

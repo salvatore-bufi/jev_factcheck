@@ -1,0 +1,14 @@
+{
+  "_comment": "StartLux-Decision-v1.1-9B-Instant on the authors' server (startlux-decide serve --launch-vllm, started by the benchmark; set up with models/startlux-9b-instant/setup.sh). One read-out per question, bidirectional prompt attention; temperatures are the folder's own (decision_config.json).",
+  "revision": "18a17f734966b213b2f00fa9c915e8b9af2a9b20",
+  "port": 8092,
+  "vllm_port": 8101,
+  "max_model_len": 32768,
+  "gpu_util": 0.88,
+  "quantization": "",
+  "workers": 8,
+  "timeout": 900.0,
+  "startup_timeout": 1800.0,
+  "url": "",
+  "batch": 64
+}

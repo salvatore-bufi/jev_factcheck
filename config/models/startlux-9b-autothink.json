@@ -1,0 +1,18 @@
+{
+  "_comment": "StartLux-Decision-v1.1-9B-AutoThink on the authors' server (started by the benchmark; set up with models/startlux-9b-autothink/setup.sh). Gate, mix and budget are the package defaults (the card's results use gate 0.9). revision empty: the snapshot of refs/main.",
+  "revision": "",
+  "port": 8092,
+  "vllm_port": 8101,
+  "max_model_len": 32768,
+  "gpu_util": 0.88,
+  "quantization": "",
+  "workers": 8,
+  "timeout": 900.0,
+  "startup_timeout": 1800.0,
+  "url": "",
+  "batch": 64,
+  "think_mode": "auto",
+  "gate": 0.6,
+  "mix": 0.75,
+  "think_budget": 4096
+}

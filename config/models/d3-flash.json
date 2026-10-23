@@ -1,0 +1,8 @@
+{
+  "_comment": "d3-flash through its own System One runtime (transformers, trust_remote_code). Temperature is the package's own (1, decision_config.json); the package has no length cap, the benchmark applies 32,768 tokens per question.",
+  "revision": "13dc1cc8ef23caefa765907e1d764751e5629f7d",
+  "max_length": 32768,
+  "question_batch": 8,
+  "verify": "fast",
+  "batch": 32
+}

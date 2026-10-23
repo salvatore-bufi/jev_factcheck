@@ -2,7 +2,7 @@
 
 [vllm-sr/d3-turbo](https://huggingface.co/vllm-sr/d3-turbo): the 26B multimodal decision model of Decision 3.0
 (vLLM Semantic Router), a Qwen3.5 backbone (Gated DeltaNet + full attention) with a 255-way answer-code readout.
-Licence: Apache-2.0.
+Licence: Apache-2.0. Its smaller sibling is [d3-flash](../d3-flash/README.md).
 
 ## How the benchmark runs it
 

@@ -1,0 +1,3 @@
+# Nothing in the benchmark's environment beyond core: the model runs on the authors' server from models/startlux-9b-autothink/.venv
+# (bash models/startlux-9b-autothink/setup.sh: startlux-decide @ a99977d with vllm==0.31.0).
+requests
