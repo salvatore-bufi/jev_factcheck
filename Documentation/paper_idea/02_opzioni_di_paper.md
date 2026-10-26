@@ -18,7 +18,7 @@ La domanda è: *creare un dataset nuovo e testarci i modelli? proporre un datase
 ## Opzione 2 — Paper di analisi con domande scientifiche nette (**consigliata ora**)
 
 **Cosa**: la stessa inferenza dell'Opzione 1, organizzata attorno a tre domande che nessuno ha affrontato sul grounding:
-1. **Base contro ricetta** (RQ2): sette TDM su Qwen3.5-9B e tre su Qwen3.5-4B (Kev sulle varianti Base), contro la loro base letta in modo ingenuo e calibrato senza training. *Quanto aggiunge l'addestramento da decision model, e quanto varia fra ricette sulla stessa base?*
+1. **Base contro ricetta** (RQ2): sette TDM su Qwen3.5-9B, due sulla variante Base e cinque su Qwen3.5-4B ([10](10_selezione_modelli.md)), contro la loro base letta in modo ingenuo e calibrato senza training. *Quanto aggiunge l'addestramento da decision model, e quanto varia fra ricette sulla stessa base?*
 2. **Protocollo contro modello** (RQ3): quanto spostano il risultato soglia, polarità e parafrasi della domanda, una contro tre domande, composizione della richiesta, troncamento, contaminazione. *Le differenze della leaderboard sono più grandi del rumore di protocollo?*
 3. **Che errori fanno** (RQ4–RQ6): ammissione di claim non supportati, contraddetto contro non stabilito, calibrazione e trasferimento della soglia, sovrapposizione degli errori.
 
@@ -90,4 +90,4 @@ Motivi:
 
 1. **Data di congelamento della lista dei modelli** (proposta: 30 novembre). Dopo quella data, nuovi modelli solo in appendice.
 2. **I riferimenti fuori vincolo**: Jev 1.13 (per continuità con [2609.37647](https://arxiv.org/abs/2609.37647) e con il nostro run) e 1.14, che costano pochi dollari; Winnow-12B e Rune-26B già misurati; i 27B della leaderboard solo citati. Proposta: una riga "riferimenti" in fondo alla tabella principale, nessuna analisi su di loro.
-3. **B-ctrl su quale coppia**: proposta JPT-9B (o elephant-1) contro Qwen3.5-9B, perché la base è la stessa di sette TDM; in alternativa KnowLine-4B o pplx-decider-flash contro Qwen3.5-4B, che costa la metà; d1-3B per il pilota.
+3. **B-ctrl su quale coppia**: proposta elephant-1 contro Qwen3.5-9B (stessa base di sette TDM; JPT-9B parte invece dalla variante Base); in alternativa KnowLine-4B o pplx-decider-flash contro Qwen3.5-4B, che costa la metà; d1-3B per il pilota.

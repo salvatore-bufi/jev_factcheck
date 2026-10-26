@@ -13,8 +13,9 @@ Rivista il 26 ottobre 2026. Rispetto alla prima versione: Jev su AggreFact è gi
 | **RQ5** | **Calibrazione**: le probabilità sono calibrate sul grounding? La soglia scelta in un dominio trasferisce agli altri? | A5 |
 | **RQ6** | **Robustezza**: distrattori, posizione dell'evidenza, opzioni invertite o rinominate, richiesta con più domande | set diagnostico ridotto (A6) |
 | **RQ7** | **Costo e composizione**: qualità contro costo, latenza, energia; gli errori si sovrappongono? Le cascate battono il controllo a escalation casuale? | A7, A9 |
+| **RQ8** | **La classifica dei decision model predice il grounding?** La Decision Index (generale e il suo sottoinsieme di grounding) ordina i modelli come AggreFact e i test fuori dominio? | E9 di [11](11_design_esperimenti.md), senza inferenza in più |
 
-RQ2 e RQ3 sono il cuore del paper: sono le domande nuove, e qualunque risultato esca è informativo.
+RQ2 e RQ3 sono il cuore del paper: sono le domande nuove, e qualunque risultato esca è informativo. RQ8 è quasi gratis e utile a chiunque scelga un modello dalla classifica. Il design esperimento per esperimento (domande, dati, regole, celle, statistica) è in [11_design_esperimenti.md](11_design_esperimenti.md).
 
 ## 2. Indizi già visibili nei nostri dati
 
@@ -35,17 +36,22 @@ Dalla grid search sul test (`results/.../grid_551bb722.md`). Sono **esplorativi*
 
 ### 3.1 I gruppi per base (il disegno di RQ2)
 
-| Base | TDM (stato) | Base generica da leggere |
-|---|---|---|
-| **Qwen3.5-9B** | JPT-9B (fatto), elephant-1 (fatto), Nimble-9B-v3 (adapter pronto), d3-flash (adapter pronto), StartLux-9B-Instant (adapter pronto; architettura Qwen3.5, base non dichiarata), **Clef-flash** (nuovo), **Tacit-9B** (nuovo) | Qwen3.5-9B (nella cache HF) |
-| Qwen3.5-9B-Base | Kev-9B (nuovo) | Qwen3.5-9B-Base |
-| **Qwen3.5-4B** | KnowLine-4B (fatto), **pplx-decider-flash v1.2** (nuovo); da verificare: SII-Decision-4B, Intern-Decision-4B | Qwen3.5-4B |
-| Qwen3.5-4B-Base | Kev-4B (nuovo) | Qwen3.5-4B-Base |
-| Qwen3.5-2B | Strands Decider 2B, Tacit-2B (nuovi) | Qwen3.5-2B |
-| Qwen3-8B | CLM-8B (fatto, encoder congelato + teste), Tacit-8B (nuovo) | Qwen3-8B (nella cache) |
-| LFM2.5-VL-3B | d1-3B (fatto) | LFM2.5-VL-3B |
+La lista definitiva, con le motivazioni e i numeri della Decision Index, è in [10_selezione_modelli.md](10_selezione_modelli.md). In sintesi:
 
-Il gruppo Qwen3.5-9B è il più prezioso: **sette ricette diverse sulla stessa base** (LoRA semplice, attenzione bidirezionale a blocchi, testa con 255 codici, attenzione bidirezionale sul prompt, testa congiunta, autodistillazione del ragionamento). Misura direttamente quanto conta la ricetta. Il gruppo Qwen3.5-4B lo replica a metà taglia, e insieme al resto dà una **curva di taglia** da 0,4B a 9B.
+| Base | TDM (livello A) | Base generica da leggere |
+|---|---|---|
+| **Qwen3.5-9B** | elephant-1 (fatto), StartLux-9B, d3-flash, Nimble-9B-v3 (pronti), OneJev 1.6-9B, Clef-flash, Tacit-9B (nuovi) | Qwen3.5-9B (nella cache) |
+| Qwen3.5-9B-Base | JPT-9B (fatto), Kev-9B (nuovo) | Qwen3.5-9B-Base |
+| **Qwen3.5-4B** | KnowLine-4B (fatto), StartLux-4B, pplx-decider-flash, d3-mini, OneJev 1.6-4B (nuovi) | Qwen3.5-4B |
+| LFM2.5-VL-3B / LFM2.5-2.6B-Base | d1-3B (fatto), LFM2.5-2.6B-RLCD | LFM2.5-VL-3B / LFM2.5-2.6B-Base |
+| **Gemma-4-E4B-it** (non Qwen) | Winnow-E4B, Strands Decider E4B, Gevva E4B (encoder) | Gemma-4-E4B-it |
+| **Ministral-3-8B** (non Qwen) | Standard One 8B (Instruct), Jevstral 8B (Base) | Ministral-3-8B-Instruct e -Base |
+| MiMo-V2.6-Distill-Qwen-9B | Drex v1.5 (nuovo) | MiMo-V2.6-Distill-Qwen-9B |
+| DeBERTa-v3-large | GLiClass v4 edge (nuovo) | — (controparte: FactCG, checker sullo stesso backbone) |
+
+Più le curve di taglia (livello B: StartLux, d3, OneJev, JPT, Kev fino a 0,8B), i controlli (CLM-8B, Laya) e due altri encoder (Amber su ModernBERT, Crivo su Ettin). Il blocco non Qwen serve a rispondere all'obiezione "è un confronto su Qwen": il 68% dei TDM fino a 9B della Decision Index, e tutti i primi 25, sono su Qwen; per questo il disegno principale è su Qwen e la generalità si verifica su Gemma-4-E4B, Ministral-3-8B e LFM2.5 ([10](10_selezione_modelli.md) §1.5; E2b di [11](11_design_esperimenti.md)).
+
+Il gruppo Qwen3.5-9B è il più prezioso: **sette ricette diverse sulla stessa base** (fine-tuning completo con attenzione bidirezionale a blocchi, prompt bidirezionale, attenzione non causale con 255 codici, runtime OneJev, LoRA con 255 codici, testa congiunta, autodistillazione senza etichette). Misura direttamente quanto conta la ricetta. Il gruppo Qwen3.5-4B lo replica a metà taglia, e insieme al resto dà una **curva di taglia** da 0,4B a 9B.
 
 Per ogni base, tre letture:
 1. **ingenua**: il prompt del TDM corrispondente (o un prompt neutro comune), softmax sulle lettere delle opzioni, attenzione causale;
@@ -81,7 +87,7 @@ Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 |---|---|---|
 | Sviluppo | `dev_select` / `dev_confirm` dalle nostre fonti ([../fine_tuning_factcheck/00b_split_e_protocollo.md](../fine_tuning_factcheck/00b_split_e_protocollo.md)) | soglia, temperatura, scelta delle domande |
 | Test principale | **LLM-AggreFact test** (11 fonti, 29.320 righe), zero-shot; media riportata **anche senza RAGTruth** | confronto con la leaderboard e con [2609.37647](https://arxiv.org/abs/2609.37647) |
-| Fuori dominio | HaluBench (senza la parte RAGTruth), HalluMix, SciFact, Climate-FEVER, HealthVer, COVID-Fact, LLM-Oasis; FaithBench se ottenibile | generalizzazione e trasferimento della soglia; quasi tutti già nella cache HF |
+| Fuori dominio | HaluBench (senza la parte RAGTruth), HalluMix, SciFact, Climate-FEVER, HealthVer, COVID-Fact; FaithBench se ottenibile | generalizzazione e trasferimento della soglia; nella cache solo SciFact e HalluMix, gli altri da scaricare ([11](11_design_esperimenti.md) §3.3) |
 | Diagnostico | [05_set_diagnostico.md](05_set_diagnostico.md), versione ridotta | RQ6 |
 
 **Contaminazione** (T4): la Decision Index usa RAGTruth e HoVer, e i produttori ottimizzano per la Decision Index. Quindi RAGTruth va trattato come "probabilmente visto" per tutti i TDM recenti; HoVer non va usato come test fuori dominio per i TDM. Controllare anche la colonna `contamination_identifier` di AggreFact.
@@ -120,6 +126,7 @@ Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 | A8 | Analisi degli errori: 100 errori per modello rappresentativo, categorizzati (entità, numeri, attribuzione, multi-hop, documento lungo, etichetta dubbia) | RQ4 |
 | A9 | Accordo fra modelli: sovrapposizione degli errori fra TDM sulla stessa base, fra TDM e checker; ensemble semplice; cascata TDM → LLM contro escalation casuale a pari budget | RQ7 |
 | A10 | Quantizzazione di un 9B (BF16 contro FP8 o 4 bit), per il deployment su GPU piccole; il caso di Winnow (BF16 76,95, NVFP4 77,49) come riferimento | robustezza del deployment, in appendice |
+| A11 | Decision Index contro le nostre misure (correlazione di rango, casi fuori diagonale) | RQ8 |
 
 ## 8. Tabelle e figure previste
 

@@ -83,7 +83,7 @@ Conseguenza per noi: la baseline B1 non può essere solo la base "letta in modo 
 ## 3. Cosa rende il contributo difendibile oggi
 
 1. **Ampiezza controllata sui TDM piccoli**: ~15–20 TDM aperti fino a 9B, cinque architetture di lettura (lettere su LLM causale, attenzione bidirezionale sul prompt, testa congiunta, encoder, contrastivo), da 0,4B a 9B, tutti eseguibili su una sola GPU da 24–48 GB, **stesse domande, stessi dati, stesse regole**, con cache di probabilità e logit rilasciate. Nessuna voce della leaderboard è confrontabile così.
-2. **L'esperimento naturale "stessa base, ricette diverse"**: sette TDM su Qwen3.5-9B e tre su Qwen3.5-4B (contando Kev sulle varianti Base), contro la base letta in modo ingenuo e calibrato. Separa tre effetti: base, lettura, addestramento da decision model.
+2. **L'esperimento naturale "stessa base, ricette diverse"**: sette TDM su Qwen3.5-9B, due sulla variante Base e cinque su Qwen3.5-4B ([10](10_selezione_modelli.md)), contro la base letta in modo ingenuo e calibrato. Separa tre effetti: base, lettura, addestramento da decision model.
 3. **Sensibilità al protocollo**, misurata senza nuova inferenza grazie alla grid search già pronta: se le scelte di protocollo valgono più della distanza fra i modelli, la leaderboard va letta diversamente. È un risultato utile a tutto il campo.
 4. **Errori, calibrazione, trasferimento**: asimmetria degli errori (claim non supportati ammessi), contraddetto contro non stabilito, ECE per dominio, trasferimento della soglia, accordo fra modelli.
 5. **Un esperimento di fine-tuning mirato** (B-ctrl): stesso training di grounding su un TDM e sulla sua base.

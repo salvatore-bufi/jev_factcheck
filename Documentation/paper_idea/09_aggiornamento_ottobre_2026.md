@@ -60,6 +60,18 @@ Note:
 - La classe "9B" di Qwen3.5 ha ~9,4B parametri (torre visiva inclusa) e StartLux ~9,7B: il vincolo va inteso come taglia nominale, e va scritto così nel paper.
 - Usciti dallo studio, e mantenuti solo come riferimento: Winnow-12B e Rune-26B-A4B (già misurati), d3-turbo e StartLux-27B (adapter pronti, non si eseguono), Clef 27B, Nimble-v4-max, pplx-decider 27B, mammoth-1, Kev-27B.
 
+## 2ter. I dati della Decision Index (Space `multimodalart/jev-decision-index`)
+
+Lo Space pubblica i dati grezzi della classifica in `data/index.json` (generato il 26/10/2026 alle 15:30 UTC; edizione 0.4; 229 sistemi; 110.201 richieste; Jev di riferimento 1.14; una RTX PRO 6000). Per ogni sistema: parametri serviti, base, tecnica (fine-tuning completo, LoRA, testa, "inference technique" senza training), punteggio Full 0.4, ECE e Brier, latenza, e il punteggio di ognuno dei 42 benchmark. Regola dichiarata: "native inference helpers, prompts and readout rules are preserved", la stessa di questa repo.
+
+Cosa ne abbiamo ricavato (dettagli in [10_selezione_modelli.md](10_selezione_modelli.md)):
+- **sotto i 9B l'addestramento da decision model vale ~24 punti** rispetto alle letture senza training della stessa taglia; a 31B solo ~2–4;
+- **sui cinque benchmark di grounding/NLI** (RAGTruth, HoVer, ANLI, ContractNLI, NLI4CT) elephant-1 (9B) ha la stessa media dei migliori 27–31B (85,4) e 9 punti più di Jev 1.13, ma su AggreFact sta 2–3 punti sotto Jev: da qui RQ8;
+- la classifica generale non ordina come AggreFact (JPT-9B 109° ma alla pari con elephant-1, 41°, sul nostro AggreFact);
+- possibili inversioni di polarità sulla domanda negativa di RAGTruth (Clef-flash 35,6; d3 nano/lite/edge ~30);
+- famiglie a più taglie con lo stesso runtime (StartLux, d3, OneJev, JPT, Kev), utili per la curva di taglia;
+- Amber e Crivo dichiarano di essere addestrati sugli split di training del kit della Decision Index (RAGTruth compreso).
+
 ## 3. Altri lavori da citare
 
 - Giudici a rubrica: i TDM e gli LLM sbagliano negli stessi punti ([2609.29769](https://arxiv.org/abs/2609.29769)).

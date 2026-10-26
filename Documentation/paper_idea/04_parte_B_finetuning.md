@@ -27,7 +27,7 @@ Nessuno l'ha testata. Le ricette pubblicate addestrano TDM generali; i checker s
 
 | Elemento | Scelta |
 |---|---|
-| Coppia principale | JPT-9B (o elephant-1) contro Qwen3.5-9B; replica a metà taglia: KnowLine-4B (o pplx-decider-flash) contro Qwen3.5-4B; pilota su d1-3B contro LFM2.5-VL-3B. Tutto entro il vincolo dei 9B |
+| Coppia principale | elephant-1 contro Qwen3.5-9B (oppure JPT-9B contro Qwen3.5-9B-Base); replica a metà taglia: KnowLine-4B (o pplx-decider-flash) contro Qwen3.5-4B; **replica non Qwen**: Winnow-E4B contro Gemma-4-E4B-it; pilota su d1-3B contro LFM2.5-VL-3B. Tutto entro il vincolo dei 9B |
 | Dati | mix di stadio 1 della guida (fonti pubbliche + MiniCheck C2D/D2C + ANLI difficile), stesso per entrambe ([../fine_tuning_factcheck/02e_mix_finale.md](../fine_tuning_factcheck/02e_mix_finale.md)) |
 | Domanda | una `noul` (quella scelta sul nostro dev secondo [../fine_tuning_factcheck/02d_varianti_domanda.md](../fine_tuning_factcheck/02d_varianti_domanda.md)) |
 | Loss | CE binaria sul margine fra le due lettere ([../fine_tuning_factcheck/04_loss.md](../fine_tuning_factcheck/04_loss.md)) |

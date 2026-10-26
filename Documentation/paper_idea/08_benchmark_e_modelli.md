@@ -25,16 +25,16 @@ Integra [03_parte_A_valutazione.md](03_parte_A_valutazione.md). Rivisto il 26 ot
 
 ## 2. La suite proposta
 
-"In cache" = già nella cache HF di questa macchina.
+"In cache" = dati già nella cache HF di questa macchina (verificato il 26/10: alcune voci hanno solo i metadati, senza dati).
 
 ### Livello 1 — indispensabile
 
 | Benchmark | Cosa copre | Dimensione | Metrica | In cache | Note |
 |---|---|---|---|---|---|
 | **LLM-AggreFact** (11 fonti) | riassunti, dialoghi, RAG, claim di LLM | 29.320 | BAcc media per fonte + AUC; media anche **senza RAGTruth** | sì | CC BY-ND, solo valutazione |
-| **HaluBench** (6 fonti) | QA con contesto: finanza, medicina, DROP | ~15.000 | BAcc per fonte | sì | parte RAGTruth riportata a parte |
+| **HaluBench** (6 fonti) | QA con contesto: finanza, medicina, DROP | ~15.000 | BAcc per fonte | **no** (solo metadati) | parte RAGTruth riportata a parte |
 | **HalluMix** | multi-documento, documenti lunghi, più domini | da verificare | BAcc | sì | sostituisce TRUE se il tempo manca |
-| **Verifica di claim con evidenza data**: SciFact, Climate-FEVER, HealthVer, COVID-Fact | scienza, clima, salute | migliaia | BAcc, AUC | sì | fuori dalla Decision Index: test fuori dominio puliti per i TDM |
+| **Verifica di claim con evidenza data**: SciFact, Climate-FEVER, HealthVer, COVID-Fact | scienza, clima, salute | migliaia | BAcc, AUC | solo SciFact; gli altri **no** | fuori dalla Decision Index: test fuori dominio puliti per i TDM |
 | **TRUE** (11 dataset) | riassunti, dialogo, parafrasi, verifica | ~100.000 (campionare a 5.000 per dataset) | ROC-AUC per dataset | no | confronto con AlignScore e Granite Guardian; facoltativo se il tempo manca |
 | **FaithBench** | allucinazioni difficili nei riassunti | ~800 | BAcc | no | il più duro |
 
@@ -43,7 +43,7 @@ Integra [03_parte_A_valutazione.md](03_parte_A_valutazione.md). Rivisto il 26 ot
 | Benchmark | Perché | In cache |
 |---|---|---|
 | **RAGTruth** (test, livello di risposta) | confronto con Arize, LettuceDetect, HalluGuard | sì (`wandb/RAGTruth-processed`) |
-| **LLM-Oasis** (claim verification) | testi di Wikipedia | sì |
+| **LLM-Oasis** (claim verification) | testi di Wikipedia | **no** (solo metadati) |
 | SummaC benchmark | standard storico | no |
 | WiCE, SummEdits, VitaminC (test) | in distribuzione per B-ctrl; VitaminC anche per le coppie minime | sì |
 
@@ -73,6 +73,8 @@ Integra [03_parte_A_valutazione.md](03_parte_A_valutazione.md). Rivisto il 26 ot
 Regola generale: nella tabella principale dichiarare per ogni benchmark se è **mai visto** in training (per B-ctrl) e se è **nella Decision Index** (per i TDM).
 
 ## 4. I modelli
+
+La selezione definitiva, con le motivazioni tratte dalla Decision Index, è in [10_selezione_modelli.md](10_selezione_modelli.md); le tabelle qui sotto sono il catalogo di partenza. Attenzione: la Decision Index indica come base di JPT-9B la variante **Qwen3.5-9B-Base**.
 
 **Vincolo**: solo modelli fino a 9B parametri (taglia nominale; la classe "9B" di Qwen3.5 ha ~9,4B parametri con la torre visiva, StartLux-9B ~9,7B). Parametri da Hugging Face dove disponibili.
 
@@ -148,7 +150,7 @@ Per i modelli vecchi (GPT-4o, Claude 3.5 Sonnet, Llama-3.1-70B, ...) si citano i
 
 | Gruppo | Modelli |
 |---|---|
-| TDM fino a 9B (~13) | gruppo Qwen3.5-9B (JPT, elephant-1, Nimble-v3, d3-flash, StartLux-9B, Clef-flash, Tacit-9B); Kev-9B; gruppo Qwen3.5-4B (KnowLine, pplx-decider-flash); Kev-4B; d1-3B; Laya |
+| TDM fino a 9B (17, livello A di [10](10_selezione_modelli.md)) | gruppo Qwen3.5-9B (elephant-1, StartLux-9B, d3-flash, OneJev-9B, Nimble-v3, Clef-flash, Tacit-9B); JPT-9B e Kev-9B (Base); gruppo Qwen3.5-4B (KnowLine, StartLux-4B, pplx-decider-flash, d3-mini, OneJev-4B); d1-3B; Drex v1.5; GLiClass v4 edge |
 | Basi (4–5) | Qwen3.5-9B, Qwen3.5-9B-Base, Qwen3.5-4B, Qwen3.5-4B-Base, LFM2.5-VL-3B, con due letture |
 | Specializzati (4) | Bespoke-MiniCheck-7B, MiniCheck-Flan-T5-L, FactCG, Granite Guardian 3.3 |
 | Generativi (2) | Qwen3.5-9B generativo, un chiuso economico su sottoinsieme |

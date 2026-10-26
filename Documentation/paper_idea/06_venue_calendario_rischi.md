@@ -19,7 +19,7 @@ Il tema speciale di ACL 2027 è "Homogenization and knowledge collapse in LLMs".
 
 ## 2. Calendario a ritroso (obiettivo: ARR 4 gennaio 2027)
 
-Dieci settimane. La parte di analisi viene prima, perché serve per il preprint e perché è il paper anche se B-ctrl non arriva.
+Dieci settimane. Il dettaglio esperimento per esperimento è in [11](11_design_esperimenti.md) §9. La parte di analisi viene prima, perché serve per il preprint e perché è il paper anche se B-ctrl non arriva.
 
 | Periodo | Lavoro | Uscita |
 |---|---|---|
@@ -69,6 +69,7 @@ Margine: stretto, ma il vincolo dei 9B lo rende più sicuro: ogni modello entra 
 | Bersaglio mobile (nuovi TDM, Jev 1.14, leaderboard che cambia) | certa | medio | data di congelamento; i nuovi modelli in appendice; il messaggio di RQ3 non dipende dai modelli |
 | Contaminazione dei TDM (dati di training non pubblici; RAGTruth nella Decision Index) | alta | medio | analisi con e senza RAGTruth; test fuori dominio scelti fuori dalla Decision Index; dichiarato nelle limitazioni |
 | Adapter nuovi lenti da scrivere (runtime proprietari, versioni di vLLM incompatibili) | media | medio | priorità ai modelli già pronti; Clef ha un `systemone` in Python nel repository dei pesi |
+| Revisori: "è un confronto incentrato su Qwen" | alta | medio | quota di Qwen nell'ecosistema documentata; blocco non Qwen (Gemma-4-E4B, Ministral-3-8B, LFM2.5, encoder) con E2b; B-ctrl replicato su Gemma-4-E4B |
 | Revisori: "perché solo fino a 9B? I migliori sono 27B" | media | medio | motivazione esplicita (costo, deployment su una GPU, fine-tuning accessibile, gruppi per base più ricchi); i 27B e Jev riportati come riferimento; la distanza dai 27B è essa stessa un risultato |
 | Etichette rumorose (ExpertQA ~59–61 per tutti; HaluEval segnalato) | certa | medio | categoria "etichetta dubbia" nell'analisi degli errori; non inseguire le fonti rumorose |
 | Licenze (molti TDM non commerciali; AggreFact CC BY-ND) | certa | basso per un paper | dichiarare; non ridistribuire derivati di AggreFact |
