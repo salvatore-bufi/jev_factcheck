@@ -1,75 +1,84 @@
 # Venue, calendario, rigore e rischi
 
-Le date sono quelle trovate l'8 ottobre 2026; vanno sempre ricontrollate sui siti ufficiali (ACL Rolling Review, siti delle conferenze).
+Date verificate il 26 ottobre 2026 sui siti ufficiali dove indicato; le altre vanno ricontrollate.
 
 ## 1. Dove sottomettere
 
-| Venue | Come | Scadenze note / attese | Adatta a | Note |
+| Venue | Come | Scadenze | Adatta a | Note |
 |---|---|---|---|---|
-| **ACL 2027** (Kyoto, 17–22 agosto 2027) | ACL Rolling Review (ARR), poi *commitment* | l'ultimo ciclo ARR utile per ACL 2027 è a **gennaio 2027** (date esatte ancora "TBA" sul sito) | paper completo (Parte A + B) | **obiettivo consigliato** |
-| EMNLP 2027 | ARR | ciclo atteso verso maggio–giugno 2027 | piano di riserva, o versione più ricca | |
-| Findings (ACL / EMNLP) | stessa sottomissione ARR | decisione dei chair | se main non passa | |
-| NAACL 2027, EACL 2027, COLING 2027 | ARR | i commitment (ottobre e dicembre 2026) richiedono revisioni ARR già ottenute | — | non raggiungibili per questo lavoro |
-| ICLR 2027 | diretta | scadenza passata (25/09/2026) | — | |
-| Workshop FEVER (Fact Extraction and VERification) | diretta | di solito a primavera, co-locato con ACL o EMNLP | sola Parte A, o versione breve | attenzione alle regole sulla doppia sottomissione se si pubblicano atti |
-| TrustNLP (co-locato con ACL/NAACL) | diretta | primavera 2027, da verificare | Parte A | |
-| NeurIPS 2027 Datasets & Benchmarks | diretta | attesa verso maggio 2027 | solo se si fa un dataset vero (Opzione 3) | |
-| **arXiv** | preprint | subito | fissare la priorità | non impedisce la sottomissione ARR (seguire le regole ARR sull'anonimato) |
+| **ACL 2027** (Kyoto, 17–22 agosto 2027) | ACL Rolling Review, poi *commitment* | **ARR: 4 gennaio 2027**, 23:59 AoE (ufficiale, [call](https://2027.aclweb.org/calls/main/)); commitment e notifiche ancora da annunciare | **primo paper** (analisi + B-ctrl) | **obiettivo consigliato**. Long paper 8 pagine (9 nella versione finale); Limitations e Responsible NLP checklist obbligatorie; nessuna doppia sottomissione |
+| Findings of ACL 2027 | stessa sottomissione | decisione dei chair | se main non passa | |
+| EMNLP 2027 | ARR | conferenza a inizio novembre 2027 (Messico o America Centrale, provvisorio); ciclo ARR non ancora annunciato | **secondo paper** (metodo completo + set diagnostico completo) | |
+| NAACL 2027, COLING 2027, EACL 2027 | ARR | scadenze ARR del 12 ottobre 2026 passate | — | non raggiungibili |
+| ICLR 2027 | diretta | passata | — | |
+| Workshop FEVER | diretta | FEVER 2026 si è tenuto il 28 marzo 2026 a Rabat; l'edizione 2027 non è ancora annunciata | versione breve, o il set diagnostico | attenzione alla doppia sottomissione se ci sono atti |
+| NeurIPS 2027 Datasets & Benchmarks | diretta | attesa verso maggio 2027 | solo per un dataset vero (etichette distribuzionali) | |
+| **arXiv** | preprint | **entro fine novembre 2026** | fissare la priorità | ARR permette i preprint (da verificare la regola corrente sull'anonimato nella call); la sottomissione resta anonima |
 
-## 2. Calendario a ritroso (obiettivo: ARR gennaio 2027 per ACL 2027)
+Il tema speciale di ACL 2027 è "Homogenization and knowledge collapse in LLMs". C'è un aggancio possibile ma da non forzare: se i TDM costruiti sulla stessa base sbagliano negli stessi punti (A9), è un caso misurabile di omogeneizzazione. Va citato solo se i dati lo mostrano.
+
+## 2. Calendario a ritroso (obiettivo: ARR 4 gennaio 2027)
+
+Dieci settimane. La parte di analisi viene prima, perché serve per il preprint e perché è il paper anche se B-ctrl non arriva.
 
 | Periodo | Lavoro | Uscita |
 |---|---|---|
-| ottobre 2026 (sett. 2–4) | Step 0: split, test fuori dominio; baseline di tutti i modelli con protocollo zero-shot; LLM generici con la stessa lettura (B1); checker specializzati (B3) | tabella della Parte A |
-| inizio novembre 2026 | set diagnostico (costruzione + validazione di 500 esempi); analisi degli errori | Parte A completa |
-| metà novembre 2026 | **preprint arXiv della Parte A** (facoltativo ma consigliato, per la priorità) | preprint |
-| novembre 2026 | codice di training; replay, varianti, negativi difficili; pilota su JPT | primo risultato di fine-tuning |
-| dicembre 2026 | ablazioni su JPT; Winnow; controlli sulle basi; seed | risultati della Parte B |
-| fine dicembre 2026 – gennaio 2027 | scrittura, figure, appendici, revisione interna, checklist ARR (riproducibilità, limitazioni, etica) | paper completo |
-| gennaio 2027 | **sottomissione ARR** | |
-| primavera 2027 | revisioni ARR, risposta ai revisori, commitment ad ACL 2027 | |
+| 26 ott – 8 nov | Step 0: split, dev, test fuori dominio. Run completi dei TDM con adapter pronto (d3-flash, StartLux-9B, Nimble-9B-v3, MiniCheck-7B). Adapter delle basi (lettura ingenua e calibrata). Jev 1.13 e 1.14 con il protocollo zero-shot | tabella A1 parziale |
+| 9 – 22 nov | Adapter nuovi (Clef, Nimble-v4, Kev-9B). Inferenza fuori dominio. Varianti di protocollo (RQ3) e set diagnostico ridotto. Codice di B-ctrl e pilota su d1-3B | A1–A3 complete |
+| **30 nov** | **congelamento della lista dei modelli**; **preprint arXiv** con A1–A3 (RQ1–RQ3) | preprint |
+| 1 – 14 dic | B-ctrl sulla coppia 9B; calibrazione e trasferimento (A5); errori e accordo (A4, A8, A9) | risultati completi |
+| **12 dic** | **punto di decisione**: se B-ctrl non è solido, resta il pilota in una sottosezione o in appendice | |
+| 15 – 31 dic | scrittura, figure, appendici, revisione interna, checklist ARR | paper completo |
+| 1 – 4 gen | ultimi controlli, sottomissione | |
+| primavera 2027 | revisioni ARR, risposta, commitment ad ACL 2027 | |
 
-Margine: è stretto ma fattibile, perché la Parte A è già in gran parte pronta. Se a metà dicembre la Parte B non è solida, si sottomette la Parte A più un pilota di fine-tuning a gennaio, e si sposta il paper completo su EMNLP 2027.
+Margine: stretto. La parte più a rischio sono gli adapter nuovi (Clef, Nimble-v4) e la base Qwen3.8-27B, che richiede una GPU da 80 GB: se non c'è, il gruppo 27B si limita ai TDM senza la base, e RQ2 si appoggia ai gruppi 9B, 12B e 4B.
 
 ## 3. Checklist di rigore (da completare prima della sottomissione)
 
 **Dai 14 punti dell'audit dei TDM** ([01_stato_arte_e_novita.md](01_stato_arte_e_novita.md), §4):
-- [ ] B1 baseline con log-probabilità di LLM generici; B2 cascata generativa; B3 checker specializzati
-- [ ] T1 dispersione fra modelli; T2 invarianza; T3 opzioni rinominate o invertite; T4 provenienza dei dati
-- [ ] R1 versioni e date esatte (pesi, Jev); R2 intervalli di confidenza; R3 scelte post-valutazione dichiarate
+- [ ] B1 basi con lettura ingenua **e** calibrata senza training; B2 cascata generativa con controllo a escalation casuale; B3 checker specializzati
+- [ ] T1 dispersione fra modelli; T2 invarianza (polarità, composizione, distrattori, posizione); T3 opzioni rinominate o invertite; T4 provenienza e contaminazione
+- [ ] R1 versioni e date esatte (revisioni dei pesi in `run.json`, Jev 1.13.0 e 1.14.0); R2 intervalli di confidenza; R3 scelte post-valutazione dichiarate
 - [ ] C1 calibrazione su dati tenuti da parte; C2 accuratezza ad alta confidenza; C3 soglie congelate prima del test; C4 latenza con e senza cache
 
 **Dalla checklist ARR**:
-- [ ] sezione Limitations (obbligatoria)
+- [ ] sezione Limitations
 - [ ] dichiarazione su rischi ed etica
-- [ ] licenze di dati e modelli, rispetto dei termini (LLM-AggreFact: solo valutazione)
-- [ ] dettagli di calcolo: GPU, ore, numero di corse
+- [ ] licenze di dati e modelli e rispetto dei termini (LLM-AggreFact: CC BY-ND, solo valutazione; JPT, Nimble, StartLux, Bespoke-MiniCheck: non commerciali)
+- [ ] dettagli di calcolo: GPU, ore, numero di corse, energia (già misurata dal benchmark)
 - [ ] iperparametri e procedura di scelta
 - [ ] codice e dati rilasciati (o motivazione)
-- [ ] uso di assistenti AI dichiarato secondo le regole della venue
+- [ ] uso di assistenti AI dichiarato secondo la policy "Writing Assistance"
 
 **Specifiche di questo lavoro**:
-- [ ] dichiarare che il pacchetto di domande e la soglia di Jev nel run originale sono stati scelti sul dev di AggreFact, e il controllo intermedio sul test (`results/INTERIM_AMENDMENT.md`); nel paper usare il protocollo zero-shot
-- [ ] decontaminazione documentata (RAGTruth 98%, WiCE 30%)
-- [ ] nessun test usato per scegliere nulla
+- [ ] dichiarare che il pacchetto di domande e la soglia del run originale di Jev sono stati scelti sul dev di AggreFact, e il controllo intermedio sul test ([../../legacy/results/INTERIM_AMENDMENT.md](../../legacy/results/INTERIM_AMENDMENT.md)); nel paper usare il protocollo zero-shot
+- [ ] riprodurre il numero di Jev di [2609.37647](https://arxiv.org/abs/2609.37647) (78,6 a soglia 0,5) come controllo del nostro protocollo
+- [ ] la grid search sul test è esplorativa: nessuna scelta del paper viene da lì
+- [ ] media di AggreFact riportata anche senza RAGTruth (Decision Index); HoVer mai usato come test fuori dominio per i TDM
+- [ ] decontaminazione dei dati di B-ctrl documentata (RAGTruth 98%, WiCE 30%)
+- [ ] data di congelamento della lista dei modelli dichiarata
 
 ## 4. Rischi e contromisure
 
 | Rischio | Probabilità | Impatto | Contromisura |
 |---|---|---|---|
-| Scoop da un altro gruppo (il filone produce paper ogni settimana) | media | alto | preprint della Parte A entro metà novembre; ricontrollare arXiv ogni settimana |
-| Revisori: "è solo benchmarking" | alta per la sola Parte A | alto | Parte B + RQ2 (contro le basi generiche) + analisi di calibrazione e robustezza |
-| Il fine-tuning non batte i checker specializzati | media | medio | il paper regge come analisi se B-ctrl e oblio sono misurati; raccontare il compromesso |
-| Jev cambia versione o prezzo | media | basso | conclusioni principali sui modelli aperti; versione e date registrate; cache delle risposte rilasciate |
-| Etichette rumorose (ExpertQA ~59 per tutti; HaluEval già segnalato) | certa | medio | analisi degli errori con categoria "etichetta dubbia"; non inseguire le fonti rumorose |
-| Licenze (JPT non commerciale; dati NC) | certa | basso per un paper | dichiarare; rilasciare adapter con le licenze corrette |
-| Calcolo insufficiente | media | medio | JPT con QLoRA sul portatile; Winnow solo per la configurazione finale; L40S per le corse critiche |
-| Doppia sottomissione (workshop con atti + conferenza) | bassa | alto | preferire arXiv; se workshop, scegliere uno senza atti o un contenuto chiaramente diverso |
+| Scoop: un lavoro con molti TDM aperti su AggreFact (tre lavori vicini in sei settimane; i produttori inviano alla leaderboard ogni settimana) | **alta** | alto | preprint entro il 30 novembre; ricerca settimanale su arXiv ([01](01_stato_arte_e_novita.md) §6); puntare su RQ2 e RQ3, che sono più difficili da replicare senza la nostra infrastruttura |
+| Revisori: "è solo benchmarking" | media | alto | RQ2 e RQ3 come contributi principali; ogni tabella risponde a una domanda; B-ctrl |
+| RQ2 dà differenze piccole fra base calibrata e TDM | media | basso | è un risultato: conferma l'audit sul grounding e sposta il valore dei TDM su costo e interfaccia |
+| Bersaglio mobile (nuovi TDM, Jev 1.14, leaderboard che cambia) | certa | medio | data di congelamento; i nuovi modelli in appendice; il messaggio di RQ3 non dipende dai modelli |
+| Contaminazione dei TDM (dati di training non pubblici; RAGTruth nella Decision Index) | alta | medio | analisi con e senza RAGTruth; test fuori dominio scelti fuori dalla Decision Index; dichiarato nelle limitazioni |
+| Adapter nuovi lenti da scrivere (runtime proprietari, versioni di vLLM incompatibili) | media | medio | priorità ai modelli già pronti; Clef ha un `systemone` in Python nel repository dei pesi |
+| GPU insufficiente per i 27B (Qwen3.8-27B, Nimble-v4-max, d3-turbo richiedono 56–80 GB) | media | medio | FP8 su L40S dove il runtime lo consente; altrimenti RQ2 sui gruppi 9B, 12B, 4B |
+| Etichette rumorose (ExpertQA ~59–61 per tutti; HaluEval segnalato) | certa | medio | categoria "etichetta dubbia" nell'analisi degli errori; non inseguire le fonti rumorose |
+| Licenze (molti TDM non commerciali; AggreFact CC BY-ND) | certa | basso per un paper | dichiarare; non ridistribuire derivati di AggreFact |
+| Doppia sottomissione (workshop con atti + conferenza) | bassa | alto | preferire arXiv |
 
 ## 5. Etica e limitazioni (bozza)
 
-- Un fact checker documento–claim verifica il **supporto nel documento**, non la verità nel mondo: un documento sbagliato produce verdetti sbagliati. Va scritto chiaramente, per evitare usi impropri come "rilevatore di fake news".
-- Tutti i dati sono in inglese; nessuna garanzia su altre lingue.
-- Le probabilità calibrate su un dominio possono non esserlo su un altro (lo misuriamo: RQ3).
-- Uso di modelli chiusi (Jev) e riproducibilità limitata dalle loro versioni.
-- I dati generati con LLM possono contenere errori sistematici del generatore; sono verificati da un secondo modello e su un campione umano.
+- Un fact checker documento–claim verifica il **supporto nel documento**, non la verità nel mondo: un documento sbagliato produce verdetti sbagliati. Va scritto chiaramente, per evitare usi come "rilevatore di fake news".
+- La BAcc nasconde l'asimmetria degli errori: un guardiano che ammette più claim non supportati è più pericoloso a parità di BAcc. Lo misuriamo e lo diciamo.
+- Tutti i dati sono in inglese.
+- Le probabilità calibrate in un dominio possono non esserlo in un altro (RQ5).
+- Uso di modelli chiusi e di TDM aperti con dati di training non pubblici: contaminazione non esclusa.
+- I dati generati con LLM (set diagnostico, B-ctrl) possono contenere errori sistematici del generatore; sono verificati automaticamente e, nella versione completa, su un campione umano.

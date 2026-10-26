@@ -1,96 +1,90 @@
 # Le opzioni di paper, a confronto
 
-La domanda è: *creare un dataset nuovo e testarci i modelli? proporre un dataset? oppure altro?* Le opzioni realistiche sono cinque.
+La domanda è: *creare un dataset nuovo e testarci i modelli? proporre un dataset? oppure altro?* Rispetto all'8 ottobre le opzioni sono le stesse, ma il loro valore è cambiato: la valutazione di Jev su AggreFact è già pubblicata ([2609.37647](https://arxiv.org/abs/2609.37647)), e le ricette di fine-tuning dei TDM pure ([2610.02076](https://arxiv.org/abs/2610.02076), [2610.17205](https://arxiv.org/abs/2610.17205), [2609.35865](https://arxiv.org/abs/2609.35865)). Dettagli in [01](01_stato_arte_e_novita.md) e [09](09_aggiornamento_ottobre_2026.md).
 
-## Opzione 1 — Solo valutazione ("benchmarking paper")
+## Opzione 1 — Benchmarking ampio ("tutti i TDM su AggreFact")
 
-**Cosa**: valutare TDM aperti e chiusi sul fact checking documento–claim con benchmark esistenti (LLM-AggreFact + test fuori dominio), con calibrazione, robustezza e costi, contro checker specializzati e LLM generici.
-
-| Pro | Contro |
-|---|---|
-| Gran parte dei risultati c'è già (5 modelli su tutto il test di AggreFact) | i revisori delle conferenze principali tendono a considerarla un contributo debole se manca un'idea o un'analisi forte |
-| Tempi brevi (4–6 settimane) | facile da superare: chiunque abbia accesso a Jev può fare qualcosa di simile |
-| Costo basso (inferenza; Jev è costato ~2 $ per tutto) | |
-
-**Adatta a**: preprint rapido, workshop (FEVER, TrustNLP), Findings se l'analisi è profonda.
-
-## Opzione 2 — Valutazione + metodo di specializzazione (consigliata)
-
-**Cosa**: l'Opzione 1, più il fine-tuning di Winnow-12B e JPT-9B con loss sulle lettere e replay, con la misura di quanto si perde sulle decisioni generali (oblio).
+**Cosa**: valutare molti TDM aperti e chiusi sul fact checking documento–claim (LLM-AggreFact + fuori dominio), contro checker specializzati e LLM generici.
 
 | Pro | Contro |
 |---|---|
-| Contributo completo: "dove sono i TDM oggi" + "come migliorarli senza romperli" | più lavoro: codice di training, GPU (L40S), molte corse |
-| Risponde a un buco esplicito dell'audit (fine-tuning dei modelli aperti, attribuzione dei guadagni) | rischio che il fine-tuning non batta i checker specializzati: il paper resta valido se l'analisi è onesta, ma è meno forte |
-| Il controllo con i modelli base (stesso training su Gemma-4-12B e Qwen3.5-9B) dà un risultato scientifico netto, in un senso o nell'altro | |
+| quasi tutta l'inferenza è già fatta o pronta | **più debole di prima**: Jev su AggreFact è pubblicato, la leaderboard ha già i TDM |
+| tempi brevi | senza una domanda scientifica è "una tabella più lunga della leaderboard" |
 
-**Adatta a**: ACL / EMNLP (main o Findings).
+**Adatta a**: workshop o preprint, non a una conferenza principale.
 
-## Opzione 3 — Proporre un dataset nuovo
+## Opzione 2 — Paper di analisi con domande scientifiche nette (**consigliata ora**)
 
-**Cosa**: costruire un benchmark nuovo di fact checking (documenti, claim, etichette umane) e valutarci i modelli.
+**Cosa**: la stessa inferenza dell'Opzione 1, organizzata attorno a tre domande che nessuno ha affrontato sul grounding:
+1. **Base contro ricetta** (RQ2): sei TDM su Qwen3.5-9B, due su Qwen3.8-27B, Winnow su Gemma-4-12B, KnowLine su Qwen3.5-4B, contro la loro base letta in modo ingenuo e calibrato senza training. *Quanto aggiunge l'addestramento da decision model, e quanto varia fra ricette sulla stessa base?*
+2. **Protocollo contro modello** (RQ3): quanto spostano il risultato soglia, polarità e parafrasi della domanda, una contro tre domande, composizione della richiesta, troncamento, contaminazione. *Le differenze della leaderboard sono più grandi del rumore di protocollo?*
+3. **Che errori fanno** (RQ4–RQ6): ammissione di claim non supportati, contraddetto contro non stabilito, calibrazione e trasferimento della soglia, sovrapposizione degli errori.
 
-| Pro | Contro |
-|---|---|
-| Un buon dataset può avere molto impatto e molte citazioni | **costoso**: per ~2.000–5.000 esempi con doppia annotazione servono settimane di annotatori (o un budget di crowdsourcing qualificato) e un protocollo di accordo |
-| Contributo chiaro e durevole | **i revisori sono severi**: chiedono motivazione del buco, guida di annotazione, accordo fra annotatori, analisi degli errori, datasheet, licenze, baseline forti |
-| | il buco va dimostrato: LLM-AggreFact, HaluBench, HalluMix, RAGTruth, FaithBench coprono già molto |
-| | allontana dalla domanda principale (i TDM) |
-
-**Quando avrebbe senso**: solo se c'è un buco che i dataset esistenti non coprono e che i TDM rendono importante. Due candidati:
-- **etichette graduate o distribuzionali** (più annotatori per esempio, con probabilità di supporto): l'unico modo per valutare davvero la calibrazione, che è la promessa dei TDM;
-- **domini o lingue non coperti** (es. documenti in italiano, documenti amministrativi o legali lunghi).
-
-**Adatta a**: NeurIPS Datasets & Benchmarks, LREC-COLING, oppure come secondo paper dopo il primo.
-
-## Opzione 4 — Set diagnostico ricavato da test esistenti (contributo secondario consigliato)
-
-**Cosa**: un insieme di test **controllati**, costruito trasformando esempi di test esistenti: coppie minime (si cambia un numero o un'entità nel claim), rimozione della frase di evidenza, distrattori aggiunti, evidenza spostata in un documento lungo, domande parafrasate, campi rinominati. Le trasformazioni sono automatiche (anche con LLM); un **campione viene validato a mano**.
+Più **un solo esperimento di fine-tuning** (B-ctrl, [04](04_parte_B_finetuning.md)): stesso training di grounding su un TDM e sulla sua base.
 
 | Pro | Contro |
 |---|---|
-| Costa poco: niente annotazione da zero, solo validazione di un campione (es. 500 esempi, 2 annotatori, 2–3 giorni) | non è un "dataset nuovo" pieno: va presentato come risorsa diagnostica |
-| Misura proprio le proprietà promesse dai TDM (sensibilità all'evidenza, invarianza, calibrazione) | va costruito solo da test (mai da dati di training) e con licenze compatibili |
-| Riutilizzabile da tutta la comunità, anche per altri checker | |
+| ogni risultato ha valore, in qualunque direzione esca ("la ricetta conta poco" è un risultato forte quanto "conta molto") | servono le basi generiche e i test di robustezza: ~3 settimane di lavoro |
+| usa il vantaggio unico della repo: stesse domande, cache di logit, grid search senza inferenza, misure di costo ed energia | il fine-tuning ridotto a un controllo: chi cerca un metodo resta deluso |
+| risponde alla domanda aperta dell'audit (vantaggio della lettura tipizzata) sul compito dove conta | il campo corre: i risultati sui modelli vanno congelati a una data |
+| sta nei tempi di ARR del 4 gennaio | |
 
-Dettagli: [05_set_diagnostico.md](05_set_diagnostico.md).
+**Adatta a**: ACL 2027 (main o Findings).
 
-## Opzione 5 — Due paper separati
+## Opzione 3 — Valutazione + metodo di specializzazione (era la consigliata)
 
-1. **Subito**: Opzione 1 come preprint e poi workshop o Findings (fissa la priorità, dato che il campo corre).
-2. **Dopo**: Opzione 2 (fine-tuning) + Opzione 4 (set diagnostico) per ACL o EMNLP 2027.
+**Cosa**: l'Opzione 2 più il fine-tuning completo (loss sulle lettere, replay o ancoraggio, varianti di domanda, negativi difficili, ablazioni, tre seed) su Winnow e JPT.
 
 | Pro | Contro |
 |---|---|
-| protegge dallo scoop | i due paper si sovrappongono: il secondo deve aggiungere molto per essere accettato |
-| il primo esce in poche settimane | un preprint arXiv **non** impedisce la sottomissione a ACL/EMNLP; un paper già *accettato* a un workshop con atti sì, se il secondo è troppo simile: verificare le regole sulla doppia sottomissione |
+| contributo "dove sono i TDM" + "come migliorarli" | **la novità del metodo è calata**: loss sulle lettere + KL (LLM-as-Jev), calo di calibrazione con il fine-tuning (Inner Jev), coppie contrastive e rimozione dell'evidenza (PACT) sono già pubblicati in forma generale |
+| | 2–2,5 mesi di lavoro: non entra nel 4 gennaio insieme alla Parte A fatta bene |
+| | rischio che il fine-tuning non superi Nimble-v4-max (79,5) o Clef (79,0) zero-shot |
+
+**Adatta a**: secondo paper (EMNLP 2027 o ciclo ARR successivo), meglio se combinato con l'Opzione 4 completa e con dati multilingue.
+
+## Opzione 4 — Set diagnostico ricavato da test esistenti
+
+**Cosa**: test controllati costruiti trasformando esempi di test esistenti (coppie minime, rimozione dell'evidenza, distrattori, posizione, polarità della domanda, composizione della richiesta), validati a mano su un campione. Dettagli: [05_set_diagnostico.md](05_set_diagnostico.md).
+
+| Pro | Contro |
+|---|---|
+| misura proprio le proprietà che i lavori di ottobre mettono in dubbio (polarità, contesto che ribalta, richieste composte) | coppie minime controllate esistono già per domini singoli (radiologia, finanza): il valore sta nel farle su molti TDM e su fonti diverse |
+| economico | non si può derivare da LLM-AggreFact (licenza CC BY-ND, solo valutazione) |
+
+Nel primo paper: **versione ridotta** (le famiglie automatiche che non richiedono validazione umana, più rimozione dell'evidenza dove è annotata). La versione completa va nel secondo.
+
+## Opzione 5 — Proporre un dataset nuovo
+
+| Pro | Contro |
+|---|---|
+| contributo chiaro e durevole | costoso (settimane di annotazione), revisori severi, allontana dalla domanda principale |
+| con **etichette distribuzionali** (più annotatori per esempio) sarebbe l'unico modo per valutare davvero la calibrazione, promessa centrale dei TDM; Sys1Cal ([2609.35342](https://arxiv.org/abs/2609.35342)) e ProbabilityBench ([2610.17016](https://arxiv.org/abs/2610.17016)) lo fanno su dati sintetici, non sul grounding | |
+
+**Quando**: secondo o terzo paper (NeurIPS 2027 Datasets & Benchmarks, LREC). Candidati distintivi: etichette distribuzionali per il grounding, con la classe "non stabilito" separata da "contraddetto"; documenti in italiano.
 
 ## Tabella riassuntiva
 
-| Opzione | Novità | Costo | Tempo | Rischio di rifiuto (conferenza principale) | Venue tipica |
+| Opzione | Novità oggi | Costo | Tempo | Rischio di rifiuto (main) | Venue tipica |
 |---|---|---|---|---|---|
-| 1. Solo valutazione | media | basso | 4–6 sett. | alto | workshop, Findings |
-| **2. Valutazione + metodo** | alta | medio | 3–4 mesi | medio | ACL/EMNLP main o Findings |
-| 3. Dataset nuovo | alta se il buco è reale | alto | 4–6 mesi | medio-alto | D&B track, LREC |
-| 4. Set diagnostico | media (come aggiunta) | basso-medio | 2–3 sett. | — (secondario) | dentro l'Opzione 2 |
-| 5. Due paper | — | medio | preprint subito + 3–4 mesi | — | workshop + main |
+| 1. Benchmarking ampio | bassa | basso | 3–4 sett. | alto | workshop, preprint |
+| **2. Analisi con domande nette + B-ctrl** | **media-alta** | basso-medio | 7–8 sett. | medio | **ACL 2027 main/Findings** |
+| 3. Analisi + metodo completo | media (metodo in parte pubblicato) | medio | 3–4 mesi | medio | EMNLP 2027 |
+| 4. Set diagnostico | media (come aggiunta) | basso-medio | 2–3 sett. | — | dentro la 2 (ridotto) o la 3 (completo) |
+| 5. Dataset nuovo | alta se il buco è reale | alto | 4–6 mesi | medio-alto | D&B, LREC |
 
 ## Raccomandazione
 
-**Opzione 2 con il set diagnostico dell'Opzione 4, più un preprint anticipato della sola parte di valutazione.**
+**Opzione 2, con il set diagnostico ridotto e B-ctrl, sottomessa ad ARR il 4 gennaio 2027 per ACL 2027, con un preprint entro fine novembre.** Poi l'Opzione 3 (+ Opzione 4 completa) come secondo paper.
 
 Motivi:
-- usa il lavoro già fatto (cinque modelli valutati, infrastruttura, protocollo, dati di training pronti);
-- risponde a tre buchi indicati dall'audit: fine-tuning dei modelli aperti, attribuzione dei guadagni (architettura/inizializzazione contro dati), stabilità della calibrazione fra domini;
-- evita il costo e il rischio di un dataset nuovo, ma lascia una risorsa riutilizzabile (il set diagnostico);
-- il preprint anticipato protegge dallo scoop.
+- la valutazione "piatta" e il metodo generale sono stati occupati da altri in ottobre; le domande RQ2 e RQ3 no, e la repo ha già quasi tutti i dati per rispondere;
+- ogni esito è pubblicabile: è la proprietà che serve con dieci settimane a disposizione;
+- B-ctrl è l'unico esperimento di fine-tuning con una domanda nuova (inizializzazione da TDM contro base, per il grounding) e costa poche corse;
+- il preprint anticipato è indispensabile: tre lavori vicini in sei settimane.
 
-Il dataset nuovo (Opzione 3) lo terrei come **secondo paper**, nella forma più distintiva: **etichette distribuzionali per la calibrazione** dei fact checker, eventualmente multilingue (inglese + italiano).
+## Cosa decidere subito
 
-## Una domanda da chiarire prima di partire
-
-**Contributo principale: "valutazione" o "metodo"?** Il titolo, l'abstract e l'ordine delle sezioni cambiano molto:
-- se il fine-tuning dà un guadagno netto (es. Winnow sopra 79 su AggreFact zero-shot, senza oblio), il paper è **di metodo**, con la valutazione come motivazione;
-- se il guadagno è modesto, il paper è **di analisi** ("cosa sanno e non sanno fare i TDM come fact checker"), con il fine-tuning come uno degli esperimenti.
-
-Conviene decidere dopo le prime corse del pilota (Fase 1 di [../fine_tuning/07_esperimenti.md](../fine_tuning/07_esperimenti.md)), scrivendo intanto le sezioni comuni.
+1. **Data di congelamento della lista dei modelli** (proposta: 30 novembre). Dopo quella data, nuovi modelli solo in appendice.
+2. **I modelli chiusi**: Jev 1.13 (per continuità con [2609.37647](https://arxiv.org/abs/2609.37647) e con il nostro run) e 1.14 (versione corrente); gli altri chiusi solo se l'accesso è immediato.
+3. **B-ctrl su quale coppia**: proposta JPT-9B (o elephant-1) contro Qwen3.5-9B, perché la base è la stessa di molti TDM ed entra in una L40S; d1-3B per il pilota.
