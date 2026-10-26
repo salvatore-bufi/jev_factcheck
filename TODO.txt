@@ -16,11 +16,14 @@ startlux-models/StartLux-Decision-v1.1-27B-Instant
 
 
 startlux-models/StartLux-Decision-v1.1-9B-AutoThink
-StartLux-Decision-v1.1-9B-Instant
-vllm-sr/d3-flash
-PelaAI/KnowLine-4B-Gen5.5
-baselabs/elephant-1
+StartLux-Decision-v1.1-9B-Instant   latency 39 ms
+vllm-sr/d3-flash                   latency 54 ms
+PelaAI/KnowLine-4B-Gen5.5         latency 35 ms
+baselabs/elephant-1               latency 114 ms
 
 
 nohup python -u benchmark.py --model d3-flash --gpu 3 > d3-flash_test.out 2>&1 &
 nohup python -u benchmark.py --model starlux-9b-instant --gpu 3 > starlux-instant_test.out 2>&1 &
+
+nohup python -u benchmark.py --model elephant-1  --gpu 2 > elephant-1_test.out 2>&1 &
+nohup python -u benchmark.py --model knowline-4b  --gpu 2 > knowline-4b_test.out 2>&1 &

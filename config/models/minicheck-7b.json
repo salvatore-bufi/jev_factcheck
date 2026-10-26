@@ -1,0 +1,9 @@
+{
+  "_comment": "Bespoke-MiniCheck-7B baseline (ignores the questions) on vLLM, with the authors' scorer (minicheck LLMCheck @b58b9fa): SentenceFusion, min over claim sentences of max over document chunks, supported > 0.5.",
+  "revision": "1ed7786bcda3fa1dc35f7c4ed9e3f36b785d33b8",
+  "max_model_len": 32768,
+  "gpu_util": 0.9,
+  "prefix_caching": true,
+  "eager": true,
+  "batch": 64
+}

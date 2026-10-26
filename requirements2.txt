@@ -51,7 +51,7 @@ pydantic>=2
 startlux-decide @ git+https://github.com/StartLuxLabs/StartLux-Decision.git@a99977d9332decc9fb27a2488b4a83b533b6cd5f
 aiohttp>=3.9
 
-# ---- factcg (baseline)
+# ---- factcg and minicheck-7b (baselines): NLTK sentence splitting (needs its punkt_tab data); sentencepiece for both tokenizers
 sentencepiece
 protobuf
 nltk

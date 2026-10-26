@@ -1,0 +1,5 @@
+# Runs in the benchmark's environment (Python 3.12, CUDA GPU). 15.5 GB of bf16 weights: a 24 GB+ GPU.
+vllm>=0.28
+transformers
+sentencepiece        # the model's own InternLM2 tokenizer (trust_remote_code)
+nltk                 # sentence splitting of documents and claims; needs the punkt_tab data

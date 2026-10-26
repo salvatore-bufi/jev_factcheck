@@ -25,6 +25,7 @@ does the document support the claim? The results table so far is in [table.md](t
 | [models/startlux-9b-instant](models/startlux-9b-instant/README.md) | StartLux-Decision-v1.1-9B-Instant | 9B | the authors' server (`startlux-decide` + vLLM 0.31 in the folder's own `.venv`, from its `setup.sh`); bidirectional prompt attention |
 | [models/startlux-9b-autothink](models/startlux-9b-autothink/README.md) | StartLux-Decision-v1.1-9B-AutoThink | 9B | the authors' server; thinks when unsure (not downloaded yet) |
 | [models/startlux-27b-autothink](models/startlux-27b-autothink/README.md) | StartLux-Decision-v1.1-27B-AutoThink | 27B | the authors' server; thinks when unsure; `quantization=fp8` on 48 GB GPUs |
+| [models/minicheck-7b](models/minicheck-7b/README.md) | Bespoke-MiniCheck-7B (`bespokelabs/Bespoke-MiniCheck-7B`) | 7B | **baseline**, not a decision model: vLLM, the authors' MiniCheck scorer (claim sentences against document chunks) |
 | [models/factcg](models/factcg/README.md) | FactCG-DeBERTa-v3-Large | 0.4B | **baseline**, not a decision model: ignores the questions |
 
 `python benchmark.py --list` prints them. Each folder's README covers its installation, protocol and caveats.
