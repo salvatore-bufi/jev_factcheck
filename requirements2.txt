@@ -45,6 +45,9 @@ pydantic>=2
 # ---- knowline-4b: nothing more for the default backend (hf). backend=sglang needs sglang==0.5.21, which is not
 # installed here: it pins its own stack; use a separate environment and the option sglang_python.
 
+# ---- nimble-9b (a LoRA on Qwen3.5-9B; its engine is copied in models/nimble-9b/nimble)
+peft>=0.21                     # the authors used 0.21.0
+
 # ---- startlux-9b-instant, startlux-9b-autothink, startlux-27b-autothink
 # The authors' package: prompt, read-out, AutoThink loop and the vLLM plugin for Instant models. The plugin is inert
 # in every other vLLM run: it installs only when STARTLUX_PREFIX_BIDIR=1, which its launcher sets for its own servers.

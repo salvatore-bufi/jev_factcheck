@@ -1,0 +1,9 @@
+{
+  "_comment": "Bespoke-Nimble-9B-v3: a LoRA on Qwen/Qwen3.5-9B (revision pinned by the adapter's schema_config.json), through the authors' engine (bespoke-nimble-9b-v3-decision-index@654b124, copied in models/nimble-9b/nimble). transformers + PEFT, bf16, temperature 1.",
+  "revision": "8e927b9b4afdbb14479fac10a7364d1a695be208",
+  "max_tokens": 32768,
+  "batch_tokens": 65536,
+  "shared_prefix": true,
+  "cache_tokens": 131072,
+  "batch": 16
+}
