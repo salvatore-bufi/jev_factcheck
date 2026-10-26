@@ -34,6 +34,32 @@ Ricerca fatta il 26 ottobre 2026, diciotto giorni dopo la prima versione di ques
 
 Con quelli già nella repo, il gruppo "Qwen3.5-9B" arriva a sei TDM e il gruppo "Qwen3.8-27B" a due: è ciò che rende possibile RQ2.
 
+## 2bis. Vincolo dei 9B: i modelli che restano (verificati su Hugging Face il 26 ottobre)
+
+Decisione di progetto: lo studio usa solo modelli **fino a 9B parametri** (taglia nominale). Base e licenza lette dai metadati di Hugging Face; numero di parametri dai file safetensors dove disponibile.
+
+| Modello | Base dichiarata | Licenza | Parametri |
+|---|---|---|---|
+| Cloudflare/clef-flash | Qwen/Qwen3.5-9B | Apache 2.0 | 9,41B |
+| baselabs/elephant-1 | Qwen/Qwen3.5-9B | MIT | 9,41B |
+| vllm-sr/d3-flash | Qwen/Qwen3.5-9B | Apache 2.0 | 8,39B |
+| startlux-models/StartLux-Decision-v1.1-9B-Instant | non dichiarata | CC BY-NC 4.0 | 9,65B |
+| jaredpalmer/kev-9b, kev-4b | Qwen3.5-9B-Base, Qwen3.5-4B-Base | Apache 2.0 | — |
+| perplexity-ai/pplx-decider-flash-v1.2 | Qwen/Qwen3.5-4B | Apache 2.0 | 4,54B |
+| PelaAI/KnowLine-4B-Gen5.5 | Qwen/Qwen3.5-4B | Apache 2.0 | 4,66B |
+| LiquidAI/d1-3B | LiquidAI/LFM2.5-VL-3B | LFM Open | 3,12B |
+| nace-ai/drex-v1.5 | MiMo-V2.6-Distill-Qwen-9B | RAIL | 8,95B |
+| convaiinnovations/laya | — | Apache 2.0 | 0,42B |
+| morriszjm/Tacit-9B / 8B / 4B / 2B / 1.7B | Qwen3.5-9B, Qwen3-8B, Qwen3-4B, Qwen3.5-2B, Qwen3-1.7B (dal README di AnyJev) | da verificare | — |
+| amazon/strands-decider-2B-qwen3.5-v1-2610 | Qwen3.5-2B (dal nome) | da verificare | — |
+| internlm/Intern-Decision-0.8B / 2B / 4B | da verificare | da verificare | — |
+| jylin001206/SII-Decision-4B-Full | da verificare | da verificare | — |
+
+Note:
+- **Nimble-v4 9B non è su Hugging Face** (c'è solo Nimble-v4-max, 27B): è un'API a pagamento, quindi solo riferimento. Lo stesso per d1-ultra.
+- La classe "9B" di Qwen3.5 ha ~9,4B parametri (torre visiva inclusa) e StartLux ~9,7B: il vincolo va inteso come taglia nominale, e va scritto così nel paper.
+- Usciti dallo studio, e mantenuti solo come riferimento: Winnow-12B e Rune-26B-A4B (già misurati), d3-turbo e StartLux-27B (adapter pronti, non si eseguono), Clef 27B, Nimble-v4-max, pplx-decider 27B, mammoth-1, Kev-27B.
+
 ## 3. Altri lavori da citare
 
 - Giudici a rubrica: i TDM e gli LLM sbagliano negli stessi punti ([2609.29769](https://arxiv.org/abs/2609.29769)).

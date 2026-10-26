@@ -1,6 +1,6 @@
 # Benchmark e modelli: cosa usano i lavori del settore e cosa usare noi
 
-Integra [03_parte_A_valutazione.md](03_parte_A_valutazione.md). Rivisto il 26 ottobre 2026 con i rilasci di ottobre. Valutare solo su LLM-AggreFact resta un punto debole: i paper di riferimento usano più benchmark.
+Integra [03_parte_A_valutazione.md](03_parte_A_valutazione.md). Rivisto il 26 ottobre 2026 con i rilasci di ottobre e con il vincolo dei modelli fino a 9B. Valutare solo su LLM-AggreFact resta un punto debole: i paper di riferimento usano più benchmark.
 
 ## 1. Su cosa si valutano i lavori di fact checking su documento
 
@@ -74,35 +74,44 @@ Regola generale: nella tabella principale dichiarare per ogni benchmark se è **
 
 ## 4. I modelli
 
+**Vincolo**: solo modelli fino a 9B parametri (taglia nominale; la classe "9B" di Qwen3.5 ha ~9,4B parametri con la torre visiva, StartLux-9B ~9,7B). Parametri da Hugging Face dove disponibili.
+
 ### 4.1 Typed decision model
 
 Raggruppati per base, perché è il disegno di RQ2. Stato: **fatto** = run completo sul test di AggreFact; **pronto** = adapter nella repo; **nuovo** = da aggiungere.
 
 | Base | Modello | Lettura | Licenza | Stato |
 |---|---|---|---|---|
-| — (chiuso) | **Jev 1.13** / **1.14** (TypeSafe) | API | — | 1.13 fatto (dev-tuned, da rifare zero-shot); 1.14 nuovo |
-| — (chiuso) | OpenAI Decisions (beta pubblica), Microsoft Decision-1, d1-ultra (Liquid), pplx-decider via API | API | — | facoltativi |
 | **Qwen3.5-9B** | JPT-9B | LoRA, lettere | CC BY-NC | fatto (76,04) |
 | | elephant-1 (Baseten) | attenzione bidirezionale a blocchi, lettere | MIT | fatto (76,70) |
 | | Bespoke-Nimble-9B-v3 | LoRA, 255 codici | CC BY-NC | pronto |
-| | d3-flash (vLLM-SR) | attenzione non causale, 255 codici | Apache 2.0 | pronto |
-| | StartLux-Decision-v1.1-9B-Instant | attenzione bidirezionale sul prompt (base da verificare) | CC BY-NC | pronto |
-| | Kev-9B | LoRA + testa a puntatore | aperto | nuovo |
-| | Nimble-v4 9B (base da verificare) | — | CC BY-NC | nuovo (77,8 in leaderboard) |
-| **Qwen3.8-27B** | **Clef** (Cloudflare) | testa congiunta sugli stati nascosti | Apache 2.0 | nuovo (pesi in cache; 79,0 in leaderboard) |
-| | **Nimble-v4-max** | — | CC BY-NC | nuovo (79,5 in leaderboard; ~55 GB BF16) |
-| Gemma-4-12B | Winnow-12B | lettere | Apache 2.0 | fatto (BF16 76,95; NVFP4 77,49) |
-| Gemma-4-26B-A4B | Rune-26B-A4B-v3 | lettere | aperto | fatto (76,24) |
-| Qwen3.5 26B | d3-turbo | prefisso bidirezionale, 255 codici | Apache 2.0 | pronto (GPU 56 GiB+) |
-| Qwen3.5 27B | StartLux-27B-AutoThink | pensa quando è incerto | CC BY-NC | pronto |
-| Qwen3.5-4B | KnowLine-4B-Gen5.5 | lettura doppia dei prompt brevi | Apache 2.0 | fatto (75,65) |
+| | d3-flash (vLLM-SR, 8,4B) | attenzione non causale, 255 codici | Apache 2.0 | pronto |
+| | StartLux-Decision-v1.1-9B-Instant | attenzione bidirezionale sul prompt (base non dichiarata) | CC BY-NC | pronto |
+| | **Clef-flash** (Cloudflare) | testa congiunta sugli stati nascosti | Apache 2.0 | nuovo (76,6 in leaderboard) |
+| | **Tacit-9B** (AnyJev) | autodistillazione del ragionamento, lettere | da verificare | nuovo |
+| Qwen3.5-9B-Base | Kev-9B | LoRA + testa a puntatore | Apache 2.0 | nuovo |
+| **Qwen3.5-4B** | KnowLine-4B-Gen5.5 | lettura doppia dei prompt brevi | Apache 2.0 | fatto (75,65) |
+| | **pplx-decider-flash v1.2** (Perplexity) | — | Apache 2.0 | nuovo |
+| | SII-Decision-4B, Intern-Decision-4B | autodistillazione; segnaposto per campo | da verificare | facoltativi (base da verificare) |
+| Qwen3.5-4B-Base | Kev-4B | LoRA + testa a puntatore | Apache 2.0 | nuovo |
+| Qwen3.5-2B | Strands Decider 2B (AWS), Tacit-2B | — | da verificare | nuovi (curva di taglia) |
+| Qwen3-8B | CLM-v0.1-8B (encoder congelato) | contrastivo | Apache 2.0 | fatto (49,98: la regola a tre domande non è adatta) |
+| | Tacit-8B | autodistillazione, lettere | da verificare | facoltativo |
 | LFM2.5-VL-3B | d1-3B (Liquid) | parole yes/no | LFM Open | fatto (71,84) |
-| Qwen3-8B (congelato) | CLM-v0.1-8B | contrastivo | Apache 2.0 | fatto (49,98: la regola a tre domande non è adatta) |
 | MiMo-V2.6-Distill-Qwen-9B | Drex v1.5 | — | RAIL | facoltativo (76,5 in leaderboard) |
-| ModernBERT | Laya (~0,4B) | encoder + testa | aperto | facoltativo (il più piccolo) |
-| — | pplx-decider v1.2 27B / flash 4B | — | pesi aperti (licenza da verificare) | facoltativo (78,7 in leaderboard) |
+| ModernBERT | Laya (0,42B) | encoder + testa | Apache 2.0 | facoltativo (il più piccolo) |
+| — | Intern-Decision 0,8B / 2B | segnaposto per campo | da verificare | facoltativi (curva di taglia) |
 
-### 4.2 Checker specializzati
+**Riferimenti fuori vincolo o non eseguibili in locale** (una riga in fondo alla tabella principale, nessuna analisi):
+
+| Modello | Perché | Costo |
+|---|---|---|
+| Jev 1.13 / 1.14 (chiuso) | il TDM di riferimento; da riprodurre il 78,6 di [2609.37647](https://arxiv.org/abs/2609.37647) | pochi dollari |
+| Winnow-12B (76,95 / 77,49), Rune-26B-A4B (76,24) | già misurati nella repo | zero |
+| Nimble-v4 9B (77,8, solo API), Nimble-v4-max (79,5), Clef (79,0), pplx-decider 27B (78,7), d1-ultra (78,5) | numeri della leaderboard | zero |
+| d3-turbo, StartLux-27B-AutoThink | adapter pronti nella repo, ma sopra il vincolo: non si eseguono | — |
+
+### 4.2 Checker specializzati (tutti fino a 9B)
 
 | Modello | Taglia | Perché |
 |---|---|---|
@@ -117,19 +126,19 @@ Raggruppati per base, perché è il disegno di RQ2. Stato: **fatto** = run compl
 
 | Base | TDM del gruppo | Letture |
 |---|---|---|
-| **Qwen3.5-9B** (in cache) | JPT, elephant-1, Nimble-v3, d3-flash, StartLux-9B, Kev-9B | ingenua (prompt di ogni TDM + prompt neutro) e calibrata (AnyJev L0 + temperatura) |
-| **Qwen3.8-27B** | Clef, Nimble-v4-max | idem; serve GPU da 80 GB o FP8 |
-| Gemma-4-12B | Winnow | idem |
-| Qwen3.5-4B | KnowLine | idem |
+| **Qwen3.5-9B** (in cache) | JPT, elephant-1, Nimble-v3, d3-flash, StartLux-9B, Clef-flash, Tacit-9B | ingenua (prompt di ogni TDM + prompt neutro) e calibrata (AnyJev L0 + temperatura) |
+| Qwen3.5-9B-Base | Kev-9B | idem (il prompt a chat non funziona sulle basi pre-addestrate: [2610.17205](https://arxiv.org/abs/2610.17205); usare il formato di Kev) |
+| **Qwen3.5-4B** | KnowLine, pplx-decider-flash | idem |
+| Qwen3.5-4B-Base | Kev-4B | idem |
 | LFM2.5-VL-3B | d1-3B | idem |
-| Gemma-4-26B-A4B, Qwen3-8B | Rune, CLM | facoltative |
+| Qwen3.5-2B, Qwen3-8B | Strands, Tacit-2B; CLM, Tacit-8B | facoltative |
 
 ### 4.4 LLM generici che generano (B2, giudici)
 
 | Gruppo | Modelli | Come |
 |---|---|---|
-| Aperti | un modello piccolo (es. Qwen3.5-9B stesso in modalità generativa) e uno medio (es. gpt-oss-20b o Qwen3.6-35B-A3B) | "Yes/No" generato; con e senza ragionamento |
-| Chiusi | un modello economico e uno di punta di un fornitore | **su un sottoinsieme** (es. 200 righe per fonte); API batch; per la cascata con controllo a escalation casuale |
+| Aperti, fino a 9B | Qwen3.5-9B e Qwen3.5-4B in modalità generativa | "Yes/No" generato; con e senza ragionamento |
+| Chiusi (solo riferimento) | un modello economico di un fornitore | **su un sottoinsieme** (es. 200 righe per fonte); API batch; per la cascata con controllo a escalation casuale |
 
 Per i modelli vecchi (GPT-4o, Claude 3.5 Sonnet, Llama-3.1-70B, ...) si citano i numeri della leaderboard.
 
@@ -139,31 +148,32 @@ Per i modelli vecchi (GPT-4o, Claude 3.5 Sonnet, Llama-3.1-70B, ...) si citano i
 
 | Gruppo | Modelli |
 |---|---|
-| TDM (~13) | Jev 1.13 e 1.14; gruppo Qwen3.5-9B (JPT, elephant-1, Nimble-v3, d3-flash, StartLux-9B, Kev-9B); Winnow-12B; KnowLine-4B; d1-3B; Rune-26B; Clef |
-| Basi (4) | Qwen3.5-9B, Gemma-4-12B, Qwen3.5-4B, LFM2.5-VL-3B, con due letture |
+| TDM fino a 9B (~13) | gruppo Qwen3.5-9B (JPT, elephant-1, Nimble-v3, d3-flash, StartLux-9B, Clef-flash, Tacit-9B); Kev-9B; gruppo Qwen3.5-4B (KnowLine, pplx-decider-flash); Kev-4B; d1-3B; Laya |
+| Basi (4–5) | Qwen3.5-9B, Qwen3.5-9B-Base, Qwen3.5-4B, Qwen3.5-4B-Base, LFM2.5-VL-3B, con due letture |
 | Specializzati (4) | Bespoke-MiniCheck-7B, MiniCheck-Flan-T5-L, FactCG, Granite Guardian 3.3 |
-| Generativi (2–3) | un aperto piccolo, un chiuso economico, un chiuso di punta su sottoinsieme |
+| Generativi (2) | Qwen3.5-9B generativo, un chiuso economico su sottoinsieme |
+| Riferimenti | Jev 1.13 e 1.14; Winnow e Rune dalla cache; i 27B dalla leaderboard |
 
 Benchmark: livello 1 senza TRUE e FaithBench se il tempo manca (tutti gli altri sono già in cache), più il set diagnostico ridotto.
 
 ### Versione estesa (se c'è tempo, o nel secondo paper)
 
-Nimble-v4 / v4-max e la base Qwen3.8-27B, d3-turbo, StartLux-27B-AutoThink, pplx-decider, Drex, Laya, CLM con domande adatte; TRUE, FaithBench, SummaC; i chiusi facoltativi.
+La curva di taglia completa (Strands 2B, Tacit-2B, Intern-Decision 0,8B/2B/4B, SII-Decision-4B), Drex v1.5, Tacit-8B, CLM con domande adatte; TRUE, FaithBench, SummaC.
 
 ## 6. Costi stimati
 
 | Voce | Stima |
 |---|---|
 | Coppie della suite minima (AggreFact + HaluBench + HalluMix + 4 di verifica + diagnostico) | ~60.000–70.000 |
-| TDM da ~9B, tre domande per coppia, su L40S | ~2–6 ore per modello sulla suite (riferimento: Winnow BF16 9,8 righe/s, elephant-1 5,9, KnowLine 2,9 sul test di AggreFact) |
-| ~15 modelli aperti + 4 basi × 2 letture | ~80–120 ore GPU |
-| Jev su tutta la suite | pochi dollari (il test di AggreFact è costato ~1,5 $) |
-| LLM chiusi su un sottoinsieme (~5.000 coppie) | da qualche decina a qualche centinaio di dollari; API batch |
+| TDM da ~9B, tre domande per coppia | ~3–6 ore per modello sulla suite (riferimento sul test di AggreFact: elephant-1 5,9 righe/s, KnowLine-4B 2,9 righe/s); i 4B e i più piccoli meno |
+| ~15 modelli + 5 basi × 2 letture | ~70–100 ore GPU, su GPU da 24–48 GB (anche in parallelo) |
+| Jev su tutta la suite (riferimento) | pochi dollari (il test di AggreFact è costato ~1,5 $) |
+| LLM chiuso su un sottoinsieme (~5.000 coppie, riferimento) | qualche decina di dollari; API batch |
 
 ## Fonti
 
 - TRUE https://arxiv.org/abs/2204.04991 · AlignScore https://arxiv.org/abs/2305.16739 · MiniCheck https://arxiv.org/abs/2404.10774 · FactCG https://arxiv.org/abs/2501.17144
 - Granite Guardian https://arxiv.org/abs/2412.07724 · Lynx / HaluBench https://arxiv.org/abs/2407.08488 · LettuceDetect https://arxiv.org/abs/2502.17125 · HalluGuard https://arxiv.org/abs/2510.00880 · FaithBench https://arxiv.org/abs/2410.13210
 - Leaderboard di LLM-AggreFact https://llm-aggrefact.github.io/ · Decision Index https://github.com/apolinario/decision-index
-- TDM: Clef https://huggingface.co/Cloudflare/clef · Nimble-v4-max https://huggingface.co/bespokelabs/Nimble-v4-max · Drex https://huggingface.co/nace-ai/drex-v1.5 · Laya https://huggingface.co/convaiinnovations/laya · Kev https://github.com/jaredpalmer/kev · CLM https://huggingface.co/Contrastive-LM/CLM-v0.1-8B · AnyJev https://github.com/nokia-applied-research/AnyJev
+- TDM: Clef-flash https://huggingface.co/Cloudflare/clef-flash · pplx-decider-flash https://huggingface.co/perplexity-ai/pplx-decider-flash-v1.2 · Tacit https://huggingface.co/morriszjm/Tacit-9B · Kev-9B https://huggingface.co/jaredpalmer/kev-9b · Strands Decider https://huggingface.co/amazon/strands-decider-2B-qwen3.5-v1-2610 · Intern-Decision https://huggingface.co/internlm/Intern-Decision-4B · Clef https://huggingface.co/Cloudflare/clef · Nimble-v4-max https://huggingface.co/bespokelabs/Nimble-v4-max · Drex https://huggingface.co/nace-ai/drex-v1.5 · Laya https://huggingface.co/convaiinnovations/laya · Kev https://github.com/jaredpalmer/kev · CLM https://huggingface.co/Contrastive-LM/CLM-v0.1-8B · AnyJev https://github.com/nokia-applied-research/AnyJev
 - Lavori sui TDM e il grounding: vedi [09_aggiornamento_ottobre_2026.md](09_aggiornamento_ottobre_2026.md)

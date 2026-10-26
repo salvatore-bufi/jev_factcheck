@@ -23,8 +23,8 @@ Dieci settimane. La parte di analisi viene prima, perché serve per il preprint 
 
 | Periodo | Lavoro | Uscita |
 |---|---|---|
-| 26 ott – 8 nov | Step 0: split, dev, test fuori dominio. Run completi dei TDM con adapter pronto (d3-flash, StartLux-9B, Nimble-9B-v3, MiniCheck-7B). Adapter delle basi (lettura ingenua e calibrata). Jev 1.13 e 1.14 con il protocollo zero-shot | tabella A1 parziale |
-| 9 – 22 nov | Adapter nuovi (Clef, Nimble-v4, Kev-9B). Inferenza fuori dominio. Varianti di protocollo (RQ3) e set diagnostico ridotto. Codice di B-ctrl e pilota su d1-3B | A1–A3 complete |
+| 26 ott – 8 nov | Step 0: split, dev, test fuori dominio. Run completi dei modelli con adapter pronto (d3-flash, StartLux-9B, Nimble-9B-v3, MiniCheck-7B). Adapter delle basi (lettura ingenua e calibrata). Jev 1.13 e 1.14 (riferimento) con il protocollo zero-shot | tabella A1 parziale |
+| 9 – 22 nov | Adapter nuovi (Clef-flash, Tacit, pplx-decider-flash, Kev-9B/4B, Strands 2B). Inferenza fuori dominio. Varianti di protocollo (RQ3) e set diagnostico ridotto. Codice di B-ctrl e pilota su d1-3B | A1–A3 complete |
 | **30 nov** | **congelamento della lista dei modelli**; **preprint arXiv** con A1–A3 (RQ1–RQ3) | preprint |
 | 1 – 14 dic | B-ctrl sulla coppia 9B; calibrazione e trasferimento (A5); errori e accordo (A4, A8, A9) | risultati completi |
 | **12 dic** | **punto di decisione**: se B-ctrl non è solido, resta il pilota in una sottosezione o in appendice | |
@@ -32,7 +32,7 @@ Dieci settimane. La parte di analisi viene prima, perché serve per il preprint 
 | 1 – 4 gen | ultimi controlli, sottomissione | |
 | primavera 2027 | revisioni ARR, risposta, commitment ad ACL 2027 | |
 
-Margine: stretto. La parte più a rischio sono gli adapter nuovi (Clef, Nimble-v4) e la base Qwen3.8-27B, che richiede una GPU da 80 GB: se non c'è, il gruppo 27B si limita ai TDM senza la base, e RQ2 si appoggia ai gruppi 9B, 12B e 4B.
+Margine: stretto, ma il vincolo dei 9B lo rende più sicuro: ogni modello entra in una GPU da 24–48 GB, quindi più run possono andare in parallelo su GPU diverse. La parte più a rischio sono gli adapter nuovi (runtime proprietari); se mancano, RQ2 si appoggia ai cinque TDM su Qwen3.5-9B già pronti o fatti.
 
 ## 3. Checklist di rigore (da completare prima della sottomissione)
 
@@ -69,7 +69,7 @@ Margine: stretto. La parte più a rischio sono gli adapter nuovi (Clef, Nimble-v
 | Bersaglio mobile (nuovi TDM, Jev 1.14, leaderboard che cambia) | certa | medio | data di congelamento; i nuovi modelli in appendice; il messaggio di RQ3 non dipende dai modelli |
 | Contaminazione dei TDM (dati di training non pubblici; RAGTruth nella Decision Index) | alta | medio | analisi con e senza RAGTruth; test fuori dominio scelti fuori dalla Decision Index; dichiarato nelle limitazioni |
 | Adapter nuovi lenti da scrivere (runtime proprietari, versioni di vLLM incompatibili) | media | medio | priorità ai modelli già pronti; Clef ha un `systemone` in Python nel repository dei pesi |
-| GPU insufficiente per i 27B (Qwen3.8-27B, Nimble-v4-max, d3-turbo richiedono 56–80 GB) | media | medio | FP8 su L40S dove il runtime lo consente; altrimenti RQ2 sui gruppi 9B, 12B, 4B |
+| Revisori: "perché solo fino a 9B? I migliori sono 27B" | media | medio | motivazione esplicita (costo, deployment su una GPU, fine-tuning accessibile, gruppi per base più ricchi); i 27B e Jev riportati come riferimento; la distanza dai 27B è essa stessa un risultato |
 | Etichette rumorose (ExpertQA ~59–61 per tutti; HaluEval segnalato) | certa | medio | categoria "etichetta dubbia" nell'analisi degli errori; non inseguire le fonti rumorose |
 | Licenze (molti TDM non commerciali; AggreFact CC BY-ND) | certa | basso per un paper | dichiarare; non ridistribuire derivati di AggreFact |
 | Doppia sottomissione (workshop con atti + conferenza) | bassa | alto | preferire arXiv |

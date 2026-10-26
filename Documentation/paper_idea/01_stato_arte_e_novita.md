@@ -8,19 +8,24 @@ Aggiornato al 26 ottobre 2026. Il registro completo della ricerca, con tutte le 
 
 Modelli che non generano testo: leggono uno stato e domande tipizzate (*choice*, *noul* sì/no, *score*) e restituiscono una probabilità per opzione in una sola passata.
 
+Questo studio si limita ai modelli **fino a 9B parametri** (taglia nominale); i più grandi compaiono solo come riferimento.
+
 Il filone è esploso: su arXiv ci sono ~200 paper su Jev e i TDM dal 15 settembre, e la **Decision Index** (la classifica dei TDM, edizione 0.4 dal 20 ottobre) conta più di 200 sistemi. Ci sono TDM chiusi di quasi tutti i grandi fornitori e decine di TDM aperti, quasi tutti ottenuti post-addestrando poche basi (Qwen3.5-9B, Qwen3.8-27B, Gemma-4). Le famiglie che contano per noi:
 
 | Modello | Tipo | Base | Note |
 |---|---|---|---|
 | Jev 1.13 / **1.14** (TypeSafe) | chiuso, API | — | 1.14 dal 14/10 (immagini, tipo `box`, contesto lungo "danger zone"); `jev-latest` passa a 1.14; 1.13 resta, con 60 giorni di preavviso prima del ritiro |
 | OpenAI Decisions, Microsoft Decision-1, d1-ultra (Liquid) | chiusi, API | — | OpenAI ora in beta pubblica |
-| **Clef / Clef-flash** (Cloudflare, 1/10) | aperti, Apache 2.0 | Qwen3.8-27B / 9B | testa congiunta sopra il backbone; 79,0 su LLM-AggreFact (leaderboard) |
-| **Nimble-v4 / v4-max** (Bespoke Labs) | aperti, CC BY-NC | 9B (base da verificare) / Qwen3.8-27B | 77,8 / **79,5** su LLM-AggreFact (leaderboard, primo posto) |
-| **pplx-decider v1.2 / flash** (Perplexity) | pesi aperti | 27B / 4B | 78,7 su LLM-AggreFact (leaderboard) |
+| **Clef-flash** (Cloudflare, 1/10) | aperto, Apache 2.0 | **Qwen3.5-9B** | testa congiunta sopra il backbone; 76,6 su LLM-AggreFact (leaderboard). Clef (27B, 79,0) solo come riferimento |
+| Nimble-v4 9B (Bespoke Labs) | **solo API** (non su Hugging Face) | — | 77,8 su LLM-AggreFact, primo fino a 9B; Nimble-v4-max (27B, 79,5, primo assoluto) solo come riferimento |
+| **pplx-decider-flash v1.2** (Perplexity, 15/10) | aperto, Apache 2.0 | **Qwen3.5-4B** | la versione 27B fa 78,7 su LLM-AggreFact (riferimento) |
+| **Tacit-9B / 8B / 4B / 2B** (AnyJev, Nokia) | aperti | Qwen3.5-9B, Qwen3-8B, Qwen3-4B, Qwen3.5-2B | autodistillazione del ragionamento in una passata |
+| Strands Decider 2B (AWS), Intern-Decision 0,8B / 2B / 4B, SII-Decision-4B | aperti | Qwen3.5-2B e altre (da verificare) | la parte bassa della curva di taglia |
 | Drex v1.5 (nace-ai) | aperto, licenza RAIL | MiMo-V2.6-Distill-Qwen-9B | 76,5 su LLM-AggreFact |
-| elephant-1 / mammoth-1 (Baseten) | aperto (MIT) / — | Qwen3.5-9B / — | elephant-1 nella repo: 76,70 |
-| JPT-9B, Nimble-9B-v3, d3-flash, StartLux-9B, Kev-9B | aperti | Qwen3.5-9B | nella repo (Kev da aggiungere) |
-| Winnow-12B | aperto, Apache 2.0 | Gemma-4-12B | nella repo: 76,95 (BF16) |
+| Kev-9B / Kev-4B (J. Palmer) | aperti, Apache 2.0 | Qwen3.5-9B-**Base** / Qwen3.5-4B-**Base** | partono dalla variante Base, non dall'Instruct |
+| elephant-1 (Baseten) | aperto (MIT) | Qwen3.5-9B | nella repo: 76,70 |
+| JPT-9B, Nimble-9B-v3, d3-flash, StartLux-9B | aperti | Qwen3.5-9B (StartLux: architettura Qwen3.5, base non dichiarata) | nella repo |
+| Winnow-12B, Rune-26B-A4B | aperti | Gemma-4 | nella repo (76,95 e 76,24), **sopra il vincolo**: solo riferimento |
 | KnowLine-4B, d1-3B, Laya (~0,4B, encoder), CLM-8B (contrastivo) | aperti | Qwen3.5-4B, LFM2.5, ModernBERT, Qwen3-8B | nella repo (Laya da aggiungere) |
 
 Ricette pubblicate per costruire TDM aperti: AnyJev ([2610.00831](https://arxiv.org/abs/2610.00831)), LLM-as-Jev ([2610.02076](https://arxiv.org/abs/2610.02076)), Releasing the Inner Jev ([2610.17205](https://arxiv.org/abs/2610.17205)), SII-Decision ([2610.03935](https://arxiv.org/abs/2610.03935)), Our Own Jev ([2610.29052](https://arxiv.org/abs/2610.29052)), Intern-Decision ([2610.22131](https://arxiv.org/abs/2610.22131)).
@@ -67,7 +72,7 @@ Conseguenza per noi: la baseline B1 non può essere solo la base "letta in modo 
 | Domanda | Coperta da qualcuno? |
 |---|---|
 | Quanto vale Jev su LLM-AggreFact intero? | **sì** (78,6 a soglia 0,5: [2609.37647](https://arxiv.org/abs/2609.37647)). Per noi diventa un numero da riprodurre, non un contributo |
-| Quanto valgono **i TDM aperti** con **un unico protocollo controllato** su AggreFact e fuori dominio? | **no**: solo voci di leaderboard inviate dai produttori, protocollo ignoto |
+| Quanto valgono **i TDM aperti piccoli (fino a 9B)** con **un unico protocollo controllato** su AggreFact e fuori dominio? Quanto distano dai TDM grandi e chiusi? | **no**: solo voci di leaderboard inviate dai produttori, protocollo ignoto |
 | Cosa aggiunge l'addestramento da decision model **rispetto alla base**, sul grounding? Varia molto fra ricette sulla stessa base? | **no** sul grounding (solo Qwen/Gemma accanto a Jev, che non ha una base nota); l'audit lo indica come domanda aperta in generale |
 | Quanto della classifica dipende dal protocollo (soglia, formulazione, polarità, una o tre domande, composizione della richiesta, troncamento)? | **no** (studi di sensibilità esistono su altri compiti, non sul grounding e non su molti TDM) |
 | I TDM distinguono "contraddetto" da "non stabilito"? Gli errori sono simmetrici? | in parte: asimmetria degli errori per Jev su 495 claim; ipotesi del "terzo valore soppresso" su dati sintetici |
@@ -77,8 +82,8 @@ Conseguenza per noi: la baseline B1 non può essere solo la base "letta in modo 
 
 ## 3. Cosa rende il contributo difendibile oggi
 
-1. **Ampiezza controllata**: ~15–20 TDM aperti e chiusi, cinque architetture di lettura (lettere su LLM causale, attenzione bidirezionale sul prompt, testa congiunta, encoder, contrastivo), da 3B a 27B, **stesse domande, stessi dati, stesse regole**, con cache di probabilità e logit rilasciate. Nessuna voce della leaderboard è confrontabile così.
-2. **L'esperimento naturale "stessa base, ricette diverse"**: sei TDM su Qwen3.5-9B, due su Qwen3.8-27B, più Winnow/Gemma-4-12B e KnowLine/Qwen3.5-4B, contro la base letta in modo ingenuo e calibrato. Separa tre effetti: base, lettura, addestramento da decision model.
+1. **Ampiezza controllata sui TDM piccoli**: ~15–20 TDM aperti fino a 9B, cinque architetture di lettura (lettere su LLM causale, attenzione bidirezionale sul prompt, testa congiunta, encoder, contrastivo), da 0,4B a 9B, tutti eseguibili su una sola GPU da 24–48 GB, **stesse domande, stessi dati, stesse regole**, con cache di probabilità e logit rilasciate. Nessuna voce della leaderboard è confrontabile così.
+2. **L'esperimento naturale "stessa base, ricette diverse"**: sette TDM su Qwen3.5-9B e tre su Qwen3.5-4B (contando Kev sulle varianti Base), contro la base letta in modo ingenuo e calibrato. Separa tre effetti: base, lettura, addestramento da decision model.
 3. **Sensibilità al protocollo**, misurata senza nuova inferenza grazie alla grid search già pronta: se le scelte di protocollo valgono più della distanza fra i modelli, la leaderboard va letta diversamente. È un risultato utile a tutto il campo.
 4. **Errori, calibrazione, trasferimento**: asimmetria degli errori (claim non supportati ammessi), contraddetto contro non stabilito, ECE per dominio, trasferimento della soglia, accordo fra modelli.
 5. **Un esperimento di fine-tuning mirato** (B-ctrl): stesso training di grounding su un TDM e sulla sua base.
@@ -88,7 +93,7 @@ Conseguenza per noi: la baseline B1 non può essere solo la base "letta in modo 
 
 | ID | Requisito | Come lo copriamo |
 |---|---|---|
-| B1 | baseline con log-probabilità delle etichette | basi dei TDM (Qwen3.5-9B, Qwen3.8-27B, Gemma-4-12B, Qwen3.5-4B) con lo stesso prompt; lettura ingenua **e** calibrata senza training (AnyJev L0 o temperatura) |
+| B1 | baseline con log-probabilità delle etichette | basi dei TDM (Qwen3.5-9B, Qwen3.5-4B e le varianti Base, LFM2.5-VL-3B, Qwen3-8B) con lo stesso prompt; lettura ingenua **e** calibrata senza training (AnyJev L0 o temperatura) |
 | B2 | cascate generative economiche | LLM piccolo che genera "Yes/No" (con e senza ragionamento breve); cascata TDM → LLM con il controllo a escalation casuale di [2610.20634](https://arxiv.org/abs/2610.20634) |
 | B3 | modelli specifici del compito | Bespoke-MiniCheck-7B, MiniCheck-Flan-T5-L, FactCG, AlignScore, Granite Guardian 3.3 |
 | T1 | dispersione fra modelli | molti TDM e più baseline; intervalli di confidenza |

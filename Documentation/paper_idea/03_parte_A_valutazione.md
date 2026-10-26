@@ -22,28 +22,30 @@ Dalla grid search sul test (`results/.../grid_551bb722.md`). Sono **esplorativi*
 
 | Osservazione | Numeri | Perché conta |
 |---|---|---|
-| Il protocollo sposta più della distanza fra modelli | migliore combinazione contro default: d1-3B **+3,6** (71,84 → 75,47, una domanda sola), Rune +1,7, JPT +1,2, Winnow +0,8; fra i primi cinque della leaderboard ci sono 1,0 punti | RQ3: la leaderboard può essere più "protocollo" che "modello" |
-| BAcc e AUC ordinano i modelli in modo diverso | elephant-1 ha la Macro AUC più alta (87,15) ma è secondo per BAcc (76,70 contro 76,95 di Winnow, Macro AUC 84,99) | RQ3/RQ5: la soglia fissa penalizza i modelli meno calibrati sul compito |
-| La terza domanda (contraddizione) porta poco segnale | AUC invertita di `contradicted_detail` fra 0,62 e 0,83, contro 0,89–0,91 per le altre due | RQ4: i TDM riconoscono il "non supportato" ma non distinguono bene il "contraddetto" (cfr. il "terzo valore soppresso" di [Sys1Cal](https://arxiv.org/abs/2609.35342)) |
-| Tre domande aiutano poco o niente | per Rune e d1-3B la migliore regola è una domanda sola; Jev con una domanda a 0,5 fa 78,6 ([2609.37647](https://arxiv.org/abs/2609.37647)), il nostro run a tre domande dev-tuned 79,09 | RQ4: la scomposizione "in domande" non è la scomposizione "in premesse" di PremiseCheck |
-| Profili diversi a parità di media | Winnow forte su CNN (72,2), KnowLine debole (56,1) ma migliore su LFQA (85,2); elephant-1 primo su XSum e FactCheck | RQ4/RQ7: errori non sovrapposti, spazio per ensemble |
-| Documenti lunghi | BAcc fra 67 e 71 oltre 16.000 caratteri per tutti i TDM, contro 82–87 fra 1.000 e 4.000 | RQ4: il limite è comune, non di un modello |
+| Il protocollo sposta più della distanza fra modelli | migliore combinazione contro default: d1-3B **+3,6** (71,84 → 75,47, una domanda sola), JPT +1,2 (fuori vincolo anche Rune +1,7, Winnow +0,8); fra i primi cinque modelli fino a 9B della leaderboard ci sono 1,3 punti | RQ3: la leaderboard può essere più "protocollo" che "modello" |
+| BAcc e AUC ordinano i modelli in modo diverso | KnowLine-4B ha Macro AUC più alta di JPT-9B (86,55 contro 84,48) ma BAcc più bassa (75,65 contro 76,04); elephant-1 ha la Macro AUC più alta di tutti (87,15) | RQ3/RQ5: la soglia fissa penalizza i modelli meno calibrati sul compito |
+| La terza domanda (contraddizione) porta poco segnale | AUC invertita di `contradicted_detail` fra 0,72 e 0,83 per elephant-1 e KnowLine, contro 0,89–0,91 per le altre due | RQ4: i TDM riconoscono il "non supportato" ma non distinguono bene il "contraddetto" (cfr. il "terzo valore soppresso" di [Sys1Cal](https://arxiv.org/abs/2609.35342)) |
+| Tre domande aiutano poco o niente | per d1-3B la migliore regola è una domanda sola; Jev (riferimento) con una domanda a 0,5 fa 78,6 ([2609.37647](https://arxiv.org/abs/2609.37647)), il nostro run a tre domande dev-tuned 79,09 | RQ4: la scomposizione "in domande" non è la scomposizione "in premesse" di PremiseCheck |
+| Profili diversi a parità di media | KnowLine-4B debole su CNN (56,1) ma il migliore su LFQA (85,2); elephant-1 primo su XSum (77,6) e FactCheck (81,7) | RQ4/RQ7: errori non sovrapposti, spazio per ensemble |
+| Documenti lunghi | BAcc fra 67 e 70 oltre 16.000 caratteri per elephant-1 e KnowLine, contro 82–85 fra 1.000 e 4.000 | RQ4: il limite è comune, e pesa di più sui modelli piccoli con contesto lungo |
 
 ## 3. Modelli
 
+**Vincolo**: solo modelli fino a 9B parametri (taglia nominale: la classe "9B" di Qwen3.5 ha ~9,4B parametri con la torre visiva). Tutto gira su una GPU da 24–48 GB. I modelli più grandi compaiono solo come riferimento (§3.3).
+
 ### 3.1 I gruppi per base (il disegno di RQ2)
 
-| Base | TDM (stato nella repo) | Base generica da leggere |
+| Base | TDM (stato) | Base generica da leggere |
 |---|---|---|
-| **Qwen3.5-9B** | JPT-9B (fatto), elephant-1 (fatto), Nimble-9B-v3 (adapter pronto), d3-flash (adapter pronto), StartLux-9B-Instant (adapter pronto; base da verificare), Kev-9B (da aggiungere) | Qwen3.5-9B (nella cache HF) |
-| **Qwen3.8-27B** | Clef (nella cache, adapter da scrivere), Nimble-v4-max (da aggiungere) | Qwen3.8-27B (da scaricare; ~55 GB in BF16: serve una GPU da 80 GB o FP8) |
-| Gemma-4-12B | Winnow-12B (fatto: BF16 e NVFP4) | Gemma-4-12B |
-| Gemma-4-26B-A4B | Rune-26B (fatto) | Gemma-4-26B-A4B |
-| Qwen3.5-4B | KnowLine-4B (fatto) | Qwen3.5-4B |
+| **Qwen3.5-9B** | JPT-9B (fatto), elephant-1 (fatto), Nimble-9B-v3 (adapter pronto), d3-flash (adapter pronto), StartLux-9B-Instant (adapter pronto; architettura Qwen3.5, base non dichiarata), **Clef-flash** (nuovo), **Tacit-9B** (nuovo) | Qwen3.5-9B (nella cache HF) |
+| Qwen3.5-9B-Base | Kev-9B (nuovo) | Qwen3.5-9B-Base |
+| **Qwen3.5-4B** | KnowLine-4B (fatto), **pplx-decider-flash v1.2** (nuovo); da verificare: SII-Decision-4B, Intern-Decision-4B | Qwen3.5-4B |
+| Qwen3.5-4B-Base | Kev-4B (nuovo) | Qwen3.5-4B-Base |
+| Qwen3.5-2B | Strands Decider 2B, Tacit-2B (nuovi) | Qwen3.5-2B |
+| Qwen3-8B | CLM-8B (fatto, encoder congelato + teste), Tacit-8B (nuovo) | Qwen3-8B (nella cache) |
 | LFM2.5-VL-3B | d1-3B (fatto) | LFM2.5-VL-3B |
-| Qwen3-8B | CLM-8B (fatto, encoder congelato + teste) | Qwen3-8B (nella cache) |
 
-Il gruppo Qwen3.5-9B è il più prezioso: **sei ricette diverse** (LoRA semplice, attenzione bidirezionale a blocchi, testa con 255 codici, attenzione bidirezionale sul prompt, testa a puntatore) **sulla stessa base**. Misura direttamente quanto conta la ricetta.
+Il gruppo Qwen3.5-9B è il più prezioso: **sette ricette diverse sulla stessa base** (LoRA semplice, attenzione bidirezionale a blocchi, testa con 255 codici, attenzione bidirezionale sul prompt, testa congiunta, autodistillazione del ragionamento). Misura direttamente quanto conta la ricetta. Il gruppo Qwen3.5-4B lo replica a metà taglia, e insieme al resto dà una **curva di taglia** da 0,4B a 9B.
 
 Per ogni base, tre letture:
 1. **ingenua**: il prompt del TDM corrispondente (o un prompt neutro comune), softmax sulle lettere delle opzioni, attenzione causale;
@@ -52,14 +54,24 @@ Per ogni base, tre letture:
 
 La differenza 3 − 2 è "cosa aggiunge l'addestramento da decision model oltre a ciò che si ottiene gratis"; la differenza 2 − 1 è "quanto vale la sola calibrazione della lettura". È esattamente la domanda dell'audit ([2609.32160](https://arxiv.org/abs/2609.32160)).
 
-### 3.2 Gli altri gruppi
+### 3.2 Gli altri gruppi (tutti fino a 9B)
 
 | Gruppo | Modelli | Stato |
 |---|---|---|
-| TDM chiusi | Jev 1.13 (fatto, da rifare con protocollo zero-shot), **Jev 1.14**; facoltativi: OpenAI Decisions (beta pubblica), d1-ultra, pplx-decider v1.2 via API | da fare (pochi dollari) |
-| Altri TDM aperti | Rune-26B (fatto), d3-turbo (GPU 56 GiB+), StartLux-27B-AutoThink (pensa quando è incerto: interessante per RQ4), Drex v1.5, pplx-decider v1.2 (se i pesi sono scaricabili), Laya (encoder 0,4B) | in parte |
-| Checker specializzati (B3) | FactCG-DeBERTa-L (fatto, 75,64), Bespoke-MiniCheck-7B (adapter fatto), MiniCheck-Flan-T5-L, AlignScore, Granite Guardian 3.3 | in parte |
-| LLM generativi (B2) | un LLM piccolo che genera "Yes/No", con e senza ragionamento breve; un LLM chiuso economico su un sottoinsieme | da fare |
+| Altri TDM | Drex v1.5 (9B, base MiMo distillata), Laya (encoder ~0,4B), Intern-Decision 0,8B / 2B | da aggiungere (curva di taglia) |
+| Checker specializzati (B3) | FactCG-DeBERTa-L (fatto, 75,64), Bespoke-MiniCheck-7B (adapter fatto), MiniCheck-Flan-T5-L, AlignScore, Granite Guardian 3.3 (8B), HHEM-2.1 | in parte |
+| LLM generativi (B2) | Qwen3.5-9B e Qwen3.5-4B in modalità generativa, con e senza ragionamento breve | da fare |
+
+### 3.3 Riferimenti fuori vincolo o non eseguibili in locale (nessuna analisi su di loro)
+
+| Riferimento | Perché | Costo |
+|---|---|---|
+| Jev 1.13 e 1.14 (chiuso) | il TDM di riferimento del filone; continuità con [2609.37647](https://arxiv.org/abs/2609.37647) | pochi dollari |
+| Winnow-12B, Rune-26B-A4B | già misurati nella repo | zero (cache esistente) |
+| Clef 27B, Nimble-v4-max, pplx-decider 27B, Nimble-v4 9B (solo API) | numeri della leaderboard, citati | zero |
+| un LLM chiuso economico, su un sottoinsieme | riferimento generativo e cascata | decine di dollari |
+
+Servono a rispondere a una domanda sola: **quanto distano i migliori modelli fino a 9B dai TDM grandi e chiusi** (Fig. 4).
 
 Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 
@@ -107,13 +119,13 @@ Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 | A7 | Qualità contro costo (BAcc contro costo e contro energia per 1.000 claim) | RQ7 |
 | A8 | Analisi degli errori: 100 errori per modello rappresentativo, categorizzati (entità, numeri, attribuzione, multi-hop, documento lungo, etichetta dubbia) | RQ4 |
 | A9 | Accordo fra modelli: sovrapposizione degli errori fra TDM sulla stessa base, fra TDM e checker; ensemble semplice; cascata TDM → LLM contro escalation casuale a pari budget | RQ7 |
-| A10 | Quantizzazione: Winnow BF16 / NVFP4 (fatto: 76,95 contro 77,49) | robustezza del deployment, in appendice |
+| A10 | Quantizzazione di un 9B (BF16 contro FP8 o 4 bit), per il deployment su GPU piccole; il caso di Winnow (BF16 76,95, NVFP4 77,49) come riferimento | robustezza del deployment, in appendice |
 
 ## 8. Tabelle e figure previste
 
 | N. | Contenuto |
 |---|---|
-| Tab. 1 | Modelli: base, ricetta di lettura, parametri, licenza, runtime, costo |
+| Tab. 1 | Modelli: base, ricetta di lettura, parametri, licenza, runtime, memoria GPU, costo |
 | Tab. 2 | LLM-AggreFact per fonte, tutti i modelli, protocollo unico |
 | Tab. 3 | Fuori dominio + medie |
 | Tab. 4 | TDM contro base (ingenua, calibrata), per gruppo (RQ2) |
@@ -122,7 +134,7 @@ Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 | Fig. 1 | RQ2: per ogni base, la base ingenua, la base calibrata e i TDM come punti sullo stesso asse |
 | Fig. 2 | RQ3: classifica sotto protocolli diversi (grafico a "bump"), con la banda della leaderboard |
 | Fig. 3 | Diagrammi di affidabilità in dominio e fuori dominio |
-| Fig. 4 | Qualità contro costo |
+| Fig. 4 | Qualità contro costo, con i riferimenti fuori vincolo (Jev, 27B della leaderboard) come linee orizzontali |
 | Fig. 5 | Ammissione dei non supportati contro BAcc |
 
 ## 9. Lavoro e costi stimati
@@ -130,8 +142,8 @@ Per [08](08_benchmark_e_modelli.md) la lista completa e la selezione minima.
 | Voce | Stima |
 |---|---|
 | Split, dev e test fuori dominio | 1 settimana (codice) |
-| Run completi dei TDM con adapter pronto (d3-flash, StartLux, Nimble-v3, MiniCheck-7B) | 2–3 giorni GPU |
-| Adapter nuovi (Clef, Nimble-v4, Kev-9B, basi generiche con le due letture) | 1,5 settimane |
+| Run completi dei modelli con adapter pronto (d3-flash, StartLux-9B, Nimble-v3, MiniCheck-7B) | 2–3 giorni GPU |
+| Adapter nuovi (Clef-flash, Tacit, pplx-decider-flash, Kev-9B/4B, Strands, basi generiche con le due letture) | 1,5–2 settimane (Tacit e le basi condividono la lettura di AnyJev) |
 | Inferenza su dev, fuori dominio e diagnostico | 3–5 giorni GPU |
 | Jev 1.13 e 1.14 con il protocollo zero-shot | pochi dollari |
 | Varianti di protocollo (RQ3) | quasi tutte senza inferenza (grid search); polarità e composizione della richiesta richiedono un'inferenza su un sottoinsieme |

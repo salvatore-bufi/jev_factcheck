@@ -27,7 +27,7 @@ Nessuno l'ha testata. Le ricette pubblicate addestrano TDM generali; i checker s
 
 | Elemento | Scelta |
 |---|---|
-| Coppia principale | JPT-9B (o elephant-1) contro Qwen3.5-9B; pilota su d1-3B contro LFM2.5-VL-3B |
+| Coppia principale | JPT-9B (o elephant-1) contro Qwen3.5-9B; replica a metà taglia: KnowLine-4B (o pplx-decider-flash) contro Qwen3.5-4B; pilota su d1-3B contro LFM2.5-VL-3B. Tutto entro il vincolo dei 9B |
 | Dati | mix di stadio 1 della guida (fonti pubbliche + MiniCheck C2D/D2C + ANLI difficile), stesso per entrambe ([../fine_tuning_factcheck/02e_mix_finale.md](../fine_tuning_factcheck/02e_mix_finale.md)) |
 | Domanda | una `noul` (quella scelta sul nostro dev secondo [../fine_tuning_factcheck/02d_varianti_domanda.md](../fine_tuning_factcheck/02d_varianti_domanda.md)) |
 | Loss | CE binaria sul margine fra le due lettere ([../fine_tuning_factcheck/04_loss.md](../fine_tuning_factcheck/04_loss.md)) |
@@ -51,7 +51,8 @@ Tutti e tre sono pubblicabili dentro il paper di analisi.
 |---|---|
 | Codice di training (già progettato nella guida) | 1,5–2 settimane |
 | Pilota d1-3B (2 corse) | 1–2 giorni su una GPU da 24 GB |
-| Coppia 9B, 2 corse × (1–3 seed), più la curva sui dati | ~1 settimana su L40S |
+| Coppia 9B, 2 corse × (1–3 seed), più la curva sui dati | ~1 settimana su L40S (LoRA in BF16) o su una GPU da 24 GB con QLoRA |
+| Coppia 4B (facoltativa) | 2–3 giorni |
 | Valutazione | 2–3 giorni |
 
 ## 3. Nel secondo paper: il metodo completo
@@ -61,7 +62,7 @@ Se B-ctrl dà un vantaggio al TDM, il secondo paper diventa "come specializzare 
 1. **Dati di grounding con certificato** (stile PACT, ma sulle ricette C2D/D2C/CG2C): coppie minime e rimozione dell'evidenza, con il termine di necessità dell'evidenza.
 2. **Tre classi invece di due**: supportato / contraddetto / non stabilito, per affrontare il "terzo valore soppresso" ([Sys1Cal](https://arxiv.org/abs/2609.35342)) e la debolezza della domanda sulla contraddizione che vediamo nei nostri dati ([03](03_parte_A_valutazione.md) §2).
 3. **Robustezza a polarità e composizione** come obiettivo di training, misurata sul set diagnostico completo.
-4. **Confronto con lo stato dell'arte del momento**: Nimble-v4-max (79,5), Clef (79,0) e i checker; obiettivo realistico: un 9B vicino ai 27B.
+4. **Confronto con lo stato dell'arte fino a 9B**: Nimble-v4 9B (77,8, solo API), Bespoke-MiniCheck-7B (77,4), Clef-flash (76,6) e i checker; i 27B (79,0–79,5) come tetto di riferimento. Obiettivo realistico: un 9B (o un 4B) che superi tutti i modelli fino a 9B e si avvicini ai 27B.
 5. **Oblio e calibrazione**: oblio sulla Decision Index pubblica (attenzione: contiene RAGTruth e HoVer, da escludere dal conto); calibrazione fuori dominio.
 
 | Esperimento | Perché |
@@ -77,6 +78,6 @@ Tempi: 2–3 mesi. Venue: EMNLP 2027 o il ciclo ARR utile successivo ([06](06_ve
 
 ## 4. Cosa rilasciare
 
-- Adapter LoRA di B-ctrl (licenze: JPT e Nimble non commerciali; elephant-1 MIT; Qwen3.5 Apache 2.0) e codice di training.
+- Adapter LoRA di B-ctrl (licenze: JPT e Nimble non commerciali; elephant-1 MIT; KnowLine, pplx-decider-flash e Qwen3.5 Apache 2.0) e codice di training.
 - Ricette dei dati (script, non i testi di terze parti se le licenze non lo consentono).
 - Cache delle previsioni su tutti i test, come già fatto per gli altri modelli.
