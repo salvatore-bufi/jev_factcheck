@@ -1,2 +1,0 @@
-Copy of https://huggingface.co/datasets/multimodalart/decision-index-leaderboard at commit 0501b8cae77a94b3c56dc925609d88c6210835f7
-(Decision Index 0.4.1, generated 2026-10-26T15:30:58Z). Licence: CC BY 4.0, (c) the Decision Index maintainers.
