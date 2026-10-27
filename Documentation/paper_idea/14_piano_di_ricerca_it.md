@@ -96,6 +96,58 @@ Ogni esito è informativo: le ipotesi fissano cosa si verifica, non cosa speriam
 - **H4 (RQ4).** I TDM confondono "contraddetto" con "non stabilito" più di quanto confondano l'uno o l'altro con "supportato". A parità di balanced accuracy, i loro tassi di ammissione dei non supportati differiscono di più di 5 punti.
 - **H5 (RQ5).** Con pochi dati (≤ 8k coppie) un TDM è un punto di partenza migliore della sua base; il vantaggio cala con più dati.
 
+### 4.1 H1 spiegata con un esempio completo (numeri inventati)
+
+I numeri qui sotto sono **inventati**, solo per mostrare il ragionamento; quelli veri li produrrà E2.
+
+**La situazione.** Qwen3.5-9B è un LLM normale, che nessuno ha addestrato a fare fact checking o a fare il decision model. Diversi gruppi hanno preso **questa stessa base** e l'hanno post-addestrata, ciascuno a modo suo, per trasformarla in un TDM. Il risultato sono sette TDM sulla stessa base: elephant-1, StartLux-9B, d3-flash, OneJev-9B, Nimble-9B, Sieve-9B e Clef-flash. La domanda è quanto sia servito quell'addestramento per il fact checking.
+
+**Passo 1: la base da sola.** A Qwen3.5-9B, senza addestrarlo, si fa la domanda "Il documento supporta il claim?" su LLM-AggreFact. La sua probabilità di "sì" si legge nel modo migliore possibile senza training (R2):
+
+- si ripete la domanda con le opzioni in ordine invertito e si fa la media;
+- si corregge la sua tendenza a dire più spesso "sì";
+- si aggiusta la temperatura sui nostri dati di sviluppo.
+
+Supponiamo che ottenga una balanced accuracy di **72,0**: quanto sa fare la base "gratis".
+
+**Passo 2: i sette TDM.** Stessa domanda, stessi dati:
+
+| TDM | Balanced accuracy | Δ_ricetta = TDM − base |
+|---|---:|---:|
+| elephant-1 | 77,0 | **+5,0** |
+| StartLux-9B | 76,0 | **+4,0** |
+| OneJev-9B | 75,5 | **+3,5** |
+| d3-flash | 74,0 | **+2,0** |
+| Nimble-9B | 73,0 | **+1,0** |
+| Clef-flash | 72,5 | **+0,5** |
+| Sieve-9B | 70,0 | **−2,0** |
+
+Δ_ricetta è quanto ogni ricetta di addestramento ha aggiunto rispetto alla base letta bene.
+
+**Passo 3: le tre affermazioni di H1 su questi numeri.**
+
+1. **"Δ_ricetta > 0": l'addestramento aiuta?** La media dei sette Δ è (5 + 4 + 3,5 + 2 + 1 + 0,5 − 2) / 7 = **+2,0**. In media i TDM battono la base di 2 punti. La prima affermazione è confermata se l'intervallo di confidenza non include lo zero.
+2. **"La dispersione è almeno grande quanto il margine medio": tutte le ricette aiutano allo stesso modo?** No: si va da +5 (elephant-1) a −2 (Sieve-9B, che fa *peggio* della base). La deviazione standard dei sette Δ è **circa 2,4**, più grande della media (2,0), quindi anche la seconda affermazione è confermata. In parole semplici: **la differenza fra una ricetta e l'altra conta quanto, o più, del fatto stesso di addestrare.**
+3. **"Il margine cambia fra famiglie di basi": vale anche per Gemma, Ministral, LFM?** Rifacendo tutto su Gemma-4-E4B con i suoi TDM (Winnow-E4B, Gevva-E4B), supponiamo che lì la media dei Δ sia **+0,5** contro +2,0 su Qwen. Il guadagno dipende dalla base di partenza, quindi anche la terza affermazione è confermata.
+
+**Perché fare questa ipotesi.** In letteratura ci sono due posizioni opposte:
+
+- **chi costruisce TDM** dice che il suo addestramento rende i modelli migliori;
+- **l'audit [3] e altri lavori [7, 8, 9]** dicono che il vantaggio non è dimostrato, e che un LLM qualsiasi, letto bene, fa quasi lo stesso.
+
+Nessuno ha verificato quale delle due sia vera **sul fact checking**, né ha confrontato ricette diverse sulla **stessa base**. È possibile per la prima volta perché sette TDM condividono Qwen3.5-9B: base fissa, cambia solo la ricetta. È un esperimento controllato che la comunità ha già fatto per noi.
+
+H1 dice in anticipo cosa ci aspettiamo, e qualunque esito insegna qualcosa:
+
+| Se troviamo… | Conclusione per il paper |
+|---|---|
+| Δ medio ≈ 0 | sul fact checking l'addestramento da decision model non serve: basta leggere bene la base; ha ragione l'audit |
+| Δ medio > 0, ricette tutte simili | l'addestramento serve e la ricetta conta poco: qualunque TDM va bene |
+| Δ medio > 0, ricette molto diverse (quello che prevede H1) | l'addestramento può servire ma dipende da come lo fai; si guarda cosa hanno in comune le ricette migliori (attenzione bidirezionale? fine-tuning completo invece di LoRA? tipo di lettura delle risposte?) |
+| il risultato cambia molto da Qwen a Gemma | nessuna conclusione vale in generale: dipende dalla base |
+
+L'ipotesi si scrive **prima** di vedere i dati (pre-registrazione, §7), così nessun revisore può dire che abbiamo "trovato" quello che ci faceva comodo dopo aver guardato i risultati.
+
 ---
 
 ## 5. Dati, domande e regole di decisione

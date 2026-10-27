@@ -90,6 +90,58 @@ Every outcome is informative; the hypotheses fix what is tested, not what we hop
 - **H4 (RQ4).** TDMs confuse "contradicted" with "not stated" more than they confuse either with "supported". At matched balanced accuracy, their unsupported-admission rates differ by more than 5 points.
 - **H5 (RQ5).** With little training data (≤ 8k pairs), a TDM is a better initialization than its backbone; the gap shrinks with more data.
 
+### 4.1 H1 explained with a worked example (invented numbers)
+
+The numbers below are **invented**, only to show the reasoning; the real ones come from E2.
+
+**The setting.** Qwen3.5-9B is an ordinary LLM, never trained for fact checking or as a decision model. Several groups took **this same backbone** and post-trained it, each in its own way, into a TDM. The result is seven TDMs on one backbone: elephant-1, StartLux-9B, d3-flash, OneJev-9B, Nimble-9B, Sieve-9B and Clef-flash. The question is how much that training helped for fact checking.
+
+**Step 1: the backbone alone.** Qwen3.5-9B, untrained, is asked "Does the document support the claim?" on LLM-AggreFact. Its "yes" probability is read in the best training-free way (R2):
+
+- the question is repeated with the options in reverse order and the two answers are averaged;
+- its tendency to say "yes" more often is corrected;
+- the temperature is fitted on our development data.
+
+Suppose it reaches a balanced accuracy of **72.0**: what the backbone gives for free.
+
+**Step 2: the seven TDMs.** Same question, same data:
+
+| TDM | Balanced accuracy | Δ_recipe = TDM − backbone |
+|---|---:|---:|
+| elephant-1 | 77.0 | **+5.0** |
+| StartLux-9B | 76.0 | **+4.0** |
+| OneJev-9B | 75.5 | **+3.5** |
+| d3-flash | 74.0 | **+2.0** |
+| Nimble-9B | 73.0 | **+1.0** |
+| Clef-flash | 72.5 | **+0.5** |
+| Sieve-9B | 70.0 | **−2.0** |
+
+Δ_recipe is what each training recipe added over the well-read backbone.
+
+**Step 3: the three claims of H1 on these numbers.**
+
+1. **"Δ_recipe > 0": does training help?** The mean of the seven Δ is (5 + 4 + 3.5 + 2 + 1 + 0.5 − 2) / 7 = **+2.0**. On average the TDMs beat their backbone by 2 points. The first claim holds if the confidence interval excludes zero.
+2. **"The spread is at least as large as the mean margin": do all recipes help equally?** No: from +5 (elephant-1) to −2 (Sieve-9B, which does *worse* than the backbone). The standard deviation of the seven Δ is **about 2.4**, larger than their mean (2.0), so the second claim holds. In plain words: **the difference between recipes matters as much as, or more than, training at all.**
+3. **"The margin differs between backbone families": does it hold for Gemma, Ministral, LFM?** Repeating everything on Gemma-4-E4B with its TDMs (Winnow-E4B, Gevva-E4B), suppose the mean Δ there is **+0.5** against +2.0 on Qwen. The gain depends on the starting backbone, so the third claim holds.
+
+**Why this hypothesis.** The literature holds two opposite positions:
+
+- **TDM builders** say their training makes the models better;
+- **the audit [3] and related work [7, 8, 9]** say the advantage is not demonstrated, and that any LLM, read well, does almost as well.
+
+Nobody has tested which is true **for fact checking**, or compared different recipes on the **same backbone**. This is possible for the first time because seven TDMs share Qwen3.5-9B: the backbone is fixed and only the recipe changes, a controlled experiment the community has already run for us.
+
+H1 states in advance what we expect, and every outcome is informative:
+
+| If we find… | Conclusion for the paper |
+|---|---|
+| mean Δ ≈ 0 | for fact checking, decision training does not help: reading the backbone well is enough; the audit is right |
+| mean Δ > 0, recipes all similar | training helps and the recipe matters little: any TDM will do |
+| mean Δ > 0, recipes very different (what H1 predicts) | training can help but depends on how it is done; we then look at what the best recipes share (bidirectional attention? full fine-tune rather than LoRA? type of readout?) |
+| the result changes a lot from Qwen to Gemma | no conclusion holds in general: it depends on the backbone |
+
+The hypothesis is written **before** seeing the data (pre-registration, §7), so that no reviewer can say we "found" what suited us after looking at the results.
+
 ---
 
 ## 5. Data, questions and decision rules
