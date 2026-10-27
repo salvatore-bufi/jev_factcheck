@@ -1,0 +1,3 @@
+# Nothing in the benchmark's environment beyond core: the model runs on the authors' server from models/startlux-4b-instant/.venv
+# (bash models/startlux-4b-instant/setup.sh: startlux-decide @ a99977d with vllm==0.31.0), or from the 9B's .venv if it exists.
+requests

@@ -18,6 +18,7 @@ A row needs `doc` (or `document`), `claim` and a binary `label` (1 = the documen
 | `test.arrow` | 29,320 | official test split (11 sources) |
 | `dev.arrow` | 30,420 | official development split |
 | `dev-jev4520.jsonl` | 4,520 | the development rows Jev's threshold was fitted on (its tune and selection pools, ids `dev:<row>`); use it to fit per-model thresholds (`report.py --calibrate-on dev-jev4520`) |
+| `test4k.jsonl` | 3,998 | AF-4k: 364 test rows per source (all 358 of Wice), class-balanced where possible, seed 2026, test ids kept; built by `python analysis/make_test4k.py` (sha256 `2f0baa0d…`) |
 | `dataset_info.json` | | metadata from the Hugging Face `datasets` cache |
 
 `test.arrow` and `dev.arrow` are the Hugging Face `datasets` cache files of that revision, renamed. To recreate them on

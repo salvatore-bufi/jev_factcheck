@@ -1,0 +1,7 @@
+{
+  "_comment": "pplx-decider-flash-v1.2 through pplx_decider from its snapshot (in-process, transformers, bf16, reference path). Joint request (protocol v3), non-causal full attention, 255-way decision head; raw logits stored with the saved temperature 1.554.",
+  "revision": "9ff7cf9838e59df461c276b7699d56b244d2af58",
+  "max_length": 32768,
+  "batch_tokens": 32768,
+  "batch": 16
+}

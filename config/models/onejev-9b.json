@@ -1,0 +1,14 @@
+{
+  "_comment": "OneJev1.6-9B on Flide (the engine its card names; set up with models/onejev-9b/setup.sh, started by the benchmark). Causal attention, LM-head slot readout, temperature 1 (no calibration.json); Flide's default debias=1.",
+  "revision": "259e5470b0abfd795a0bbb4598d6e319fa224a38",
+  "port": 8094,
+  "dtype": "bfloat16",
+  "max_branch_tokens": 32768,
+  "max_request_tokens": 65536,
+  "quantize": "",
+  "workers": 8,
+  "timeout": 900.0,
+  "startup_timeout": 1800.0,
+  "url": "",
+  "batch": 64
+}

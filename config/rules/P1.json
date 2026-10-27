@@ -1,0 +1,11 @@
+{
+  "combine": "single",
+  "inputs": [
+    {
+      "question": "support_simple",
+      "take": "yes"
+    }
+  ],
+  "threshold": 0.5,
+  "note": "Q1 alone (primary)."
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "Jeffan-4B-2010 through inference/jeffan_engine from its snapshot (in-process, transformers, bf16; the card's transformers path). Bidirectional full-attention layers, option-code readout at temperature 1; prompts above max_len fail instead of being cut.",
+  "revision": "937a008f86f4a20a903d628f22ffad3e3f431d2c",
+  "max_len": 65536,
+  "budget": 65536,
+  "batch": 16
+}

@@ -1,0 +1,11 @@
+{
+  "combine": "single",
+  "inputs": [
+    {
+      "question": "support_3way",
+      "take": "option:supported"
+    }
+  ],
+  "threshold": 0.5,
+  "note": "P(supported) of the three-way question."
+}

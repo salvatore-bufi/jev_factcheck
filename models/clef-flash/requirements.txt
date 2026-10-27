@@ -1,0 +1,4 @@
+# Runs in the existing "factcheck" conda environment. The card was tested with torch 2.11 and transformers 5.10.2.
+transformers>=5.10
+safetensors
+flash-linear-attention>=0.5.2   # Qwen3.5's linear-attention layers; without it transformers runs a slow torch path

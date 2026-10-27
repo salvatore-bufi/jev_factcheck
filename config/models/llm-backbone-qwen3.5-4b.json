@@ -1,0 +1,12 @@
+{
+  "_comment": "BB4: Qwen3.5-4B (Instruct), the counterpart of A11-A14. Neutral prompt, both option orders (R0/R1); R2 is fitted by analysis/focused_10.py.",
+  "repo": "Qwen/Qwen3.5-4B",
+  "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "chat": true,
+  "readout": "r1",
+  "max_model_len": 32768,
+  "gpu_util": 0.9,
+  "max_num_seqs": 32,
+  "max_batched_tokens": 8192,
+  "batch": 64
+}

@@ -28,6 +28,12 @@ does the document support the claim? The results table so far is in [table.md](t
 | [models/startlux-27b-autothink](models/startlux-27b-autothink/README.md) | StartLux-Decision-v1.1-27B-AutoThink | 27B | the authors' server; thinks when unsure; `quantization=fp8` on 48 GB GPUs |
 | [models/minicheck-7b](models/minicheck-7b/README.md) | Bespoke-MiniCheck-7B (`bespokelabs/Bespoke-MiniCheck-7B`) | 7B | **baseline**, not a decision model: vLLM, the authors' MiniCheck scorer (claim sentences against document chunks) |
 | [models/factcg](models/factcg/README.md) | FactCG-DeBERTa-v3-Large | 0.4B | **baseline**, not a decision model: ignores the questions |
+| [models/onejev-9b](models/onejev-9b/README.md) | OneJev1.6-9B (`OmniJev/OneJev1.6-9B`) | 9B | Flide, the engine its card names (own `.venv` from `setup.sh`, server started by the benchmark) |
+| [models/startlux-4b-instant](models/startlux-4b-instant/README.md) | StartLux-Decision-v1.1-4B-Instant | 4B | as startlux-9b-instant (same package and `.venv`), other ports |
+| [models/clef-flash](models/clef-flash/README.md) | Clef-Flash (`Cloudflare/clef-flash`) | 9B | transformers, the repo's `joint_schema_model.py`; joint schema head over all questions |
+| [models/pplx-decider-flash](models/pplx-decider-flash/README.md) | pplx-decider-flash-v1.2 (`perplexity-ai/pplx-decider-flash-v1.2`) | 4B | transformers, the repo's `pplx_decider` package (reference path); joint request, non-causal full attention |
+| [models/jeffan-4b](models/jeffan-4b/README.md) | Jeffan-4B-2010 (`tattrongvu/Jeffan-4B-2010`) | 4B | transformers, the repo's `jeffan_engine`; bidirectional full-attention layers |
+| [models/llm-backbone](models/llm-backbone/README.md) | a plain backbone LLM (Qwen3.5-9B / -4B, one config each) | 4B/9B | **counterpart**, not decision-trained: vLLM, neutral prompt, both option orders |
 
 `python benchmark.py --list` prints them. Each folder's README covers its installation, protocol and caveats.
 
@@ -181,6 +187,7 @@ models/<m>/    adapter.py (the model's protocol) + README, requirements and the 
 config/        question sets (config/questions/) and model options (config/models/)
 dataset/       local datasets (not committed)
 results/       benchmark output
+analysis/      scripts of the focused 10-TDM study (analysis/README.md); tests/test_focused.py checks them
 tests/         python tests/test_core.py (no GPU) and python tests/test_adapters.py (offline prompt checks)
 legacy/        the original Jev experiment and the per-model caches of the first runs, kept unchanged (legacy/README.md)
 ```

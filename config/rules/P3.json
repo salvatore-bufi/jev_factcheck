@@ -1,0 +1,11 @@
+{
+  "combine": "single",
+  "inputs": [
+    {
+      "question": "unsupported_detail",
+      "take": "no"
+    }
+  ],
+  "threshold": 0.5,
+  "note": "negated Q2 alone."
+}

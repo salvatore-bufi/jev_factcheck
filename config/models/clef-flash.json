@@ -1,0 +1,6 @@
+{
+  "_comment": "Clef-Flash through joint_schema_model.py from its snapshot (in-process, transformers, bf16). Joint schema head over the final hidden states; one logit per option, softmax at temperature 1. Rows above max_length fail instead of being cut.",
+  "revision": "f0b7d3cd65296abfe459e6c228b618f5d8b26d2f",
+  "max_length": 32768,
+  "batch": 16
+}

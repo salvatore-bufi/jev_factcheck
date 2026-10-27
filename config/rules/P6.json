@@ -1,0 +1,19 @@
+{
+  "combine": "mean",
+  "inputs": [
+    {
+      "question": "support_simple",
+      "take": "yes"
+    },
+    {
+      "question": "unsupported_detail",
+      "take": "no"
+    },
+    {
+      "question": "contradicted_detail",
+      "take": "no"
+    }
+  ],
+  "threshold": 0.5,
+  "note": "mean of the three checks."
+}

@@ -1,0 +1,3 @@
+# Nothing in the benchmark's environment beyond core: the model runs on Flide from models/onejev-9b/.venv
+# (bash models/onejev-9b/setup.sh: flide @ 08b87d0, torch 2.12+, flash-linear-attention 0.5.x).
+requests

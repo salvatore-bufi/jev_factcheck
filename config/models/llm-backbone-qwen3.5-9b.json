@@ -1,0 +1,12 @@
+{
+  "_comment": "BB9: Qwen3.5-9B (Instruct), the counterpart of A1-A5 and A7. Neutral prompt, both option orders (R0/R1); R2 is fitted by analysis/focused_10.py. Same revision as the base Nimble needs.",
+  "repo": "Qwen/Qwen3.5-9B",
+  "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+  "chat": true,
+  "readout": "r1",
+  "max_model_len": 32768,
+  "gpu_util": 0.9,
+  "max_num_seqs": 32,
+  "max_batched_tokens": 8192,
+  "batch": 64
+}
