@@ -5,6 +5,7 @@
 .aws/
 .venv*/
 venv/
+*.out
 
 # Python caches and local scratch files
 __pycache__/

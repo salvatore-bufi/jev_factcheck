@@ -4,14 +4,7 @@ Version of 27 October 2026. All paths are relative to the repository root.
 
 ---
 
-## 0. About this guide
-
-This guide describes a small, self-contained study. It explains what is measured, why, and how each number is computed, with worked examples. It then gives the exact commands to produce every number. It is written for a reader who has never seen the project. Every term is explained the first time it appears, and §2 collects them all.
-
-The study compares **10 decision models** with **the 2 ordinary language models they were built from**, on a single benchmark of fact checking, **LLM-AggreFact**. It is not the paper. It is a first look that decides which models and which evaluation protocol are worth the expensive experiments of the next phases. Its choices are a subset of the full research plan (`Documentation/paper_idea/13_research_plan_en.md`): same model names, questions, rules and metrics. So every result produced here can later go into the paper unchanged.
-
-How the guide is organised:
-
+## 0. Index
 - **§1** explains the problem and the models in plain words.
 - **§2** is a glossary.
 - **§3** shows, on one concrete example, everything that happens to a single row of data: what the model is asked, what it answers, how the answer becomes a prediction and how predictions become a score. Read it before anything else: the rest of the guide only repeats these steps on more rows and more models.
@@ -741,7 +734,18 @@ done
 python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --limit 32 --no-profile --tag smoke
 python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --limit 32 --no-profile --tag smoke
 ```
-
+Oppure con il nohup
+```sh
+nohup bash -c '
+for m in elephant-1 startlux-9b-instant d3-flash onejev-9b nimble-9b clef-flash \
+         knowline-4b startlux-4b-instant pplx-decider-flash jeffan-4b factcg minicheck-7b; do
+  python benchmark.py --model $m --gpu 0 --limit 32 --no-profile --tag smoke
+done
+python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --limit 32 --no-profile --tag smoke
+python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --limit 32 --no-profile --tag smoke
+' > smoke.log 2>&1 &
+echo "PID: $!"
+```
 **Acceptance, for each system** (read `results/lytang--LLM-AggreFact/test/summary_551bb722.md`, which lists the per-question AUC of every run):
 
 - 0 failures, or only rows whose prompt is longer than the model's declared limit (the reason is in the run's `failures.jsonl`);
