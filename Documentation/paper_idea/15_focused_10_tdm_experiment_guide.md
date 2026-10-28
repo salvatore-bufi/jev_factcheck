@@ -827,6 +827,167 @@ done
 python benchmark.py --model $TDMS --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile
 ```
 
+**Server version (shared server with the `gpu-run` scheduler).** The same runs as above, but one job per model, each with its own log file in `logs/`, ready to copy and paste. Each line is independent: the scheduler starts it when a GPU is free, and the terminal can be closed. A log is named `<model>_<split>[_<question file>][_<tag>].out`, so no two jobs write the same log. The result folders cannot collide either (§7: each run has its own folder, named after the split, the options hash and the questions hash).
+
+Before launching, read these four points:
+
+- **Same model, same machine, same time.** The server-based adapters start a server on a fixed port: StartLux-9B uses 8092/8101, StartLux-4B 8093/8102, OneJev 8094. Two jobs of the *same* one of these models (e.g. its dev run and its test run) must not run on the same machine at the same time, or the second cannot open its port. Launch the next job of these three models only when the previous one has finished (`tail logs/<model>_*.out` shows `=== summary ===`). The other models have no such limit.
+- **`--gpu 0`.** `benchmark.py` sets `CUDA_VISIBLE_DEVICES` to the value of `--gpu`. This is right if `gpu-run` shows each job only its own GPU, as index 0, which is how the smoke test ran. If instead `gpu-run` assigns a GPU by setting `CUDA_VISIBLE_DEVICES`, check with `nvidia-smi` that each job runs on the GPU it was given.
+- **A busy GPU.** `benchmark.py` refuses to start on a GPU where another compute process is running, because latency and memory would be distorted. If the scheduler shares GPUs between jobs, add `--allow-busy-gpu` to the command, and state it in the results.
+- **Redirection.** It must be written `> logs/<name>.out 2>&1`, with no space between `2` and `>&1`. With a space, the error messages do not go to the log.
+
+```sh
+mkdir -p logs
+
+# RUN-01: AF-dev, QF1, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split dev-jev4520 > logs/elephant-1_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split dev-jev4520 > logs/startlux-9b-instant_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split dev-jev4520 > logs/d3-flash_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split dev-jev4520 > logs/onejev-9b_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split dev-jev4520 > logs/nimble-9b_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split dev-jev4520 > logs/clef-flash_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split dev-jev4520 > logs/knowline-4b_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split dev-jev4520 > logs/startlux-4b-instant_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split dev-jev4520 > logs/pplx-decider-flash_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split dev-jev4520 > logs/jeffan-4b_dev-jev4520.out 2>&1 &
+
+# RUN-02: AF-dev, QF1, the 2 backbones
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split dev-jev4520 > logs/llm-backbone-qwen3.5-9b_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split dev-jev4520 > logs/llm-backbone-qwen3.5-4b_dev-jev4520.out 2>&1 &
+
+# RUN-03: AF, QF1, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test > logs/elephant-1_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test > logs/startlux-9b-instant_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test > logs/d3-flash_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test > logs/onejev-9b_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test > logs/nimble-9b_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test > logs/clef-flash_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test > logs/knowline-4b_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test > logs/startlux-4b-instant_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test > logs/pplx-decider-flash_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test > logs/jeffan-4b_test.out 2>&1 &
+
+# RUN-04: AF, QF1, the 2 backbones
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test > logs/llm-backbone-qwen3.5-9b_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test > logs/llm-backbone-qwen3.5-4b_test.out 2>&1 &
+
+# RUN-05 (optional, E0): the 2 checkers on AF-dev and AF
+nohup gpu-run -- python benchmark.py --model factcg --gpu 0 --split dev-jev4520 > logs/factcg_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model factcg --gpu 0 --split test > logs/factcg_test.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model minicheck-7b --gpu 0 --split dev-jev4520 > logs/minicheck-7b_dev-jev4520.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model minicheck-7b --gpu 0 --split test > logs/minicheck-7b_test.out 2>&1 &
+
+# RUN-06: AF-dev, q1_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/elephant-1_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/startlux-9b-instant_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/d3-flash_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/onejev-9b_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/nimble-9b_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/clef-flash_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/knowline-4b_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/startlux-4b-instant_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/pplx-decider-flash_dev-jev4520_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split dev-jev4520 --questions config/questions/q1_only.json --no-profile > logs/jeffan-4b_dev-jev4520_q1_only.out 2>&1 &
+
+# RUN-07: AF-4k, q1_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/elephant-1_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/startlux-9b-instant_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/d3-flash_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/onejev-9b_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/nimble-9b_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/clef-flash_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/knowline-4b_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/startlux-4b-instant_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/pplx-decider-flash_test4k_q1_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --questions config/questions/q1_only.json --no-profile > logs/jeffan-4b_test4k_q1_only.out 2>&1 &
+
+# RUN-08: AF-dev, q4_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/elephant-1_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/startlux-9b-instant_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/d3-flash_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/onejev-9b_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/nimble-9b_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/clef-flash_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/knowline-4b_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/startlux-4b-instant_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/pplx-decider-flash_dev-jev4520_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split dev-jev4520 --questions config/questions/q4_only.json --no-profile > logs/jeffan-4b_dev-jev4520_q4_only.out 2>&1 &
+
+# RUN-09: AF-4k, q4_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/elephant-1_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/startlux-9b-instant_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/d3-flash_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/onejev-9b_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/nimble-9b_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/clef-flash_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/knowline-4b_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/startlux-4b-instant_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/pplx-decider-flash_test4k_q4_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --questions config/questions/q4_only.json --no-profile > logs/jeffan-4b_test4k_q4_only.out 2>&1 &
+
+# RUN-10: AF-dev, q5_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/elephant-1_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/startlux-9b-instant_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/d3-flash_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/onejev-9b_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/nimble-9b_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/clef-flash_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/knowline-4b_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/startlux-4b-instant_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/pplx-decider-flash_dev-jev4520_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split dev-jev4520 --questions config/questions/q5_only.json --no-profile > logs/jeffan-4b_dev-jev4520_q5_only.out 2>&1 &
+
+# RUN-11: AF-4k, q5_only.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/elephant-1_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/startlux-9b-instant_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/d3-flash_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/onejev-9b_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/nimble-9b_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/clef-flash_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/knowline-4b_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/startlux-4b-instant_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/pplx-decider-flash_test4k_q5_only.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --questions config/questions/q5_only.json --no-profile > logs/jeffan-4b_test4k_q5_only.out 2>&1 &
+
+# RUN-12: AF-dev, q6_three_way.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/elephant-1_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/startlux-9b-instant_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/d3-flash_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/onejev-9b_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/nimble-9b_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/clef-flash_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/knowline-4b_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/startlux-4b-instant_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/pplx-decider-flash_dev-jev4520_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split dev-jev4520 --questions config/questions/q6_three_way.json --no-profile > logs/jeffan-4b_dev-jev4520_q6_three_way.out 2>&1 &
+
+# RUN-13: AF-4k, q6_three_way.json, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/elephant-1_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/startlux-9b-instant_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/d3-flash_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/onejev-9b_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/nimble-9b_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/clef-flash_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/knowline-4b_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/startlux-4b-instant_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/pplx-decider-flash_test4k_q6_three_way.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --questions config/questions/q6_three_way.json --no-profile > logs/jeffan-4b_test4k_q6_three_way.out 2>&1 &
+
+# RUN-14: AF-4k, QF1, documents cut at 32,000 characters, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/elephant-1_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/startlux-9b-instant_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/d3-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/onejev-9b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/nimble-9b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/clef-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/knowline-4b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/startlux-4b-instant_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/pplx-decider-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/jeffan-4b_test4k_trunc32k.out 2>&1 &
+```
+
+Check progress with `tail -f logs/<name>.out`, and the status of everything with `grep -H "status" logs/*.out`. A job that stopped (error, or the scheduler ended it) can be relaunched with exactly the same line: it continues from the rows already done.
+
 Notes:
 
 - Without `--questions`, `benchmark.py` uses QF1 (`config/questions/claim_support.json`).
@@ -846,6 +1007,18 @@ python report.py --split test --questions config/questions/claim_support.json --
 python report.py --split test --questions config/questions/claim_support.json --rule support_simple --threshold 0.5             # P1 at T-0.5
 ```
 
+**Server version.** `report.py` reads the saved answers and needs no GPU, so it does not go through `gpu-run`. All three commands write the same file, `results/lytang--LLM-AggreFact/test/summary_551bb722_custom.md`, so they run one after the other in one job, and the file is copied after each:
+
+```sh
+mkdir -p logs
+nohup bash -c '
+D=results/lytang--LLM-AggreFact/test
+python report.py --split test --questions config/questions/claim_support.json --rule support_simple --calibrate-on dev-jev4520 && cp $D/summary_551bb722_custom.md $D/check_P1_T-AF.md
+python report.py --split test --questions config/questions/claim_support.json --decision config/rules/P2.json --calibrate-on dev-jev4520 && cp $D/summary_551bb722_custom.md $D/check_P2_T-AF.md
+python report.py --split test --questions config/questions/claim_support.json --rule support_simple --threshold 0.5 && cp $D/summary_551bb722_custom.md $D/check_P1_T-0.5.md
+' > logs/report_checks.out 2>&1 &
+```
+
 A model near 50 on every source has a key or polarity error in its adapter: compare a few rows by hand.
 
 ### Step 8 — The analysis (all tables)
@@ -853,6 +1026,13 @@ A model near 50 on every source has a key or polarity error in its adapter: comp
 ```sh
 python analysis/make_runs.py                                                       # which folder is which run
 python analysis/focused_10.py --runs analysis/focused_runs.json --out results/focused_10
+```
+
+**Server version.** No GPU needed. The second command needs the first one's output, so they run one after the other in one job:
+
+```sh
+mkdir -p logs
+nohup bash -c 'python analysis/make_runs.py && python analysis/focused_10.py --runs analysis/focused_runs.json --out results/focused_10' > logs/analysis_focused_10.out 2>&1 &
 ```
 
 **Done when** `make_runs.py` reports 12 systems (14 with the checkers) and both groups, and `results/focused_10/` holds the five tables of §10. What the two scripts compute is in §9.
@@ -868,6 +1048,77 @@ for P in p01 p02 p03 p04 p05 p06 p07 p08 p09 p10; do
   python benchmark.py $BB4 --gpu 0 --split test4k --limit 500 --questions config/questions/$P.json --no-profile
 done
 python report.py --split test4k --rule support_simple --threshold 0.5
+```
+
+**Server version.** Set the two model folders first (the best of each group in `table_main.md`), then paste the rest. The same port rule as in Step 6 applies if one of them is StartLux or OneJev: launch its next paraphrase only when the previous one has finished.
+
+```sh
+mkdir -p logs
+BEST_G9=elephant-1      # replace with the best TDM of the Qwen3.5-9B group (its folder name under models/)
+BEST_G4=knowline-4b     # replace with the best TDM of the Qwen3.5-4B group
+
+# RUN-15, paraphrase p01
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p01.json --no-profile > logs/$BEST_G9_test4k_p01.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p01.json --no-profile > logs/$BEST_G4_test4k_p01.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p01.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p01.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p01.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p01.out 2>&1 &
+
+# RUN-15, paraphrase p02
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p02.json --no-profile > logs/$BEST_G9_test4k_p02.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p02.json --no-profile > logs/$BEST_G4_test4k_p02.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p02.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p02.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p02.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p02.out 2>&1 &
+
+# RUN-15, paraphrase p03
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p03.json --no-profile > logs/$BEST_G9_test4k_p03.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p03.json --no-profile > logs/$BEST_G4_test4k_p03.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p03.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p03.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p03.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p03.out 2>&1 &
+
+# RUN-15, paraphrase p04
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p04.json --no-profile > logs/$BEST_G9_test4k_p04.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p04.json --no-profile > logs/$BEST_G4_test4k_p04.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p04.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p04.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p04.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p04.out 2>&1 &
+
+# RUN-15, paraphrase p05
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p05.json --no-profile > logs/$BEST_G9_test4k_p05.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p05.json --no-profile > logs/$BEST_G4_test4k_p05.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p05.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p05.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p05.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p05.out 2>&1 &
+
+# RUN-15, paraphrase p06
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p06.json --no-profile > logs/$BEST_G9_test4k_p06.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p06.json --no-profile > logs/$BEST_G4_test4k_p06.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p06.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p06.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p06.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p06.out 2>&1 &
+
+# RUN-15, paraphrase p07
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p07.json --no-profile > logs/$BEST_G9_test4k_p07.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p07.json --no-profile > logs/$BEST_G4_test4k_p07.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p07.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p07.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p07.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p07.out 2>&1 &
+
+# RUN-15, paraphrase p08
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p08.json --no-profile > logs/$BEST_G9_test4k_p08.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p08.json --no-profile > logs/$BEST_G4_test4k_p08.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p08.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p08.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p08.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p08.out 2>&1 &
+
+# RUN-15, paraphrase p09
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p09.json --no-profile > logs/$BEST_G9_test4k_p09.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p09.json --no-profile > logs/$BEST_G4_test4k_p09.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p09.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p09.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p09.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p09.out 2>&1 &
+
+# RUN-15, paraphrase p10
+nohup gpu-run -- python benchmark.py --model $BEST_G9 --gpu 0 --split test4k --limit 500 --questions config/questions/p10.json --no-profile > logs/$BEST_G9_test4k_p10.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model $BEST_G4 --gpu 0 --split test4k --limit 500 --questions config/questions/p10.json --no-profile > logs/$BEST_G4_test4k_p10.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-9b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p10.json --no-profile > logs/llm-backbone-qwen3.5-9b_test4k_p10.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model llm-backbone --model-config config/models/llm-backbone-qwen3.5-4b.json --gpu 0 --split test4k --limit 500 --questions config/questions/p10.json --no-profile > logs/llm-backbone-qwen3.5-4b_test4k_p10.out 2>&1 &
+
+# after all of them have finished (no GPU needed):
+nohup python report.py --split test4k --rule support_simple --threshold 0.5 > logs/report_paraphrases.out 2>&1 &
 ```
 
 Report per model the mean and SD of BAcc over the 10 paraphrases and the worst − best range. `make_runs.py` ignores these `--limit` runs on purpose.
