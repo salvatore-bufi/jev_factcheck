@@ -23,9 +23,9 @@ Se la stessa informazione è ripetuta in due frasi, togliendone una il verdetto 
 ## Come farlo
 
 1. **Righe**: i positivi del training del piano binario non Wikipedia (C2D, D2C, SummEdits, AVeriTeC e le altre fonti), più FEVER e HoVer per confrontare con le annotazioni. Niente righe di test né fonti di AggreFact.
-2. **Calcolo con d1-3B** (`evidence/label_counterfactual.py`): per ogni riga, un forward per frase tolta. I prompt sono uguali fino alla frase tolta, quindi si riusa il calcolo della parte comune. Documenti fino a 80 frasi; oltre, solo per le 50 frasi più promettenti.
+2. **Calcolo con KnowLine-4B** (`evidence/label_counterfactual.py`): per ogni riga, un forward per frase tolta. KnowLine è causale, quindi i prompt sono uguali fino alla frase tolta e si riusa il calcolo della parte comune (con un modello bidirezionale non si potrebbe). Documenti fino a 80 frasi; oltre, solo per le 50 frasi più promettenti.
 3. **Prima verifica, senza training**: su `dev_evid_select`, si usa l'importanza come punteggio delle frasi e si confronta con le annotazioni. Se non fa meglio di E-LEX, il segnale è troppo rumoroso e ci si ferma.
-4. **Accordo fra modelli**: su 300 righe si rifà il calcolo con JPT-9B. Se gli ordinamenti sono molto diversi, per JPT e Winnow si ricalcola col modello stesso.
+4. **Accordo fra modelli**: su 300 righe si rifà il calcolo con elephant-1. Se gli ordinamenti sono molto diversi, per gli altri modelli si ricalcola col modello stesso.
 5. **Training** (fase 1a, esperimento H-CF): alla loss della testa si aggiunge un termine che avvicina l'ordinamento dei punteggi della testa a quello dell'importanza (KL fra le due distribuzioni normalizzate sulle frasi), con peso 0,3 e 1. Il gruppo trovato con l'ablazione fa da evidenza, con peso 0,5.
 6. **Valutazione** su tre set:
    - `dev_evid_select` (Wikipedia): non deve peggiorare di più di 1 punto di F1;
@@ -45,7 +45,7 @@ Rispetto alla configurazione migliore senza questa aggiunta:
 |---|---|
 | L'importanza segue le scorciatoie del modello (per esempio frasi con parole del claim che il modello sopravvaluta) | la verifica del punto 3; tenere sempre le annotazioni dove ci sono |
 | Informazione ripetuta: importanza bassa per tutte le copie | il gruppo dell'ablazione come evidenza |
-| Costo: un forward per frase | d1-3B, riuso della parte comune, limite di 80 frasi |
+| Costo: un forward per frase | KnowLine-4B, riuso della parte comune, limite di 80 frasi |
 | Se il modello viene riaddestrato (fase 2), l'importanza calcolata prima non vale più | usarla solo col modello congelato, o ricalcolarla |
 
 ## Perché vale la pena

@@ -2,7 +2,7 @@
 
 ## In breve
 
-Si parte da una testa semplice (H0) e si aggiunge **un pezzo alla volta**, tenendolo solo se migliora. Tutto si fa su **d1-3B** con i vettori salvati (fase 1a): ogni prova è un training della sola testa. Alla fine JPT-9B e Winnow-12B ripetono la configurazione migliore.
+Si parte da una testa semplice (H0) e si aggiunge **un pezzo alla volta**, tenendolo solo se migliora. Tutto si fa su **KnowLine-4B** con i vettori salvati (fase 1a): ogni prova è un training della sola testa. Alla fine elephant-1 e gli altri decision model ripetono la configurazione migliore.
 
 ## Regole
 
@@ -56,17 +56,17 @@ Ognuno toglie o cambia un pezzo, per capire quanto conta:
 |---|---|---|
 | H2d | se H2c ha aiutato sulle frasi lunghe | media pesata dei token decisa dalla testa (fase 1b, [09](09_training.md) §4) |
 | H-PAIR | se l'insieme completo su HoVer resta sotto 0,65, o l'F1 cala di oltre 5 punti con frasi lontane | punteggio per coppie di frasi ([08](08_testa_e_loss.md) §4) |
-| H-FAITH | se la sufficienza resta sotto l'85% | far verificare al modello che le frasi scelte reggano il verdetto ([09](09_training.md) §5); si tiene solo se la sufficienza sale e l'F1 non scende di più di 1 punto |
 | H6 | se gli obiettivi non sono raggiunti dopo tutto il resto | fase 2, con peso dell'evidenza 0,1 / 0,3 / 1 |
 
-## JPT-9B e Winnow-12B
+## elephant-1 e gli altri modelli
 
 | Nome | Che cosa |
 |---|---|
-| J0, W0 | si salvano i vettori e si addestra la configurazione migliore di d1; controllo rapido di quali layer usare (possono essere diversi) |
-| W-FAITH | H-FAITH su Winnow, solo se su d1 è stato utile |
-| J6, W6 | fase 2, solo se su d1 ha dato un guadagno chiaro e il modello è sotto gli obiettivi |
-| L1 | latenza per i tre modelli ([10](10_valutazione.md) §5) |
+| E0 | elephant-1: si salvano i vettori e si addestra la configurazione migliore di KnowLine; controllo rapido di quali layer usare (possono essere diversi) |
+| H4-bi | H4 su elephant-1: con l'attenzione bidirezionale il preambolo serve ancora? Se no, per i modelli bidirezionali si toglie |
+| X0 | gli altri decision model, con la configurazione migliore del loro gruppo di attenzione (causale: KnowLine; bidirezionale: elephant-1), nell'ordine del piano binario (prima Jeffan-4B, d3-flash, OneJev, Nimble; poi StartLux, pplx, Clef) |
+| E6 | fase 2, solo se su KnowLine ha dato un guadagno chiaro e il modello è sotto gli obiettivi |
+| L1 | latenza per ogni modello rilasciato ([10](10_valutazione.md) §5) |
 
 ## Controlli finali
 
@@ -75,7 +75,7 @@ Ognuno toglie o cambia un pezzo, per capire quanto conta:
 | C1 | 3 semi della testa finale per modello: media e variabilità |
 | C2 | sufficienza e necessità su tutti i set di test |
 | C3 | testa contro E-ABL: quanto ci si avvicina con un forward a un metodo con centinaia di forward |
-| C4 | confronto fra i tre modelli sulle righe giudicate supportate da tutti |
+| C4 | confronto fra i modelli sulle righe giudicate supportate da tutti |
 
 ## Registro
 
@@ -84,4 +84,4 @@ Ognuno toglie o cambia un pezzo, per capire quanto conta:
 | Nome | Modello | Fase | Modifica | F1 | Insieme completo | F1 ≥ 10 frasi | F1 > 1.024 token | Negativi accesi | Sufficienza | Δ verdetto | Δ latenza | Decisione |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | E-LEX | — | — | — | | | | | | | — | — | riferimento |
-| H0 | d1-3B | 1a | — | | | | | | | 0 | | |
+| H0 | KnowLine-4B | 1a | — | | | | | | | 0 | | |

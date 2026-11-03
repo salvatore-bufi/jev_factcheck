@@ -40,7 +40,7 @@ Dallo stesso articolo si ricavano due righe in più:
 
 ## 2. Etichette ricavate col modello (ablazione)
 
-Per righe supportate senza evidenza (C2D e D2C come rilasciati, righe HoVer non allineabili) si usa il verdetto di **d1-3B** del piano binario, con il prompt con preambolo ([05](05_formato_prompt.md)). Si cerca il gruppo più piccolo di frasi che, da solo, fa dire "supportato":
+Per righe supportate senza evidenza (C2D e D2C come rilasciati, righe HoVer non allineabili) si usa il verdetto di **KnowLine-4B** del piano binario, con il prompt con preambolo ([05](05_formato_prompt.md)). Si cerca il gruppo più piccolo di frasi che, da solo, fa dire "supportato":
 
 ```text
 1. si parte da un gruppo vuoto
@@ -55,12 +55,12 @@ Ogni passo richiede un forward per frase candidata: si mandano tutti insieme e s
 
 Filtri:
 - un giudice LLM conferma le frasi trovate; atteso almeno l'80% di conferme, altrimenti si rivede la procedura;
-- su 300 righe si rifà la ricerca con JPT-9B: i gruppi trovati devono coincidere in buona parte (Jaccard medio ≥ 0,7). Se no, le etichette dipendono troppo da d1, e per JPT e Winnow si usano solo le righe su cui i due modelli concordano.
+- su 300 righe si rifà la ricerca con elephant-1: i gruppi trovati devono coincidere in buona parte (Jaccard medio ≥ 0,7). Se no, le etichette dipendono troppo da KnowLine, e per gli altri modelli si usano solo le righe su cui i due concordano.
 
 ```sh
-gpu-run --batch --name ev-ablation-d1 -- bash -c \
-  'python -m evidence.label_ablation --model d1-3b --pairs c2d_train d2c_train hover_train_unaligned \
-     --out data/evidence/pairs/ablation_d1.jsonl > logs/ev-ablation-d1.out 2>&1'
+gpu-run --batch --name ev-ablation-knowline -- bash -c \
+  'python -m evidence.label_ablation --model knowline-4b --pairs c2d_train d2c_train hover_train_unaligned \
+     --out data/evidence/pairs/ablation_knowline.jsonl > logs/ev-ablation-knowline.out 2>&1'
 ```
 
 Lo script riprende da dove si era fermato se interrotto.
@@ -100,5 +100,5 @@ python -m evidence.augment_sparse --pairs fever_train hover_train construct --n 
 |---|---|
 | 30 righe per tipo lette a mano: le frasi di evidenza dimostrano il claim e non ne manca nessuna necessaria | ≥ 27 su 30 |
 | Conferme del giudice sull'ablazione | ≥ 80% |
-| Accordo d1–JPT sull'ablazione | Jaccard ≥ 0,7 |
+| Accordo KnowLine–elephant-1 sull'ablazione | Jaccard ≥ 0,7 |
 | Righe spostate con riferimenti rotti (30 lette) | 0 |

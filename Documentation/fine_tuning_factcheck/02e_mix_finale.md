@@ -117,7 +117,7 @@ print(collections.Counter(r["source"] for r in rows).most_common())
 | Documenti oltre il budget di token | < 1% per fonte (vedi [03](03_rendering_formato.md) §7) |
 | Fonti escluse | RAGTruth e WiCE assenti |
 
-Statistiche da salvare in `stats.json`: righe e positivi per fonte, quota `neg_type`, lunghezze in token (p50, p95) con il tokenizer di JPT.
+Statistiche da salvare in `stats.json`: righe e positivi per fonte, quota `neg_type`, lunghezze in token (p50, p95) con il tokenizer di Qwen3.5 (comune ai 12 modelli).
 
 ## 6. Comandi
 

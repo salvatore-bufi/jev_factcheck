@@ -2,52 +2,31 @@
 
 ## Obiettivo
 
-Addestrare un adapter LoRA su d1-3B (prove e candidato economico), JPT-9B (confronto) e Winnow-12B (massima accuratezza) con la loss di [04](04_loss.md), il curriculum di [02e](02e_mix_finale.md) e i dati renderizzati di [03](03_rendering_formato.md); controllare apprendimento e calibrazione durante il training; salvare checkpoint confrontabili.
+Addestrare un adapter LoRA prima su KnowLine-4B (prove), poi su elephant-1 (modello principale a 9B), poi sugli altri decision model e sui due backbone (B-ctrl), con la loss di [04](04_loss.md), il curriculum di [02e](02e_mix_finale.md) e i dati renderizzati di [03](03_rendering_formato.md); controllare apprendimento e calibrazione durante il training; salvare checkpoint confrontabili.
 
-## 1. LoRA in breve, con i numeri dei nostri modelli
+## 1. LoRA in breve
 
 Per una matrice congelata W (forma d_out × d_in) LoRA aggiunge B (d_out × r) e A (r × d_in): W' = W + (α/r)·B·A. Solo A e B si addestrano; B parte da zero, quindi **al passo 0 il modello è identico a quello di partenza**.
 
-Esempio: in JPT `q_proj` di un layer di attenzione piena ha d_in = 4.096. Con r = 16 i parametri addestrati per quella matrice sono 16 · (4.096 + d_out): decine di migliaia di volte meno della matrice.
-
-JPT-9B è già "Qwen3.5-9B + una LoRA fusa": i pesi pubblicati contengono W_jpt = W_qwen + ΔW_1. Si addestra un **nuovo** adapter sopra W_jpt (W_finale = W_jpt + ΔW_2); le matrici della LoRA originale non esistono più separatamente e non servono.
+Si aggiunge sempre una **nuova** LoRA sopra i pesi pubblicati, qualunque sia il training originale:
+- modelli pubblicati come pesi completi (8 su 10): W_finale = W_pubblicato + ΔW_nostro;
+- **Nimble-9B-v3** è pubblicato come LoRA (r = 64) su Qwen3.5-9B: prima si fonde la sua LoRA nel backbone (con PEFT, `merge_and_unload`), si verifica che le risposte non cambino, poi si aggiunge la nostra come per gli altri.
 
 ## 2. Moduli su cui mettere LoRA
 
-Nomi verificati sugli indici dei pesi locali.
-
-**d1-3B** (`lfm2` dentro `lfm2_vl`, 30 layer: 22 a convoluzione corta e 8 ad attenzione piena, ai layer 2, 5, 9, 13, 17, 21, 24, 27):
+Tutti i 12 modelli sono Qwen3.5 (`qwen3_5_text`, 32 layer: 24 Gated DeltaNet e 8 ad attenzione piena, ai layer 3, 7, …, 31), quindi i nomi dei moduli sono gli stessi:
 
 ```python
-D1_TARGETS = (r".*language_model\.layers\.\d+\."
-              r"(self_attn\.(q_proj|k_proj|v_proj|out_proj)"
-              r"|conv\.(in_proj|out_proj)"
-              r"|feed_forward\.(w1|w2|w3))")
+QWEN35_TARGETS = (r".*layers\.\d+\."
+                  r"(self_attn\.(q_proj|k_proj|v_proj|o_proj)"
+                  r"|linear_attn\.(in_proj_qkv|in_proj_z|out_proj)"
+                  r"|mlp\.(gate_proj|up_proj|down_proj))")
 ```
 
-- `self_attn.*` esiste solo negli 8 layer ad attenzione; `conv.*` nei 22 a convoluzione (`conv.conv` è la convoluzione corta vera e propria: piccola, si lascia congelata);
-- la MLP si chiama `feed_forward` con matrici `w1`, `w2`, `w3`;
-- la normalizzazione finale si chiama `embedding_norm` (nome dell'implementazione LFM2), la testa del vocabolario è legata alle embedding;
-- il prefisso `language_model` esclude il codificatore visivo (SigLIP2), che non si usa.
-
-**JPT-9B** (`qwen3_5_text`, 32 layer: 24 di attenzione lineare DeltaNet e 8 di attenzione piena, ai layer 3, 7, …, 31):
-
-```python
-JPT_TARGETS = (r".*language_model\.layers\.\d+\."
-               r"(self_attn\.(q_proj|k_proj|v_proj|o_proj)"
-               r"|linear_attn\.(in_proj_qkv|in_proj_z|out_proj)"
-               r"|mlp\.(gate_proj|up_proj|down_proj))")
-```
-
-- `self_attn.*` esiste solo nei layer ad attenzione piena; `linear_attn.*` solo in quelli DeltaNet.
-- `linear_attn.in_proj_a` e `in_proj_b` sono proiezioni piccolissime (una per testa): si lasciano congelate.
-- Il prefisso `language_model` esclude la torre visiva, che non si usa.
-
-**Winnow-12B** (`gemma4_text`, 48 layer: 40 con finestra scorrevole di 1.024 token e 8 globali, ai layer 5, 11, …, 47):
-
-```python
-WINNOW_TARGETS = r"model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))"
-```
+- `self_attn.*` esiste solo negli 8 layer pieni; `linear_attn.*` solo nei 24 DeltaNet;
+- `linear_attn.in_proj_a` e `in_proj_b` sono proiezioni piccolissime (una per testa): si lasciano congelate;
+- la torre visiva (presente nei modelli caricati come multimodali, es. StartLux, d3-flash) non si tocca: l'espressione regolare non la prende se i suoi moduli hanno nomi diversi; si controlla con `print_trainable_parameters` e con l'elenco dei moduli adattati;
+- **teste proprie**: la testa a 255 vie di pplx-decider-flash (~0,65 M parametri) e la testa congiunta di Clef-Flash si addestrano per intero (`modules_to_save` di PEFT), non con LoRA.
 
 ## 3. Configurazione
 
@@ -60,106 +39,66 @@ WINNOW_TARGETS = r"model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)
 | Epoche | 1 | 1 | 1 | dati in parte sintetici: la seconda epoca adatta lo stile |
 | Batch effettivo | 32 esempi | 32 | 32 | |
 | Ottimizzatore | AdamW (β 0,9 / 0,999, ε 1e-8), weight decay 0 | idem | **nuovo** AdamW | lo stato dello stadio 1 porterebbe il momento verso i dati sintetici |
-| Lunghezza massima | 4.096 | 8.192 | 8.192 | |
+| Lunghezza massima | 8.192 | 8.192 | 8.192 | |
 | Precisione | bf16; gradient checkpointing | idem | idem | |
-| Loss | CE sulle due risposte (sì/no) | idem | idem | [04](04_loss.md) |
+| Loss | CE sulle due opzioni | idem | idem | [04](04_loss.md) |
 | Checkpoint | ogni 20% | ogni 20% | ogni 10% | |
 | Seed | 13 | 13 (3 seed per la configurazione finale: 13, 14, 15) | | |
 
+Stessa configurazione per tutti i modelli, decision model e backbone: è la condizione di B-ctrl ("stessa ricetta").
+
 ## 4. Hardware e memoria
 
-| Macchina | d1-3B | JPT-9B | Winnow-12B |
-|---|---|---|---|
-| Portatile RTX 5090, 24 GB | **LoRA in bf16** (~7 GB di pesi), 8k token, batch fisico 2–4 | QLoRA (pesi a 4 bit, ~6 GB), 4k token, batch fisico 1 | non realistico |
-| L40S 45 GB | LoRA in bf16, 16k token o batch più grandi | LoRA in bf16 (~18 GB di pesi), fino a 8k token | LoRA in bf16 (~22 GB di pesi), 4–8k token |
-| 2× L40S | data parallel | data parallel (ogni scheda una copia; gli adapter sono piccoli) | idem |
+| Macchina | Gruppo 4B (KnowLine, StartLux-4B, pplx, Jeffan, Qwen3.5-4B) | Gruppo 9B (elephant-1, StartLux-9B, d3-flash, OneJev, Nimble, Clef, Qwen3.5-9B) |
+|---|---|---|
+| Portatile RTX 5090, 24 GB | **LoRA in bf16** (~9 GB di pesi), 8k token, batch fisico 1–2 | QLoRA (pesi a 4 bit), 4k token: solo per prove |
+| L40S 45 GB | LoRA in bf16, 16k token o batch più grandi | **LoRA in bf16** (~19 GB di pesi), 8k token, batch fisico 1 |
 
-d1-3B non ha bisogno di QLoRA: i numeri del portatile sono già quelli definitivi in bf16.
+Stima per un 9B su L40S a 8k token: pesi 19 GB + adapter e stati dell'ottimizzatore ~1 GB + attivazioni con gradient checkpointing ~8–12 GB ≈ 28–32 GB.
 
-Stima per Winnow su L40S a 8k token: pesi 22 GB + adapter e stati dell'ottimizzatore ~1 GB + attivazioni con gradient checkpointing ~8–12 GB ≈ 31–35 GB.
+**Trucco di memoria**: non calcolare i logit del vocabolario intero (~248.000 token × 8.192 posizioni ≈ 4 GB in bf16 per esempio). Si prende lo stato finale **solo** nella posizione di lettura e lo si moltiplica per le righe delle due opzioni (`margin` di [04](04_loss.md) §7); per pplx e Clef si chiama solo la loro testa.
 
-**Trucco di memoria**: non calcolare i logit del vocabolario intero. Con ~250.000 token di vocabolario e 8.192 posizioni, la proiezione completa costerebbe da sola ~4 GB in bf16 per esempio. Si prende lo stato finale **solo** in `answer_pos` e lo si moltiplica per le righe dei token di risposta (`margin` di [04](04_loss.md) §7).
-
-QLoRA cambia leggermente i pesi base: va bene per iterare su JPT, ma i numeri definitivi si misurano sui pesi bf16 fusi ([08](08_merge_export.md)).
+QLoRA cambia leggermente i pesi base: va bene per le prove, ma i numeri definitivi si misurano sui pesi bf16 fusi ([08](08_merge_export.md)).
 
 ## 5. Installazione
 
 ```sh
-conda run -n factcheck pip install peft
-conda run -n factcheck python -c "import peft, transformers; print(peft.__version__, transformers.__version__)"
+pip install peft flash-linear-attention causal-conv1d
+python -c "import peft, transformers, fla; print(peft.__version__, transformers.__version__)"
 ```
 
-Se `peft` richiede una versione di transformers diversa da 5.14.1 (quella usata anche da vLLM nell'ambiente), creare un ambiente separato per il training (`conda create -n factcheck-train --clone factcheck`) invece di aggiornare transformers.
+Senza `flash-linear-attention` i layer DeltaNet usano un'implementazione in torch molto più lenta. Se `peft` richiede una versione di transformers diversa da quella dell'ambiente, creare un ambiente separato per il training (`conda create -n factcheck-train --clone factcheck`) invece di aggiornare transformers.
 
 ## 6. Lo script: `finetune/train.py`
 
-Codice di riferimento completo nella struttura (PyTorch + PEFT + accelerate). I punti delicati sono commentati.
+Lo script è uguale per tutti i modelli: ciò che cambia (caricamento, maschera, lettura) sta nel renderer del modello ([03](03_rendering_formato.md) §4).
 
 ```python
-"""LoRA training of a decision model on the logits of its yes/no answer tokens.
-accelerate launch finetune/train.py --model jpt --data data/finetune/rendered/jpt/fc_pilot/train.jsonl \
-    --out finetune/outputs/P0 --lr 2e-5 [--init-adapter finetune/outputs/S1/final] [--qlora]"""
+"""LoRA training of a decision model on the two option scores it reads.
+accelerate launch finetune/train.py --model knowline-4b --data data/finetune/rendered/knowline-4b/fc_pilot/train.jsonl \
+    --out finetune/outputs/P0-knowline --lr 2e-5 [--init-adapter finetune/outputs/S1/final] [--qlora]"""
 import argparse, json, math, random, time
 from pathlib import Path
 import torch
 import transformers
 from accelerate import Accelerator
 from peft import LoraConfig, PeftModel, get_peft_model
-from losses import margin, binary_loss, anchor_kl
+from losses import binary_loss, anchor_kl
+from render import RENDERERS, QWEN35_TARGETS          # un renderer per modello, con load() e forward_model()
 
-SPECS = {
-    "d1":     dict(path="LiquidAI/d1-3B", revision="051bcc464b01b9f92942b364d9586b0ef5912432",
-                   targets=D1_TARGETS, yes_ids=[11683, 12447], no_ids=[2243, 4547, 19598], T=1.0, softcap=None),
-    "jpt":    dict(path="kirp/jpt-9b", revision="b447cc7ee105c0a76a22f8fde8ecf05074dc8be0",
-                   targets=JPT_TARGETS, yes_ids=[357], no_ids=[417], T=1.087, softcap=None),
-    "winnow": dict(path="winnow-12b-bf16/model", revision=None,
-                   targets=WINNOW_TARGETS, yes_ids=[236799], no_ids=[236776], T=1.0, softcap=30.0),
-}
-TAKE = json.load(open("finetune/question.json")).get("take", "yes")   # "no" con Q4
+TAKE = json.load(open("finetune/question.json")).get("take", "yes")
 
-def load_model(spec, qlora):
-    cfg = transformers.AutoConfig.from_pretrained(spec["path"], revision=spec["revision"])
-    cls = getattr(transformers, cfg.architectures[0])        # JPT: Qwen3_5ForConditionalGeneration; d1: Lfm2VlForConditionalGeneration
-    kw = dict(revision=spec["revision"], torch_dtype=torch.bfloat16, attn_implementation="sdpa")
-    if qlora:
-        kw["quantization_config"] = transformers.BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16)
-    model = cls.from_pretrained(spec["path"], **kw)
-    model.config.use_cache = False
-    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    model.enable_input_require_grads()
-    return model
-
-def decoder_and_rows(model, spec):
-    """-> (modulo che restituisce last_hidden_state normalizzato, righe dei token sì, righe dei token no)."""
-    base = model.get_base_model() if hasattr(model, "get_base_model") else model
-    decoder = base.model.language_model if hasattr(base.model, "language_model") else base.model
-    head = base.get_output_embeddings().weight                # Winnow e d1: = embedding (legate)
-    return decoder, head[spec["yes_ids"]], head[spec["no_ids"]]
-
-def batches(path, micro_bs, max_tokens, seed):
+def batches(path, micro_bs, seed):
     rows = [json.loads(l) for l in open(path)]
     random.Random(seed).shuffle(rows)
-    # raggruppa per lunghezza simile (meno padding), poi rimescola i gruppi
-    rows.sort(key=lambda r: len(r["input_ids"]) // 256)
+    rows.sort(key=lambda r: len(r["input_ids"]) // 256)        # lunghezze simili: meno padding
     groups = [rows[i:i + micro_bs] for i in range(0, len(rows), micro_bs)]
     random.Random(seed + 1).shuffle(groups)
     return groups
 
-def collate(group, pad_id, device):
-    L = max(len(r["input_ids"]) for r in group)
-    ids = torch.full((len(group), L), pad_id); mask = torch.zeros((len(group), L), dtype=torch.long)
-    for i, r in enumerate(group):                             # padding a destra: answer_pos non cambia
-        ids[i, :len(r["input_ids"])] = torch.tensor(r["input_ids"]); mask[i, :len(r["input_ids"])] = 1
-    return (ids.to(device), mask.to(device),
-            torch.tensor([r["answer_pos"] for r in group], device=device),
-            torch.tensor([float(r["label"]) for r in group], device=device),
-            torch.tensor([r.get("teacher_p") or 0.5 for r in group], device=device))
-
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--model", choices=SPECS, required=True)
+    p.add_argument("--model", choices=RENDERERS, required=True)
     p.add_argument("--data", required=True); p.add_argument("--out", required=True)
     p.add_argument("--init-adapter"); p.add_argument("--qlora", action="store_true")
     p.add_argument("--lr", type=float, default=2e-5); p.add_argument("--rank", type=int, default=16)
@@ -171,30 +110,31 @@ def main():
 
     torch.manual_seed(a.seed)
     acc = Accelerator(gradient_accumulation_steps=a.accum, mixed_precision="bf16")
-    spec = SPECS[a.model]
-    model = load_model(spec, a.qlora)
-    if a.init_adapter:                                        # stadio 2: si continua lo stesso adapter
+    r = RENDERERS[a.model]()
+    model = r.load(qlora=a.qlora)                              # pesi pubblicati (Nimble: LoRA degli autori già fusa)
+    model.config.use_cache = False
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    model.enable_input_require_grads()
+    if a.init_adapter:                                         # stadio 2: si continua lo stesso adapter
         model = PeftModel.from_pretrained(model, a.init_adapter, is_trainable=True)
     else:
-        model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05,
-                                                 target_modules=spec["targets"], bias="none"))
+        model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05, bias="none",
+                                                 target_modules=QWEN35_TARGETS,
+                                                 modules_to_save=r.own_head_modules))   # pplx, Clef: la loro testa
     model.print_trainable_parameters()
-    groups = batches(a.data, a.micro_bs, None, a.seed)
+    groups = batches(a.data, a.micro_bs, a.seed)
     steps = math.ceil(len(groups) / a.accum)
     opt = torch.optim.AdamW([q for q in model.parameters() if q.requires_grad], lr=a.lr, weight_decay=0.0)
     sched = transformers.get_cosine_schedule_with_warmup(opt, int(a.warmup * steps), steps)
     model, opt, sched = acc.prepare(model, opt, sched)
-    decoder, w_yes, w_no = decoder_and_rows(acc.unwrap_model(model), spec)
-    pad = 0
     Path(a.out).mkdir(parents=True, exist_ok=True)
     log = open(Path(a.out) / "log.jsonl", "a") if acc.is_main_process else None
     model.train(); t0 = time.time()
     for i, group in enumerate(groups[acc.process_index::acc.num_processes]):
-        ids, mask, pos, y, p0 = collate(group, pad, acc.device)
+        y = torch.tensor([float(x["label"]) for x in group], device=acc.device)
+        p0 = torch.tensor([x.get("teacher_p") or 0.5 for x in group], device=acc.device)
         with acc.accumulate(model):
-            h = decoder(input_ids=ids, attention_mask=mask).last_hidden_state      # [B, L, d]
-            h_ans = h[torch.arange(len(pos), device=pos.device), pos]               # [B, d]
-            s = margin(h_ans, w_yes, w_no, spec["T"], spec["softcap"], TAKE)
+            s = r.margin(model, group, TAKE)                   # forward con maschera e lettura del modello -> s [B]
             loss = binary_loss(s, y, a.loss, a.smoothing)
             if a.beta:
                 loss = loss + a.beta * anchor_kl(s, p0)
@@ -215,72 +155,56 @@ if __name__ == "__main__":
     main()
 ```
 
-Punti da controllare quando si scrive il codice vero:
+`r.margin(model, group, take)` fa, per ogni modello, il forward con la sua maschera e restituisce il margine:
+- lettura dalla testa del vocabolario: stato finale nella posizione di lettura × righe delle due opzioni (`margin` di [04](04_loss.md) §7);
+- pplx e Clef: la loro testa sullo stato finale, poi `margin_from_logits`;
+- backbone: le due lettere del prompt con l'ordine scelto per quell'esempio ([03](03_rendering_formato.md) §2.4).
 
-- `decoder_and_rows`: il modulo che restituisce `last_hidden_state` **dopo** la normalizzazione finale. Per JPT è `model.model.language_model` (i pesi si chiamano `model.language_model.layers.*` e `model.language_model.norm`); per Winnow è `model.model`. Si verifica con il test §8.
-- con `get_peft_model` i nomi dei moduli acquisiscono il prefisso `base_model.model.`: l'espressione regolare dei target funziona perché inizia con `.*` (JPT) — per Winnow aggiungere `.*` all'inizio se PEFT non trova moduli (`print_trainable_parameters` deve dare un numero > 0).
-- il padding a destra non sposta `answer_pos`; con batch fisico 1 non c'è padding.
-- per JPT il token di padding: usare `tok.pad_token_id` (con `attention_mask = 0` il valore non conta).
-- con più GPU, accelerate fa avanzare lo scheduler una volta per processo a ogni passo dell'ottimizzatore: controllare nel log che il learning rate arrivi a ~0 alla fine dell'epoca, e se scende troppo presto moltiplicare `steps` per `num_processes` nella creazione dello scheduler.
-- l'ottimizzatore preparato da accelerate salta `opt.step()` durante l'accumulo: la chiamata a ogni micro-batch è corretta.
+Punti da controllare quando si scrive il codice vero:
+- il modulo che restituisce lo stato **dopo** la normalizzazione finale (per KnowLine la temperatura è incorporata proprio lì: non va saltata);
+- con `get_peft_model` i nomi dei moduli acquisiscono il prefisso `base_model.model.`: l'espressione regolare inizia con `.*` per questo;
+- con più GPU, accelerate fa avanzare lo scheduler una volta per processo: controllare nel log che il learning rate arrivi a ~0 alla fine dell'epoca.
 
 ## 7. Comandi
 
 ```sh
 # render
-conda run -n factcheck python finetune/render.py --model d1 --mix fc_pilot
-# pilota d1-3B sul portatile (LoRA in bf16, niente QLoRA)
-conda run -n factcheck accelerate launch --num_processes 1 finetune/train.py --model d1 \
-    --data data/finetune/rendered/d1/fc_pilot/train.jsonl --out finetune/outputs/P0-d1 --lr 2e-5 --micro-bs 2 --accum 16
-# pilota JPT sul portatile (QLoRA)
-conda run -n factcheck accelerate launch --num_processes 1 finetune/train.py --model jpt --qlora \
-    --data data/finetune/rendered/jpt/fc_pilot/train.jsonl --out finetune/outputs/P0 --lr 2e-5
-# stadio 1 e 2 su 2 L40S
-conda run -n factcheck accelerate launch --num_processes 2 finetune/train.py --model winnow \
-    --data data/finetune/rendered/winnow/fc_stage1/train.jsonl --out finetune/outputs/W1/stage1 --lr 5e-5 --accum 16
-conda run -n factcheck accelerate launch --num_processes 2 finetune/train.py --model winnow \
-    --data data/finetune/rendered/winnow/fc_stage2/train.jsonl --out finetune/outputs/W1/stage2 --lr 1e-5 --accum 16 \
-    --init-adapter finetune/outputs/W1/stage1/final
+python finetune/render.py --model knowline-4b --mix fc_pilot
+# pilota KnowLine-4B (portatile, o server)
+accelerate launch --num_processes 1 finetune/train.py --model knowline-4b \
+    --data data/finetune/rendered/knowline-4b/fc_pilot/train.jsonl --out finetune/outputs/P0-knowline --lr 2e-5 --accum 32
+# stadio 1 e 2 su elephant-1, sul server
+gpu-run --batch --name ft-elephant-s1 -- bash -c 'accelerate launch --num_processes 1 finetune/train.py --model elephant-1 \
+    --data data/finetune/rendered/elephant-1/fc_stage1/train.jsonl --out finetune/outputs/E1/stage1 --lr 5e-5 \
+    > logs/ft-elephant-s1.out 2>&1'
+gpu-run --batch --name ft-elephant-s2 -- bash -c 'accelerate launch --num_processes 1 finetune/train.py --model elephant-1 \
+    --data data/finetune/rendered/elephant-1/fc_stage2/train.jsonl --out finetune/outputs/E1/stage2 --lr 1e-5 \
+    --init-adapter finetune/outputs/E1/stage1/final > logs/ft-elephant-s2.out 2>&1'
 ```
 
-Con 2 GPU e `--accum 16` il batch effettivo resta 32 (2 × 1 × 16).
+Se una corsa supera le 24 ore, aggiungere `--time` a `gpu-run`. Per i backbone: `--model qwen3.5-9b` / `qwen3.5-4b`, stessi dati e iperparametri.
 
-## 8. Test prima del primo training (obbligatori)
+## 8. Test prima del primo training (obbligatori, per ogni modello)
 
 | Test | Come | Atteso |
 |---|---|---|
-| **Margine ridotto = forward completo** | 50 prompt: `margin(h_ans, …)` contro `(max logits[:, gruppo sì] − max logits[:, gruppo no]) / T` dal forward con la testa del vocabolario, in fp32 | differenza < 1e-3 |
-| **Passo zero = baseline** | adapter appena creato (B = 0): P(supportato) su 200 righe di dev_select | uguale (entro ~0,01 per il bf16) alle probabilità di `finetune/score.py` con vLLM |
+| **Identità con il benchmark** | [03](03_rendering_formato.md) §8: P(supportato) da `r.margin` (in eval) contro l'adapter del benchmark | differenza media < 0,005 |
+| **Passo zero = baseline** | adapter appena creato (B = 0): P(supportato) su 200 righe di dev_select | uguale (entro ~0,01 per il bf16) alla baseline di [01](01_baseline.md) |
+| **Gradienti con la maschera** | per i modelli bidirezionali: un passo di training con il codice degli autori; i gradienti della LoRA nei layer pieni sono diversi da zero e la maschera resta bidirezionale (test della maschera di [03](03_rendering_formato.md) §8) | |
 | **Overfit di 64 esempi** | 300 passi su 64 esempi, lr 1e-4 | loss < 0,05: la pipeline impara |
-| **Parametri addestrabili** | `print_trainable_parameters` | > 0, ordine di decine di milioni per r = 16 |
+| **Parametri addestrabili** | `print_trainable_parameters` | > 0, decine di milioni per r = 16; per pplx e Clef anche la testa |
 
-Se il passo zero non coincide con la baseline: prompt, token di risposta o `take` sbagliati; correggere prima di addestrare.
-
-**Solo per d1-3B**: il training carica il modello con la classe standard di transformers (`Lfm2VlForConditionalGeneration`, senza `trust_remote_code`), mentre la baseline usa l'API del repository (`system_one`, con un'implementazione propria dei layer). Il test del passo zero confronta quindi le due implementazioni: le P(sì) devono coincidere entro ~0,01 su 200 righe. Se non coincidono, addestrare caricando il modello con `trust_remote_code=True` e verificare che il suo forward supporti i gradienti.
+Se il passo zero non coincide con la baseline: prompt, maschera, opzioni o `take` sbagliati; correggere prima di addestrare.
 
 ## 9. Valutazione durante il training — `finetune/quick_eval.py`
 
-A ogni checkpoint, su un campione fisso di dev_select (al massimo 200 righe per fonte, ~1.400 righe):
-
-```python
-@torch.no_grad()
-def quick_eval(model, rows, spec):
-    ps = []
-    for r in rows:                                    # batch fisico 1 per semplicità
-        ids = torch.tensor([r["input_ids"]], device="cuda")
-        h = decoder(input_ids=ids).last_hidden_state[0, r["answer_pos"]]
-        ps.append(torch.sigmoid(margin(h[None], w_yes, w_no, spec["T"], spec["softcap"], TAKE)).item())
-    recs = [{"dataset": r["source"], "label": r["label"]} for r in rows]
-    tuned = tune_threshold(recs, ps); auc = metrics(recs, ps, tuned["threshold"])
-    return {"bacc": tuned["macro_balanced_accuracy"], "thr": tuned["threshold"],
-            "bacc_05": metrics(recs, ps, 0.5)["macro_balanced_accuracy"], "ece": ece(ps, [r["label"] for r in rows])}
-```
+A ogni checkpoint, su un campione fisso di dev_select (al massimo 200 righe per fonte, ~1.400 righe), con `r.margin` in eval:
 
 | Metrica | Andamento atteso | Allarme |
 |---|---|---|
 | Loss di training | scende e si appiattisce | oscillazioni forti → lr troppo alto |
 | BAcc macro su dev_select | sopra la baseline a una domanda | una fonte crolla mentre le altre salgono |
-| Soglia ottimale | scende da 0,90–0,95 verso 0,4–0,6 | resta > 0,85 dopo metà dello stadio 1 → pochi negativi "non stabilito" |
+| Soglia ottimale | si avvicina a 0,4–0,6 | resta > 0,85 dopo metà dello stadio 1 → pochi negativi "non stabilito" |
 | BAcc a 0,5 | vicina a quella a soglia ottimale | distanza > 1 punto |
 | ECE | stabile o in calo | sale molto → sovra-confidenza |
 | Solo claim (200 righe con documento vuoto) | P media bassa | sale → il modello guarda solo il claim |
@@ -288,35 +212,27 @@ def quick_eval(model, rows, spec):
 ## 10. Scelta del checkpoint
 
 1. Fra i checkpoint dello stadio 2 (o del pilota): BAcc macro più alta su dev_select; a parità (entro 0,3) ECE più bassa.
-2. Valutazione completa del checkpoint scelto con vLLM sui pesi fusi ([08](08_merge_export.md)) su dev_select e conferma su dev_confirm.
+2. Valutazione completa del checkpoint scelto sui pesi fusi, con l'adapter del benchmark ([08](08_merge_export.md)), su dev_select e conferma su dev_confirm.
 3. AggreFact non entra nella scelta.
 
-## 11. Tempi (da misurare nei primi 100 passi)
-
-| Corsa | Esempi | Token (≈) | 1 L40S a ~1.000 token/s |
-|---|---:|---:|---|
-| `fc_pilot`, d1-3B | ~27k | ~15M | ~1–1,5 h (stima: ~3 volte meno calcolo per token di JPT); sul portatile 2–3 h |
-| stadi 1 + 2, d1-3B | ~90k | ~70M | ~6–8 h |
-| `fc_pilot`, JPT | ~27k | ~15M | ~4 h (QLoRA sul portatile: ~2× più lento) |
-| stadi 1 + 2, JPT | ~90k | ~70M | ~20 h |
-| stadi 1 + 2, Winnow | ~90k | ~70M | ~30 h; ~15 h su 2 L40S |
-
-## 12. Problemi tipici
+## 11. Problemi tipici
 
 | Sintomo | Causa probabile | Cosa fare |
 |---|---|---|
-| La loss non scende | risposte o `take` invertiti; `answer_pos` sbagliata | test di [03](03_rendering_formato.md) §8 e di questo file §8 |
+| La loss non scende | opzioni o `take` invertiti; posizione di lettura sbagliata | test di [03](03_rendering_formato.md) §8 e di questo file §8 |
+| Passo zero diverso dalla baseline solo per i modelli bidirezionali | maschera non applicata in training | test della maschera; usare il forward degli autori |
 | BAcc giù dopo pochi passi | lr troppo alto; prompt diverso dal benchmark | lr 1e-5; confronto token per token |
-| Out of memory | sequenze lunghe; logit del vocabolario calcolati | batch fisico 1, gradient checkpointing, solo `answer_pos` |
+| Out of memory | sequenze lunghe; logit del vocabolario calcolati | batch fisico 1, gradient checkpointing, solo la posizione di lettura |
+| Training molto lento | kernel DeltaNet non installati | `flash-linear-attention`, `causal-conv1d` |
 | Soglia ottimale bloccata in alto | pochi negativi `not_established` | più `remove_evidence` e C2D |
 | Probabilità tutte 0/1 | sovra-confidenza | smoothing 0,05, Brier, β·KL, temperatura rifittata |
-| Nessun parametro addestrabile | regex dei target non corrisponde ai nomi PEFT | stampare `[n for n, _ in model.named_modules()][:50]` e correggere |
+| Nessun parametro addestrabile | regex dei target non corrisponde ai nomi | stampare `[n for n, _ in model.named_modules()][:50]` e correggere |
 
-## 13. Riproducibilità
+## 12. Riproducibilità
 
-In `finetune/outputs/<esperimento>/config.json`: argomenti, SHA-256 del file renderizzato e del mix, revisione dei pesi, `question.json`, versioni di torch/transformers/peft, macchina, durata, seed.
+In `finetune/outputs/<esperimento>/config.json`: argomenti, SHA-256 del file renderizzato e del mix, modello e revisione dei pesi, `question.json`, versioni di torch/transformers/peft, macchina, durata, seed.
 
-## 14. Appendice — L'encoder stile FactCG (controllo A5 e studente della distillazione)
+## 13. Appendice — L'encoder stile FactCG (controllo A5 e studente della distillazione)
 
 | Parametro | Valore |
 |---|---|
@@ -333,5 +249,5 @@ Si può usare `transformers.Trainer` standard (la loss è la CE della classe di 
 
 ## Criteri per passare allo step successivo
 
-- Test §8 superati.
+- Test §8 superati per il modello da addestrare.
 - Un checkpoint che batte la baseline a una domanda su dev_select, confermato su dev_confirm, con soglia ottimale fra 0,3 e 0,7 ed ECE non peggiore.

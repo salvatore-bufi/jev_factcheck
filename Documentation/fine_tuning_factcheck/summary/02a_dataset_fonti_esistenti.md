@@ -39,14 +39,14 @@ MiniCheck non usa tutto ANLI: usa **21k esempi su cui i loro modelli di entailme
 
 Con il nostro modello di partenza:
 
-1. Inferenza di JPT-9B (una domanda) su tutto ANLI train (162.865 righe, premesse corte: ~130 token p95 → ~1 h con vLLM su L40S).
+1. Inferenza di KnowLine-4B (una domanda) su tutto ANLI train (162.865 righe, premesse corte: ~130 token p95), con `benchmark.py` sul file esportato come dataset locale.
 2. Per ogni riga, `p` = P(supportato). Errore "sicuro" se label 1 e `p < 0,3`, oppure label 0 e `p > 0,7`. Errore "incerto" se `0,3 ≤ p ≤ 0,7`.
 3. Si tengono tutti gli errori sicuri e incerti, più un 20% di esempi giusti scelti a caso (per non insegnare che "ANLI = sempre il contrario di quello che pensi").
 4. Bilanciamento 50/50 e tetto a ~20k.
 
 Attenzioni:
 - la selezione si fa **solo sul train** di ANLI;
-- se si sceglie con JPT e si addestra Winnow, gli esempi difficili sono un po' meno adatti a Winnow: va bene (MiniCheck usava modelli diversi da quelli addestrati); in alternativa una selezione per modello;
+- se si sceglie con KnowLine-4B e si addestra un altro modello, gli esempi difficili sono un po' meno adatti a quel modello: va bene (MiniCheck usava modelli diversi da quelli addestrati); in alternativa una selezione per modello;
 - una parte degli errori "sicuri" sono **etichette sbagliate** di ANLI: con la CE spingono forte. Se la quota di errori sicuri supera ~30%, usare Brier o label smoothing su queste righe ([04](04_loss.md)).
 
 Esempio illustrativo (costruito nello stile di ANLI, non una riga reale; label entailment → 1):
@@ -71,7 +71,7 @@ Un modello che guarda la somiglianza lessicale tende a dire "no" (la premessa pa
 ```sh
 conda run -n factcheck python data_prep/build_pairs.py all            # già fatto
 conda run -n factcheck python data_prep/build_pairs.py hotpotqa musique  # da aggiungere
-conda run -n factcheck python finetune/mine_hard.py --source anli --model jpt-9b   # da scrivere (§3)
+conda run -n factcheck python finetune/mine_hard.py --source anli --model knowline-4b   # da scrivere (§3)
 ```
 
 ## Criteri per passare allo step successivo

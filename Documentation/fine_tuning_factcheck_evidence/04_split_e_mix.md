@@ -6,7 +6,7 @@ Due cose:
 1. **Split**: si decide una volta per tutte quali righe servono per scegliere (dev) e quali per la misura finale (test), e non si cambiano più. Nessun documento può stare sia in training sia in dev/test.
 2. **Mix**: si costruisce l'insieme di training della testa, con le giuste proporzioni di casi facili, difficili e negativi.
 
-Script: `evidence/make_splits.py`, `evidence/make_mix.py`. Gli split sono gli stessi per i tre modelli.
+Script: `evidence/make_splits.py`, `evidence/make_mix.py`. Gli split sono gli stessi per tutti i modelli.
 
 ## 1. Regole degli split
 
@@ -29,7 +29,7 @@ Script: `evidence/make_splits.py`, `evidence/make_mix.py`. Gli split sono gli st
 Per ogni set si salvano anche:
 - quante frasi di evidenza ha ogni riga;
 - quanto sono lontane fra loro (vicine / 2–9 / 10–19 / 20 o più frasi);
-- quanto è lontana l'ultima frase di evidenza dal claim del preambolo, in token (meno di 1.024 / 1.024–4.096 / oltre 4.096), per ciascun modello.
+- quanto è lontana l'ultima frase di evidenza dal claim del preambolo, in token (meno di 1.024 / 1.024–4.096 / oltre 4.096), con il tokenizer di Qwen3.5 (lo stesso per tutti i modelli; le distanze cambiano solo di poco per le differenze di prompt).
 
 ```sh
 python -m evidence.make_splits --binary-splits <manifest del piano binario> --out data/evidence/splits/

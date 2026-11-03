@@ -228,11 +228,11 @@ Per la decontaminazione del train (§3, regola 3) serve l'indice dei 13-grammi e
 
 ## 6. test_long
 
-Insieme di righe di test_id e test_ood il cui **prompt renderizzato** supera 4.000 token con il tokenizer di JPT. Si salvano solo gli id:
+Insieme di righe di test_id e test_ood il cui **prompt renderizzato** supera 4.000 token con il tokenizer di Qwen3.5 (lo stesso per tutti i 12 modelli). Si salvano solo gli id:
 
 ```python
 from transformers import AutoTokenizer
-tok = AutoTokenizer.from_pretrained("kirp/jpt-9b", revision="b447cc7ee105c0a76a22f8fde8ecf05074dc8be0")
+tok = AutoTokenizer.from_pretrained("Qwen/Qwen3.5-9B", revision="c2022362")   # revisione completa: config/models/llm-backbone-qwen3.5-9b.json
 long_ids = [r["id"] for r in rows if len(tok(r["document"], add_special_tokens=False)["input_ids"]) > 3800]
 (OUT / "test_long/ids.json").write_text(json.dumps(long_ids))
 ```

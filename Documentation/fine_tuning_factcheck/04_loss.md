@@ -6,34 +6,28 @@ Definire esattamente che cosa si ottimizza. Regola guida: **si addestra esattame
 
 ## 1. Dal modello alla probabilità
 
-All'ultima posizione del prompt il modello produce lo stato nascosto finale h (dopo la normalizzazione finale; dimensione 2.048 per d1-3B, 4.096 per JPT, 3.840 per Winnow). La testa del vocabolario dà un logit per token:
+All'ultima posizione del prompt (o nella posizione di lettura del modello) il modello produce lo stato nascosto finale h (dopo la normalizzazione finale; 4.096 numeri nel gruppo 9B, 2.560 nel gruppo 4B). Da h si ottengono due punteggi, uno per opzione, in uno di due modi:
 
 ```text
-d1-3B:   z_k = E[k] · h                                     (embedding legate)
-JPT:     z_k = W_lm[k] · h                                  (lm_head separata)
-Winnow:  z_k = 30 · tanh( (E[k] · h) / 30 )                 (embedding legate + softcapping)
+lettura dalla testa del vocabolario (8 modelli e i backbone):   z_k = W_lm[k] · h      per i token delle due opzioni
+testa propria (pplx-decider-flash, Clef-Flash):                 [z_falso, z_vero] = testa(h, …)   ristretta alle due opzioni
 ```
 
-Dei ~128.000–260.000 logit si prendono solo quelli delle risposte sì e no. Una risposta può avere più forme (d1-3B: `yes`/`Yes` e `no`/`No`/`NO`): il suo logit è il **massimo** del gruppo, come fa il modello in inferenza. Poi:
+Se un'opzione ha più token possibili, il suo logit è il **massimo** del gruppo, come fa il modello in inferenza. Poi:
 
 ```text
-z_sì = max(z_k, k ∈ gruppo sì)        z_no = max(z_k, k ∈ gruppo no)
 margine "sì" m = (z_sì − z_no) / T
-take = yes (Q1–Q3):   s = m           take = no (Q4):   s = −m
+take = yes (Q1, Q4):   s = m           take = no (Q2):   s = −m
 P(supportato) = σ(s) = 1 / (1 + e^(−s))
 ```
 
-| Modello | gruppo sì | gruppo no | T |
-|---|---|---|---|
-| d1-3B | `yes` 11683, `Yes` 12447 | `no` 2243, `No` 4547, `NO` 19598 | 1 |
-| JPT-9B | `" A"` 357 | `" B"` 417 | 1,087 |
-| Winnow-12B | `B` 236799 (true) | `A` 236776 (false) | 1 |
+T è la temperatura degli autori ([01](01_baseline.md) §4.1): 1 per la maggior parte dei modelli, 1,3396 / 1,2662 per StartLux 9B / 4B, 1,554 per pplx-decider-flash. Per KnowLine la temperatura (1,50) è già nei pesi, quindi T = 1.
 
-Esempio con Q4 (d1-3B): z_yes = 0,4, z_Yes = 1,1, z_no = 2,0, z_No = 1,5, z_NO = −3 → z_sì = 1,1, z_no = 2,0 → m = −0,9 → s = +0,9 → P(supportato) = 0,71 (il modello dice "no, nessun dettaglio non supportato").
+Esempio (KnowLine-4B, Q1): z_A(Yes) = 2,1, z_B(No) = 0,3 → s = 1,8 → P(supportato) = σ(1,8) = 0,858.
 
-Esempio (Winnow): z_A = 2,1, z_B = 0,3 → s = −1,8 → P = 1/(1 + e^1,8) = 0,142.
+Esempio con Q2 (domanda negativa): z_sì = 0,4, z_no = 1,3 → m = −0,9 → s = +0,9 → P(supportato) = 0,71 (il modello dice "no, nessun dettaglio non supportato").
 
-Per JPT e senza softcapping, s = (W[357] − W[417]) · h / T: una regressione logistica su h con pesi già inizializzati ([00a](00a_scelta_approccio.md) §5).
+Con la lettura dalla testa del vocabolario, s = (W[sì] − W[no]) · h / T: una regressione logistica su h con pesi già inizializzati ([00a](00a_scelta_approccio.md) §5).
 
 ## 2. La loss di default: cross-entropy binaria
 
@@ -78,7 +72,7 @@ Dati generati e ANLI difficile contengono etichette sbagliate. Con la CE un esem
 | Brier | 2 (σ(s) − y)² | 4 (σ(s) − y) σ(s) (1 − σ(s)) = 4 · (−0,99) · 0,01 · 0,99 ≈ −0,04 |
 
 - **Label smoothing**: tiene le probabilità lontane da 0 e 1 (P massima raggiungibile senza penalità: 0,975); utile per la calibrazione.
-- **Brier**: quasi nessuna spinta sugli errori sicuri: robusto al rumore, ma lento a correggere errori veri. Coerente con il training originale di JPT.
+- **Brier**: quasi nessuna spinta sugli errori sicuri: robusto al rumore, ma lento a correggere errori veri. 
 
 Scelta iniziale: **CE**. Esperimenti P2 (Brier) e P-LS (smoothing ε = 0,05 solo su fonti generate e ANLI difficile).
 
@@ -118,13 +112,15 @@ L = media_batch[ CE (o Brier, o CE con smoothing) ]
 import torch
 import torch.nn.functional as F
 
-def margin(h_answer, w_yes, w_no, temperature, softcap=None, take="yes"):
-    """h_answer [B, d] (stato finale in answer_pos); w_yes [n_sì, d], w_no [n_no, d]: righe della testa
-    del vocabolario per i token di ciascuna risposta -> margine s [B] a favore di "supportato"."""
+def margin(h_answer, w_yes, w_no, temperature, take="yes"):
+    """Lettura dalla testa del vocabolario. h_answer [B, d] (stato finale nella posizione di lettura);
+    w_yes [n_sì, d], w_no [n_no, d]: righe della testa per i token di ciascuna opzione -> margine s [B] a favore di "supportato"."""
     z_yes, z_no = h_answer @ w_yes.T, h_answer @ w_no.T          # [B, n_sì], [B, n_no]
-    if softcap:                                                  # Winnow: 30 * tanh(z / 30)
-        z_yes, z_no = softcap * torch.tanh(z_yes / softcap), softcap * torch.tanh(z_no / softcap)
-    m = (z_yes.max(-1).values - z_no.max(-1).values).float() / temperature
+    return margin_from_logits(z_yes.max(-1).values, z_no.max(-1).values, temperature, take)
+
+def margin_from_logits(z_yes, z_no, temperature, take="yes"):
+    """Testa propria (pplx, Clef): i due logit delle opzioni [B] -> margine s [B]."""
+    m = (z_yes - z_no).float() / temperature
     return m if take == "yes" else -m
 
 def binary_loss(s, y, kind="ce", smoothing=0.0):
@@ -164,9 +160,9 @@ assert abs(s.grad.item() - (-0.0392)) < 1e-3                          # Brier qu
 
 ## 9. Verifica che il margine ridotto coincida con il forward completo
 
-Prima del training ([05](05_training.md) §8): su 50 prompt, `margin(h, w_yes, w_no, T, softcap)` deve coincidere con `(max logits[:, gruppo sì] − max logits[:, gruppo no]) / T` del forward completo del modello (differenza < 1e-3 in fp32). Per d1-3B si confronta anche con la P(sì) restituita dall'API `system_one` (entro 0,01). Per Winnow verifica anche che il softcapping sia applicato come fa il modello (se nella classe di Gemma-4 c'è anche uno scaling dei logit, va aggiunto).
+Prima del training ([05](05_training.md) §8), per ogni modello da addestrare: su 50 prompt, il margine calcolato in training (`margin` con le sole righe delle opzioni, o `margin_from_logits` con la testa del modello) deve dare la stessa P(supportato) dell'adapter del benchmark (differenza < 0,005 in media). È lo stesso controllo del test di identità di [03](03_rendering_formato.md) §8, ma passando per la funzione usata nella loss.
 
 ## Criteri per passare allo step successivo
 
 - `test_losses.py` passa.
-- Verifica §9 superata per entrambi i modelli.
+- Verifica §9 superata per il modello da addestrare (prima KnowLine-4B, poi elephant-1, poi gli altri).

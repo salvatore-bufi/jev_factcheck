@@ -41,9 +41,9 @@ Si riporta la migliore delle due, misurata su B.
 
 ```sh
 python -m evidence.baselines --method rand lex emb --block dev_evid_select
-python -m evidence.baselines --method att --model d1-3b --block dev_evid_select
-gpu-run --batch --name ev-eabl-d1 -- bash -c \
-  'python -m evidence.baselines --method abl --model d1-3b --block dev_evid_select --per-source 300 > logs/ev-eabl-d1.out 2>&1'
+python -m evidence.baselines --method att --model knowline-4b --block dev_evid_select
+gpu-run --batch --name ev-eabl-knowline -- bash -c \
+  'python -m evidence.baselines --method abl --model knowline-4b --block dev_evid_select --per-source 300 > logs/ev-eabl-knowline.out 2>&1'
 ```
 
 E-ABL: 300 righe per fonte e per modello.

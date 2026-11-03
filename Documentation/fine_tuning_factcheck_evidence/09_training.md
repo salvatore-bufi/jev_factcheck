@@ -7,7 +7,7 @@ Si addestra la testa in tre modi, dal più semplice al più costoso. Si passa al
 | Fase | Il modello | Su cosa si addestra la testa | Quando |
 |---|---|---|---|
 | **1a** | congelato, non in memoria | sui vettori salvati al passo 6 | quasi sempre: ogni prova dura minuti |
-| **1b** | congelato, in memoria | sui vettori ricalcolati a ogni passo | solo per due esperimenti che hanno bisogno di dati non salvabili (H2d, H-FAITH) |
+| **1b** | congelato, in memoria | sui vettori ricalcolati a ogni passo | solo per l'esperimento che ha bisogno dei vettori di tutti i token (H2d) |
 | **2** | addestrato anche lui, con una LoRA | come 1a | solo se, alla fine degli esperimenti, gli obiettivi non sono raggiunti |
 
 Nelle fasi 1a e 1b il verdetto **non può cambiare**: il modello non viene toccato.
@@ -25,7 +25,7 @@ Ogni prova scrive in `data/evidence/runs/<modello>/<id>/`: `config.json` (tutte 
 | Checkpoint tenuto | quello con la media più alta di F1 e insieme completo su `dev_evid_select` |
 
 ```sh
-python -m evidence.train_head --phase 1a --model d1-3b --features data/evidence/features/d1-3b \
+python -m evidence.train_head --phase 1a --model knowline-4b --features data/evidence/features/knowline-4b \
     --mix ev_head --config configs/h0.json --run h0
 ```
 
@@ -50,7 +50,7 @@ Sempre almeno 1 frase (la migliore) e al massimo 5. Si conferma su `dev_evid_con
 |---|---|---|---|
 | F1 e insieme completo | `dev_evid_select` | non supera E-LEX dopo 2 epoche | controllare le posizioni dei token ([06](06_rendering_ed_estrazione.md) §6) prima di cambiare la testa |
 | F1 per distanza fra frasi di evidenza | righe spostate | crolla oltre 10 frasi | più righe spostate; esperimenti H3c, H-PAIR |
-| F1 per distanza dal preambolo | `dev_evid_select` | crolla oltre 1.024 token (Winnow) o oltre 4.096 | più righe lontane; attenzione come feature (H2b) |
+| F1 per distanza dal preambolo | `dev_evid_select` | crolla oltre 1.024 o oltre 4.096 token | più righe lontane; attenzione come feature (H2b) |
 | Frasi mostrate per riga | `dev_evid_select` | molto più o molto meno delle frasi di evidenza | rivedere δ o il peso dei negativi |
 | Negativi con frasi sopra soglia | `dev_evid_neg` | oltre il 30% | peso dei negativi più alto |
 | Positivi incerti (P appena sopra la soglia del verdetto) | `dev_evid_select` | la testa non mostra quasi nulla | peso dei negativi più basso |
@@ -58,39 +58,18 @@ Sempre almeno 1 frase (la migliore) e al massimo 5. Si conferma su `dev_evid_con
 
 ## 4. Fase 1b
 
-Il modello è caricato in memoria e congelato; a ogni passo si rifà il forward per avere i vettori. Serve per:
+Il modello è caricato in memoria e congelato; a ogni passo si rifà il forward per avere i vettori. Serve per un solo esperimento:
 - **H2d**: invece della media fissa dei token di una frase, una media pesata in cui la testa decide quali token contano (per esempio il nome proprio dentro una frase lunga). Richiede i vettori di tutti i token, che non si salvano su disco.
-- **H-FAITH** (§5).
 
-| Impostazione | d1-3B | JPT-9B, Winnow-12B |
+| Impostazione | Gruppo 4B | Gruppo 9B |
 |---|---|---|
-| GPU | 24 GB | 48 GB |
+| GPU | 24 GB | 45 GB |
 | Righe per passo | 4–8 (accumulando fino a 32) | 1–2 (accumulando fino a 32) |
 | Lunghezza massima | 8.192 token | 8.192 token |
 | Learning rate | 5e-4 | 5e-4 |
 | Partenza | la testa migliore della fase 1a | idem |
 
-## 5. H-FAITH: nascondere frasi al modello
-
-L'idea: dopo che la testa ha scelto le frasi, si verifica col modello stesso che quelle frasi reggano il verdetto, e si corregge la testa se non è così. Si fa solo in training.
-
-Per "nascondere" una frase senza riscrivere il documento si agisce sull'attenzione: si aggiunge un valore molto negativo ai pesi con cui gli altri token guardano i token di quella frase, così il modello la ignora. Invece di nascondere del tutto, si usa la probabilità `p_k` che la testa dà alla frase: le frasi poco probabili vengono quasi nascoste, quelle probabili restano visibili.
-
-Per ogni riga positiva giudicata supportata:
-1. forward normale → punteggio del verdetto `z_full`;
-2. forward in cui restano visibili solo le frasi scelte (valore aggiunto `log p_k`) → `z_suff`; deve restare vicino a `z_full`;
-3. forward in cui sono nascoste le frasi scelte (valore aggiunto `log(1 − p_k)`) → `z_comp`; deve scendere;
-4. la differenza diventa una loss ([08](08_testa_e_loss.md) §4) e corregge la testa. I pesi del modello non cambiano.
-
-Restano sempre visibili il preambolo, il claim e la domanda. Si fa solo su:
-- **d1-3B**: si agisce sugli 8 layer di attenzione; gli altri layer guardano solo 3 token vicini, quindi la frase è quasi del tutto nascosta;
-- **Winnow-12B**: tutti i suoi 48 layer sono di attenzione, quindi la frase è nascosta del tutto.
-
-Su JPT-9B no: 24 dei suoi 32 layer non usano l'attenzione e la frase passerebbe comunque.
-
-Limiti pratici: documenti fino a 4.096 token, una riga per passo, circa 3–4 volte il costo della fase 1b. Prima di partire si controlla che, rendendo visibili tutte le frasi, `z_suff` sia uguale a `z_full`.
-
-## 6. Fase 2: training anche del modello
+## 5. Fase 2: training anche del modello
 
 Solo se gli obiettivi non sono raggiunti dopo gli esperimenti della fase 1.
 
@@ -108,7 +87,7 @@ Il verdetto ora può cambiare, quindi:
 - se la calibrazione si sposta, si aggiunge un termine che tiene le probabilità vicine a quelle del verdetto di partenza.
 
 ```sh
-gpu-run --batch --name ev-joint-d1 -- bash -c \
-  'python -m evidence.train_joint --model d1-3b --mix ev_joint --config configs/<migliore>.json \
-     --lambda 0.3 --run joint > logs/ev-joint-d1.out 2>&1'
+gpu-run --batch --name ev-joint-knowline -- bash -c \
+  'python -m evidence.train_joint --model knowline-4b --mix ev_joint --config configs/<migliore>.json \
+     --lambda 0.3 --run joint > logs/ev-joint-knowline.out 2>&1'
 ```

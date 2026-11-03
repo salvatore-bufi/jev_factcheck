@@ -37,13 +37,17 @@ def answer(document, claim):
 
 ## 2. Come gira ogni modello
 
-Tutti e tre con transformers:
+Il server ha bisogno degli **stati interni** del forward, non solo della risposta: serve un forward in transformers con gli hook di [01](01_ambiente_e_modelli.md). Quindi:
 
-| Modello | Note |
+| Modello | Server per verdetto + evidenza |
 |---|---|
-| d1-3B | con `trust_remote_code`, come nel benchmark |
-| JPT-9B | servono i pacchetti `flash-linear-attention` e `causal-conv1d`, altrimenti è molto più lento |
-| Winnow-12B | sui pesi BF16 convertiti. Il server degli autori (llama.cpp, NVFP4) non dà accesso ai vettori interni, quindi non si può usare per l'evidenza |
+| KnowLine-4B | front end degli autori con backend transformers (`hf`), più gli hook |
+| elephant-1 | motore `qev` in-process (transformers), più gli hook |
+| Jeffan-4B, d3-flash, pplx-decider-flash, Clef-Flash | il codice degli autori in transformers, più gli hook |
+| OneJev1.6-9B, Nimble-9B-v3 | transformers con il prompt degli autori (il loro runtime, Flide o il motore Nimble, non espone gli stati); verdetto verificato contro il runtime degli autori |
+| StartLux 9B/4B | transformers con la maschera bidirezionale ricostruita (il server degli autori è vLLM e non espone gli stati); verdetto verificato contro il loro server |
+
+Per tutti servono `flash-linear-attention` e `causal-conv1d` (layer DeltaNet), altrimenti il forward è molto più lento.
 
 Regole:
 - dalla GPU escono solo i vettori delle frasi (o direttamente i punteggi), mai quelli di tutti i token;
@@ -65,11 +69,11 @@ Regole:
 | `MODEL_CARD.md` | descrizione per chi usa il modello |
 
 ```json
-{"model": "d1-3b-fc-ev-v1",
+{"model": "knowline-4b-fc-ev-v1",
  "question_id": "unsupported_detail", "take": "no",
  "preamble": "Claim under review: {claim}",
  "temperature": 1.0, "threshold": 0.50,
- "evidence": {"mix_layers": [21, 24, 27, 29], "attention_layers": [2, 5, 9, 13, 17, 21, 24, 27],
+ "evidence": {"mix_layers": [19, 23, 27, 31], "attention_layers": [3, 7, 11, 15, 19, 23, 27, 31],
               "features": ["end", "mean", "att"], "head_config": "configs/<id>.json",
               "delta": 0.0, "max_evidence": 5, "min_evidence": 1},
  "segmenter": "evidence/sentences.py@<sha256>",
@@ -93,4 +97,4 @@ Regole:
 1. Scrivere `frozen.json`.
 2. Eseguire **una sola volta** i set di test e la misura di latenza; scrivere `report.md`.
 3. Model card: verifica documento–claim in inglese; evidenzia frasi **solo** quando il claim è supportato; non dice cosa manca né cosa contraddice; il prompt contiene una riga col claim prima del documento; documenti fino a 32.768 token.
-4. Licenze: d1-3B LFM Open 1.0; JPT-9B CC BY-NC 4.0 (non commerciale); Winnow-12B Apache 2.0. Dati usati per la testa: FEVER e HoVer CC BY-SA.
+4. Licenze: quelle dei pesi di partenza (MIT per elephant-1; Apache 2.0 per KnowLine-4B, Jeffan-4B, d3-flash, OneJev, pplx-decider-flash, Clef-Flash; **CC BY-NC per StartLux e Nimble**: derivati non commerciali). Dati usati per la testa: FEVER e HoVer CC BY-SA.

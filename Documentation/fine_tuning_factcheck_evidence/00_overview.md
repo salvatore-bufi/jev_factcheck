@@ -30,13 +30,13 @@ Il caso difficile è l'**evidenza sparsa**: due frasi lontane che solo **insieme
 
 ### 2.1 Che cosa fa già il decision model
 
-Il modello legge il prompt token per token. Per **ogni token** e per **ogni layer** calcola un vettore di numeri (lo *stato nascosto*, lungo 2.048 numeri per d1-3B, 4.096 per JPT-9B, 3.840 per Winnow-12B). Ogni token "vede" solo i token che lo precedono.
+Il modello legge il prompt. Per **ogni token** e per **ogni layer** calcola un vettore di numeri (lo *stato nascosto*, lungo 2.560 numeri nei modelli da 4B e 4.096 in quelli da 9B). Nei modelli causali ogni token "vede" solo i token che lo precedono; nei modelli bidirezionali, negli 8 layer ad attenzione piena, vede anche quelli dopo (§3).
 
 Il verdetto si legge dall'**ultimo token del prompt** (la posizione di risposta, chiamata `answer_pos`): lì il modello assegna un punteggio alla risposta "sì" e uno alla risposta "no", e da questi si ricava P(supportato). Questa parte esiste già ed è stata addestrata nel piano binario. **Non la tocchiamo.**
 
 ### 2.2 Che cosa aggiungiamo
 
-Mentre il modello fa quel forward, leggiamo alcuni dei vettori che calcola comunque, e li diamo a una **piccola rete separata** (la *testa di evidenza*, circa 3 milioni di parametri contro i 3–12 miliardi del modello). La testa dà un punteggio a ogni frase.
+Mentre il modello fa quel forward, leggiamo alcuni dei vettori che calcola comunque, e li diamo a una **piccola rete separata** (la *testa di evidenza*, circa 3 milioni di parametri contro i 4–9 miliardi del modello). La testa dà un punteggio a ogni frase.
 
 ```text
                  ┌───────────────────────────── prompt ──────────────────────────────┐
@@ -85,12 +85,12 @@ I vettori `h_end`, `h_mean` e `q` si leggono da **4 layer** diversi (non solo da
 ### 2.4 Che cosa fa la testa
 
 1. **Comprime** ogni vettore a 256 numeri (una moltiplicazione per una matrice).
-2. **Fa comunicare** le frasi: due layer di transformer *non causale*, cioè ogni frase vede tutte le altre e `q`, in avanti e all'indietro. Questo risolve l'evidenza sparsa: nel modello la frase 1 non può vedere la frase 40 (viene dopo), nella testa sì.
+2. **Fa comunicare** le frasi: due layer di transformer *non causale*, cioè ogni frase vede tutte le altre e `q`, in avanti e all'indietro. Questo risolve l'evidenza sparsa: nel modello la frase 1 non può vedere la frase 40 (viene dopo: vale per i modelli causali, e per i 24 layer DeltaNet di tutti), nella testa sì.
 3. **Dà i punteggi**: `s_k` per ogni frase k, e `s_0` calcolato da `q`, che fa da **soglia di quella riga**. Si mostrano le frasi con `s_k > s_0`. La soglia cambia da documento a documento: se servono 3 frasi può abbassarsi per farle passare tutte.
 
 ### 2.5 Perché il preambolo
 
-Ogni token vede solo ciò che lo precede. Nel prompt del piano binario il claim viene **dopo** il documento, quindi quando il modello legge le frasi non sa ancora che cosa deve verificare: i vettori delle frasi non dipendono dal claim.
+Nei modelli causali ogni token vede solo ciò che lo precede. Nel prompt del piano binario il claim viene **dopo** il documento, quindi quando il modello legge le frasi non sa ancora che cosa deve verificare: i vettori delle frasi non dipendono dal claim. Nei modelli bidirezionali le frasi vedono il claim negli 8 layer pieni anche senza preambolo, ma non nei 24 layer DeltaNet, che restano causali: il preambolo aiuta anche lì, ma meno (lo misura l'esperimento H4).
 
 Mettendo una riga `Claim under review: <claim>` **prima** del documento, ogni frase è letta sapendo che cosa si verifica. Il resto del prompt resta identico a quello del piano binario: il claim compare ancora dopo il documento, nel punto in cui il verdetto è stato addestrato a vederlo. Così il verdetto si può riusare (si verifica al passo [05](05_formato_prompt.md)).
 
@@ -102,11 +102,14 @@ Siccome il modello è congelato, i suoi vettori si calcolano **una volta sola** 
 
 ## 3. I modelli
 
-| Modello | Ruolo | Vettore (d) | Layer | Layer che guardano tutto il testo |
-|---|---|---:|---:|---|
-| **d1-3B** | si fanno qui tutte le prove (è il più veloce) | 2.048 | 30 | 8 (numeri 2, 5, 9, 13, 17, 21, 24, 27); gli altri 22 guardano solo 3 token vicini |
-| **JPT-9B** | conferma a 9B | 4.096 | 32 | 8 (3, 7, 11, …, 31); gli altri 24 portano avanti un riassunto del testo letto |
-| **Winnow-12B** (BF16) | candidato di massima qualità | 3.840 | 48 | 8 (5, 11, 17, …, 47); gli altri 40 guardano solo gli ultimi 1.024 token |
+I modelli sono quelli del piano binario ([../fine_tuning_factcheck/00_overview.md](../fine_tuning_factcheck/00_overview.md) §2), cioè i 10 decision model dello studio focalizzato. Tutti sono Qwen3.5: 32 layer, di cui 8 ad attenzione piena (3, 7, 11, 15, 19, 23, 27, 31) e 24 Gated DeltaNet, che portano avanti un riassunto del testo letto e restano sempre causali.
+
+| Modello | Ruolo | Vettore (d) | Attenzione nei layer pieni |
+|---|---|---:|---|
+| **KnowLine-4B** | si fanno qui tutte le prove (4B, causale, lettura semplice) | 2.560 | causale |
+| **elephant-1** | conferma a 9B; modello principale del piano binario | 4.096 | bidirezionale a blocchi |
+| Jeffan-4B, d3-flash, OneJev1.6-9B, Nimble-9B-v3 | estensione (codice degli autori in transformers) | 2.560 / 4.096 | Jeffan, d3: bidirezionale; OneJev, Nimble: causale |
+| StartLux 9B/4B, pplx-decider-flash, Clef-Flash | estensione, con più lavoro (StartLux gira solo con vLLM; pplx e Clef hanno una testa propria) | 2.560 / 4.096 | StartLux, pplx: bidirezionale; Clef: come caricato |
 
 Il verdetto di ogni modello è quello del piano binario (stessa domanda, stessa soglia).
 
@@ -138,7 +141,7 @@ Il verdetto di ogni modello è quello del piano binario (stessa domanda, stessa 
 | 8 | Testa e loss | [08](08_testa_e_loss.md) | codice testato |
 | 9 | Training | [09](09_training.md) | teste addestrate |
 | 10 | Valutazione | [10](10_valutazione.md) | metriche e latenza |
-| 11 | Esperimenti | [11](11_esperimenti.md) | configurazione finale per i tre modelli |
+| 11 | Esperimenti | [11](11_esperimenti.md) | configurazione finale per ogni modello |
 | 12 | Server e rilascio | [12](12_export_e_servizio.md) | server che restituisce verdetto ed evidenza |
 | — | Checklist e problemi frequenti | [13](13_checklist.md) | |
 | — | Una strada da esplorare | [14](14_strada_da_esplorare.md) | |
@@ -146,8 +149,8 @@ Il verdetto di ogni modello è quello del piano binario (stessa domanda, stessa 
 Codice in `evidence/` (pacchetto Python nella radice della repo), dati in `data/evidence/`. Sul server i job GPU si lanciano così (il log va rediretto dentro il comando):
 
 ```sh
-gpu-run --batch --name ev-extract-d1 -- bash -c \
-  'python -m evidence.extract --model d1-3b --mix ev_head > logs/ev-extract-d1.out 2>&1'
+gpu-run --batch --name ev-extract-knowline -- bash -c \
+  'python -m evidence.extract --model knowline-4b --mix ev_head > logs/ev-extract-knowline.out 2>&1'
 ```
 
 ## 6. Obiettivi
@@ -159,4 +162,4 @@ gpu-run --batch --name ev-extract-d1 -- bash -c \
 | Insieme completo su HoVer (evidenza su più pagine) | ≥ 0,65 |
 | Evidenza lontana | F1 con frasi a ≥ 20 frasi di distanza al massimo 5 punti sotto quello con frasi vicine |
 | Sufficienza | ≥ 85% |
-| Latenza | al massimo +3% rispetto al solo verdetto (d1-3B: +3% o +2 ms, il maggiore dei due) |
+| Latenza | al massimo +3% rispetto al solo verdetto (modelli 4B: +3% o +2 ms, il maggiore dei due) |

@@ -29,9 +29,9 @@ Invece del replay su domande generiche, un termine di KL **sugli esempi di fact 
 L = CE(lettere, etichetta) + β · KL(p_partenza ‖ p_studente)      con β ∈ {0,05; 0,1}
 ```
 
-Effetto: dove il modello di partenza era già giusto il training non lo sposta inutilmente; dove sbagliava, la CE prevale. Costo: un forward in più del modello di partenza per esempio, oppure le sue probabilità calcolate una volta prima del training (consigliato: è una sola inferenza sul mix, ~1 h per JPT).
+Effetto: dove il modello di partenza era già giusto il training non lo sposta inutilmente; dove sbagliava, la CE prevale. Costo: un forward in più del modello di partenza per esempio, oppure le sue probabilità calcolate una volta prima del training (consigliato: è una sola inferenza sul mix).
 
-Nota: il modello di partenza con `support_simple` è sbilanciato verso "sì" (soglia ottimale 0,90–0,95, [01](01_baseline.md)). Un β alto **conserverebbe** anche questo difetto. Per questo β resta piccolo, e l'ancoraggio è un esperimento (P-KL in [07](07_esperimenti.md)), non il default.
+Nota: con `support_simple` i decision model tendono a dire "sì" troppo facilmente (soglia ottimale alta, [01](01_baseline.md)). Un β alto **conserverebbe** anche questo difetto. Per questo β resta piccolo, e l'ancoraggio è un esperimento (P-KL in [07](07_esperimenti.md)), non il default.
 
 ### 2. Replay minimo per conservare il decision model (solo se serve)
 

@@ -2,7 +2,7 @@
 
 ## Obiettivo
 
-Arrivare alla configurazione finale con poche corse, **una variazione alla volta**, decidendo con criteri fissati prima. Si sperimenta su **d1-3B** (3B: corse brevi, anche sul portatile in bf16); ciò che vince si ripete su Winnow-12B, e su JPT-9B come confronto. Fino all'arrivo dei run di ottobre il modello per iterare era JPT; i risultati ([../risultati_aggrefact_2026-10.md](../risultati_aggrefact_2026-10.md)) mostrano che d1-3B ha quasi la stessa AUC a un quarto del costo.
+Arrivare alla configurazione finale con poche corse, **una variazione alla volta**, decidendo con criteri fissati prima. Si sperimenta su **KnowLine-4B** (4B, causale, lettura dalla testa del vocabolario: corse brevi, anche sul portatile in bf16); ciò che vince si ripete su elephant-1, poi su tutti gli altri decision model e sui due backbone (fase B, l'esperimento B-ctrl del paper).
 
 ## 1. Regole
 
@@ -15,54 +15,48 @@ Arrivare alla configurazione finale con poche corse, **una variazione alla volta
 
 ## 2. Fase 0 — Baseline (nessun training)
 
-| ID | Cosa | Costo | Uscita |
-|---|---|---|---|
-| B1 | d1-3B, JPT e Winnow, domande Q1 e Q4 | 0 su AggreFact (già nei run di ottobre); ~1 h sul nostro dev | punto di partenza |
-| B2 | tre domande (stessa cache di B1 se si renderizzano tutte e tre) | 0 | quanto recuperare |
-| B3 | domande Q2, Q3 | ~2 h | **domanda di produzione** |
-| B4 | Qwen3.5-9B base, Gemma-4-12B-it | ~2 h | partenza del controllo |
-| B5–B7 | FactCG, MiniCheck-FT5, Bespoke-7B | ~3 h | riferimenti |
+| ID | Cosa | Uscita |
+|---|---|---|
+| B1 | i 10 decision model, domande Q1, 1 − Q2, Q4 (su AggreFact: dai run dello studio; sul nostro dev: `benchmark.py`) | punto di partenza |
+| B2 | tre domande (QF1), regola `min` | quanto recuperare |
+| B4 | Qwen3.5-9B e Qwen3.5-4B, prompt neutro, letture R0 e R1 | partenza dei controlli B-ctrl |
+| B5–B7 | FactCG, MiniCheck-FT5, Bespoke-7B | riferimenti |
 
-Procedura: [01_baseline.md](01_baseline.md).
+Procedura: [01_baseline.md](01_baseline.md); scelta della domanda: [02d](02d_varianti_domanda.md).
 
-## 3. Fase 1 — Pilota (d1-3B, `fc_pilot`, uno stadio)
+## 3. Fase 1 — Pilota (KnowLine-4B, `fc_pilot`, uno stadio)
 
-Riferimento **P0**: d1-3B, LoRA r16, lr 2e-5, 1 epoca, CE sulle due risposte, 8.192 token, domanda scelta in B3 (favorita: Q4).
+Riferimento **P0**: KnowLine-4B, LoRA r16, lr 2e-5, 1 epoca, CE sulle due opzioni, 8.192 token, domanda scelta in [02d](02d_varianti_domanda.md).
 
 | ID | Variazione rispetto a P0 | Domanda | Come si legge |
 |---|---|---|---|
-| **P0** | — | il fine-tuning funziona? | se non batte B1 su dev_select di ≥ 0,5: **fermarsi** e ricontrollare rendering, lettere, target (test di [03](03_rendering_formato.md) e [05](05_training.md)) |
+| **P0** | — | il fine-tuning funziona? | se non batte B1 su dev_select di ≥ 0,5: **fermarsi** e ricontrollare rendering, opzioni, target (test di [03](03_rendering_formato.md) e [05](05_training.md)) |
 | P1a / P1b | lr 5e-5 / 1e-5 | sensibilità | tenere il migliore |
 | P2 | `--loss brier` | calibrazione con dati rumorosi | adottare se ECE migliora senza perdere BAcc |
 | P-LS | `--smoothing 0.05` (solo fonti generate e `anli_hard`) | rumore delle etichette | idem |
 | P-KL | `--beta 0.05` | serve l'ancoraggio? | adottare solo se P0 peggiora ECE o fonti piccole di dev_select |
-| P3 | SFT classico: CE su tutto il vocabolario al token della risposta | quanto vale la loss sulle sole risposte | atteso peggiore in ECE; conferma della scelta |
+| P3 | SFT classico: CE su tutto il vocabolario al token della risposta | quanto vale la loss sulle sole opzioni | atteso peggiore in ECE; conferma della scelta |
 | P-VAR | 10% di varianti di domanda ([02d](02d_varianti_domanda.md) §5) | regolarizzazione | tenere solo se migliora |
 
-Costo: ~7 corse × ~1–1,5 h (L40S) o ~2–3 h (portatile) con d1-3B; con JPT sarebbero ~4 h e ~8 h.
-
-## 4. Fase A — Architettura (stessi dati: `fc_pilot`)
-
-È la fase che conferma con numeri nostri la scelta di [00a](00a_scelta_approccio.md).
+## 4. Fase A — Architettura e punto di partenza (stessi dati: `fc_pilot`)
 
 | ID | Partenza | Uscita | Domanda |
 |---|---|---|---|
-| A1 | d1-3B | yes/no | riferimento (= P0 o migliore della fase 1) |
-| A1b | JPT-9B | lettere | stesso training su un decision model più grande |
-| A2 | Qwen3.5-9B base | lettere, stesso prompt | vale partire da un decision model? |
-| A3 | Qwen3.5-9B base | testa nuova `Linear(4096 → 2)` sullo stato in `answer_pos` (addestrata insieme alla LoRA, lr della testa 1e-4) | cambiare la testa aiuta? |
-| A4 | d1-3B | testa nuova **inizializzata** con w_sì − w_no | verifica pratica dell'equivalenza con A1 |
+| A1 | KnowLine-4B | opzioni A/B | riferimento (= P0 o migliore della fase 1) |
+| A2 | Qwen3.5-4B (backbone) | lettere A/B, prompt neutro, ordine casuale | **pilota di B-ctrl**: vale partire da un decision model? |
+| A3 | Qwen3.5-4B | testa nuova `Linear(2560 → 2)` sullo stato nella posizione di lettura (lr della testa 1e-4) | cambiare la testa aiuta? |
+| A4 | KnowLine-4B | testa nuova **inizializzata** con w_sì − w_no | verifica pratica dell'equivalenza con A1 |
 | A5 | DeBERTa-v3-large stile FactCG | testa nuova, chunk 550 parole | quanto vale la taglia |
 
 | Esito | Conclusione |
 |---|---|
-| A1 > A2 di ≥ 0,5 | il decision model aiuta: si prosegue con d1-3B / Winnow |
-| A1 ≈ A2 | il vantaggio è nei dati; il backbone si sceglie per licenza e costo (Qwen3.5 base è Apache 2.0, JPT è CC BY-NC, d1-3B e LFM2.5 hanno la LFM Open License) |
+| A1 > A2 di ≥ 0,5 | il decision model aiuta (prima evidenza per B-ctrl) |
+| A1 ≈ A2 | il vantaggio è nei dati: coerente con l'audit della letteratura; si conferma sulle altre coppie (fase B) |
 | A3 < A2 | non cambiare la testa |
 | A4 ≈ A1 | equivalenza confermata; la testa estratta si può usare per servire ([08](08_merge_export.md) §4) |
 | A5 ≥ A1 − 1 | l'encoder è quasi equivalente: considerare seriamente la distillazione |
 
-## 5. Fase 2 — Dati (d1-3B, configurazione migliore delle fasi 1 e A)
+## 5. Fase 2 — Dati (KnowLine-4B, configurazione migliore delle fasi 1 e A)
 
 | ID | Variazione | Domanda |
 |---|---|---|
@@ -81,14 +75,13 @@ Ordine consigliato: D-MC, D-D2C, D-HARD, D-CUR, poi gli altri. D-SCALE si fa sul
 
 **Come leggere un esperimento sui dati**: confrontare la BAcc per fonte, non solo la media. Se aggiungere D2C fa salire SummEdits di 3 punti e scendere VitaminC di 1, è un buon segno (il dominio debole migliora).
 
-## 6. Fase 3 — Winnow e lunghezza
+## 6. Fase 3 — elephant-1 e lunghezza
 
 | ID | Variazione | Domanda |
 |---|---|---|
-| W0 | configurazione migliore di d1-3B su Winnow | il risultato si trasferisce? quanto guadagna un modello 4 volte più grande? |
-| J0 | idem su JPT-9B | terzo punto di confronto |
-| D1-FIN | d1-3B con la ricetta finale e 3 seed | se arriva entro ~1 punto da Winnow su dev_select e test_ood, è il candidato da rilasciare (costo 4–5 volte più basso) |
-| F2 | 8.192 token in training invece di 4.096 | documenti lunghi |
+| E0 | configurazione migliore di KnowLine-4B su elephant-1 | il risultato si trasferisce a 9B? quanto guadagna il modello più grande? |
+| E-BB9 | la stessa ricetta su Qwen3.5-9B | **coppia principale di B-ctrl** |
+| KL-FIN | KnowLine-4B con la ricetta finale e 3 seed | se arriva entro ~1 punto da elephant-1 su dev_select e test_ood, è il candidato da rilasciare (costo minore) |
 | F3 | rank 8 / 32 / 64 | capacità dell'adapter |
 | K1 | chunk in inferenza C = 8.192 / 16.384 / 32.768 token | scelta di C su dev_select (righe lunghe) |
 | K2 | claim lunghi divisi in frasi: `min` sulle frasi del `max` sui chunk | risposte lunghe |
@@ -100,34 +93,44 @@ Ordine consigliato: D-MC, D-D2C, D-HARD, D-CUR, poi gli altri. D-SCALE si fa sul
 | X1 | + `L_pair` sulle coppie C2D / CG2C / VitaminC (μ = 0,3) |
 | X2 | μ = 0,1 e coppie `remove_evidence` / `contradict_claim` |
 
-## 8. Controlli finali (obbligatori)
+## 8. Fase B — B-ctrl su tutte le ricette
+
+La ricetta finale (dati, loss, iperparametri), **identica**, su ogni decision model e sul suo backbone. Domanda del paper: a parità di dati, partire da un decision model è meglio che partire dal backbone? E il vantaggio dipende dalla ricetta?
+
+| Gruppo | Decision model | Backbone |
+|---|---|---|
+| 9B | elephant-1 (E0), StartLux-9B, d3-flash, OneJev1.6-9B, Nimble-9B-v3, Clef-Flash | Qwen3.5-9B (E-BB9) |
+| 4B | KnowLine-4B (KL-FIN), StartLux-4B, pplx-decider-flash, Jeffan-4B | Qwen3.5-4B (A2 con la ricetta finale) |
+
+Per ogni modello: test di identità e passo zero prima di partire ([05](05_training.md) §8), poi stadi 1 e 2.
+
+**Curva sui dati** (sulle due coppie principali, elephant-1/Qwen3.5-9B e KnowLine-4B/Qwen3.5-4B): stadio 1 con 0, 2k, 8k, 32k righe. Il vantaggio del decision model, se c'è, dovrebbe essere massimo con pochi dati.
+
+| Esito | Lettura |
+|---|---|
+| decision model ≫ backbone, soprattutto con pochi dati | l'inizializzazione da decision model aiuta: consiglio pratico a chi costruisce checker |
+| decision model ≈ backbone | il valore è nei dati |
+| decision model < backbone | il training da decision model irrigidisce il modello: risultato da controllare con un secondo seed e su un'altra coppia |
+
+Ordine consigliato: prima i modelli con lettura dalla testa del vocabolario e codice in transformers (Jeffan-4B, d3-flash, OneJev, Nimble), poi quelli con maschera da ricostruire (StartLux) o testa propria (pplx, Clef).
+
+## 9. Controlli finali (obbligatori)
 
 | ID | Cosa |
 |---|---|
-| C1 | la ricetta finale su LFM2.5-VL-3B (controllo di d1-3B), Gemma-4-12B-it (controllo di Winnow) e Qwen3.5-9B base (controllo di JPT) |
-| C2 | 3 seed (13, 14, 15) della configurazione finale: media e deviazione standard |
+| C2 | 3 seed (13, 14, 15) della configurazione finale su KnowLine-4B ed elephant-1: media e deviazione standard |
 | C3 | FactCG, MiniCheck-FT5, Bespoke-MiniCheck-7B sulla stessa suite |
 
-## 9. Registro: `finetune/experiments_fc.md`
+## 10. Registro: `finetune/experiments_fc.md`
 
 Una riga per corsa:
 
-| ID | Modello | Mix | Variazione | BAcc dev | AUC dev | BAcc@0,5 | Soglia ott. | ECE | Solo claim | Rimozione evid. | Durata | Decisione |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| B1 | d1-3B | — | domanda Q4 | | | | | | | | 0 | baseline |
-| P0 | d1-3B | fc_pilot | — | | | | | | | | | |
-
-## 10. Calendario indicativo
-
-| Settimana | Lavoro |
-|---|---|
-| 1 | Step 0 (split), fase 0, `render.py`, `losses.py`, `train.py`, ANLI difficile, `fc_pilot`; avvio della generazione D2C su un'altra GPU |
-| 2 | fase 1 e fase A su d1-3B (corse da poche ore: si possono fare più esperimenti al giorno) |
-| 3 | fine generazione (C2D, CG2C), fase 2 |
-| 4 | fase 3 su Winnow e JPT; D1-FIN |
-| 5 | C1–C3, congelamento, test, export |
+| ID | Modello | Mix | Variazione | BAcc dev | AUC dev | BAcc@0,5 | Soglia ott. | ECE | Solo claim | Rimozione evid. | Decisione |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| B1 | KnowLine-4B | — | domanda scelta | | | | | | | | baseline |
+| P0 | KnowLine-4B | fc_pilot | — | | | | | | | | |
 
 ## Criteri di completamento
 
 - Configurazione finale scelta con le regole di §1, registrata, confermata su dev_confirm.
-- C1–C3 eseguiti.
+- Fase B eseguita almeno sulle due coppie principali; C2 e C3 eseguiti.

@@ -8,7 +8,7 @@
 ## 1. L'esempio pronto per il modello
 
 ```json
-{"id": "hover:train:...", "model": "d1-3b",
+{"id": "hover:train:...", "model": "knowline-4b",
  "input_ids": [1, 2, "..."], "answer_pos": 1287,
  "sent_tok_spans": [[198, 212], [213, 248], "…", [1201, 1240]],
  "sent_char_spans": [[0, 112], [113, 260], "…"],
@@ -23,7 +23,7 @@
 
 ## 2. Trovare i token di ogni frase
 
-Il problema: in d1-3B e Winnow il documento è dentro un JSON, quindi nel prompt non è scritto come nell'originale. Virgolette, a capo e (per Winnow) `<` diventano sequenze più lunghe: `"` → `\"`, a capo → `\n`, `<` → `<`. Le posizioni delle frasi nel testo originale non coincidono con quelle nel prompt.
+Il problema: in quasi tutti i modelli il documento è dentro un JSON (elephant-1, StartLux, d3-flash, Jeffan, Nimble, pplx, Clef), quindi nel prompt non è scritto come nell'originale. Virgolette e a capo diventano sequenze più lunghe: `"` → `\"`, a capo → `\n`, `<` → `<`. Le posizioni delle frasi nel testo originale non coincidono con quelle nel prompt.
 
 Procedura:
 1. costruire il prompt in tre pezzi: prima del documento, documento come appare nel prompt, dopo il documento;
@@ -53,18 +53,18 @@ def escape_with_map(text, escape_lt=False):
     return "".join(out), pos
 ```
 
-Verificata contro `json.dumps(…, ensure_ascii=False)` su 20.000 stringhe con caratteri difficili: identica. Con `escape_lt=True` riproduce `safe_data` di Winnow.
+Verificata contro `json.dumps(…, ensure_ascii=False)` su 20.000 stringhe con caratteri difficili: identica. `escape_lt=True` serve solo se un modello scrive `<` come `\u003c` (lo si vede confrontando con il suo renderer).
 
 Casi particolari:
 - un token a cavallo di due frasi (es. `."`) va alla frase che contiene il suo ultimo carattere non spazio;
-- Winnow tokenizza separatamente la parte prima e dopo la domanda: le posizioni si calcolano sui pezzi e si sommano;
-- JPT: il documento è scritto così com'è, basta lo spostamento dovuto al testo che lo precede.
+- se il codice degli autori tokenizza separatamente prefisso e domanda (elephant-1, OneJev, Nimble), le posizioni si calcolano sui pezzi e si sommano;
+- KnowLine scrive lo stato come testo indentato, non JSON: il documento compare così com'è (a meno dell'indentazione delle righe), ed è ripetuto nelle richieste lette due volte: si usano gli intervalli della seconda copia.
 
 ## 3. Documenti troppo lunghi
 
 | Uso | Lunghezza massima del prompt |
 |---|---|
-| Estrazione | d1-3B 16.384 token; JPT e Winnow 8.192 (16.384 se la memoria basta) |
+| Estrazione | modelli 4B 16.384 token; modelli 9B 8.192 (16.384 se la memoria basta) |
 | Training con il modello in memoria | 8.192 |
 | Server | 32.768 |
 
@@ -83,17 +83,17 @@ Per ogni riga, dal forward:
 | `n_tok` | n frasi | quanti token ha ogni frase |
 | `answer_logits` | 2 | punteggi di "sì" e "no", per ricalcolare P(supportato) |
 
-Spazio per 26.000 righe con ~60 frasi: ~50 GB per d1-3B, ~100 GB per JPT e Winnow. Se lo spazio non basta, per JPT e Winnow si salvano solo i layer che su d1 sono risultati utili (esperimento H2a).
+Spazio per 26.000 righe con ~60 frasi: ~60 GB per un modello 4B, ~100 GB per un 9B. Se lo spazio non basta, per i modelli successivi si salvano solo i layer che su KnowLine sono risultati utili (esperimento H2a).
 
 Formato: `data/evidence/features/<modello>/<set>/shard-00000.safetensors` (1.000 righe per file) più un indice `index.jsonl`. Ogni cartella ha un `meta.json` con modello, pesi, preambolo, layer e versione del codice di divisione in frasi e di rendering: il training rifiuta vettori calcolati con impostazioni diverse.
 
 ## 5. Comando
 
 ```sh
-gpu-run --batch --name ev-extract-d1 -- bash -c \
-  'python -m evidence.extract --model d1-3b \
+gpu-run --batch --name ev-extract-knowline -- bash -c \
+  'python -m evidence.extract --model knowline-4b \
      --rows data/evidence/mixes/ev_head.jsonl data/evidence/splits/dev_evid_select data/evidence/splits/dev_evid_confirm data/evidence/splits/dev_evid_neg \
-     --out data/evidence/features/d1-3b > logs/ev-extract-d1.out 2>&1'
+     --out data/evidence/features/knowline-4b > logs/ev-extract-knowline.out 2>&1'
 ```
 
 Se si interrompe, riparte dai file già completati.
@@ -103,7 +103,7 @@ Se si interrompe, riparte dai file già completati.
 | Test | Deve dare |
 |---|---|
 | I token di ogni frase, ritrasformati in testo, sono la frase (200 righe per modello) | 200 su 200 |
-| Documenti con `"`, `\`, a capo, tab, `<`, emoji, cinese, arabo | posizioni giuste su d1 e Winnow |
+| Documenti con `"`, `\`, a capo, tab, `<`, emoji, cinese, arabo | posizioni giuste per ogni modello |
 | Senza preambolo, il prompt è identico a quello del piano binario | identico |
 | P(supportato) dai punteggi salvati = P del verdetto scelto al passo 5 | differenza < 0,005 |
 | Stessa riga estratta due volte | vettori identici |

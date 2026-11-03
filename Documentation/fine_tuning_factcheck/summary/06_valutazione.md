@@ -30,7 +30,7 @@ Misurare se il modello fine-tunato è un fact checker binario migliore della bas
 | BAcc per tipo di negativo (`contradicted` / `not_established`) | i "non stabilito" sono il punto debole atteso |
 | Latenza p50/p95 per claim, claim/s | costo d'uso |
 
-Incertezza: bootstrap per documento (`document_cluster_bootstrap` in [metrics.py](../../metrics.py)); differenze sotto ~0,5 punti di media non conclusive.
+Incertezza: bootstrap per documento (`document_cluster_bootstrap` in [core/metrics.py](../../../core/metrics.py)); differenze sotto ~0,5 punti di media non conclusive.
 
 ## 3. Soglia
 
@@ -59,9 +59,9 @@ Tutti con lo stesso protocollo (soglia dal nostro dev, più soglia 0,5):
 
 | Modello | Taglia | Ruolo |
 |---|---:|---|
-| Baseline a una domanda (Winnow, JPT) | 12B / 9B | punto di partenza |
-| Baseline a tre domande | 12B / 9B | quanto si è recuperato della regola di Jev |
-| Modello base fine-tunato (C1) | 12B / 9B | valore dell'inizializzazione |
+| Baseline a una domanda (stesso modello prima del training) | 4B / 9B | punto di partenza |
+| Baseline a tre domande | 4B / 9B | quanto si è recuperato della regola di Jev |
+| Backbone fine-tunato con la stessa ricetta (B-ctrl) | 4B / 9B | valore dell'inizializzazione da decision model |
 | Encoder E1 fine-tunato sugli stessi dati | 0,4B | valore della taglia |
 | FactCG-DeBERTa-v3-L, MiniCheck-FT5 | 0,4B / 0,8B | riferimenti pubblici |
 | Bespoke-MiniCheck-7B | 7B | miglior modello aperto con la stessa ricetta di dati |

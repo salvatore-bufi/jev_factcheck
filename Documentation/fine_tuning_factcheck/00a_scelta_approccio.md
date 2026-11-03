@@ -47,118 +47,96 @@ Due varianti: **CG2C-MHQA**, che parte da dataset di domande multi-hop (HotpotQA
 
 **Cosa ne ricaviamo**: MiniCheck e FactCG **non introducono architetture**. Il loro valore è: (a) le ricette di dati, (b) il curriculum in due stadi, (c) il chunking con `max`, (d) l'obiettivo di una soglia vicina a 0,5. Tutte e quattro si applicano a qualunque backbone.
 
-## 4. Il nostro punto di partenza: i decision model
+## 4. Il nostro punto di partenza: i decision model dello studio
 
-d1-3B (LFM2.5-VL-3B), JPT-9B (Qwen3.5-9B) e Winnow-12B (Gemma-4-12B) sono LLM addestrati a rispondere a **domande tipizzate** su uno stato: il prompt contiene lo stato (qui: documento e claim) e la domanda; il modello mette quasi tutta la probabilità su due risposte (le lettere A/B per JPT e Winnow, le parole yes/no per d1-3B). La probabilità di "sì" si legge dai logit di quelle due risposte, in un solo forward.
+I modelli sono i 10 decision model dello studio focalizzato, tutti costruiti su Qwen3.5 (6 sul 9B, 4 sul 4B), più i due backbone ([00](00_overview.md) §2). Ognuno riceve uno **stato** (qui documento e claim) e una **domanda** con opzioni, e restituisce una probabilità per opzione in un solo forward.
 
-Misure su LLM-AggreFact test (run di ottobre 2026, `results/lytang--LLM-AggreFact/test/`; analisi in [../risultati_aggrefact_2026-10.md](../risultati_aggrefact_2026-10.md)). Q1 = `support_simple`; Q4 = `unsupported_detail` letta come 1 − P(sì). "Migliore" = soglia scelta sul test stesso, quindi ottimistica:
+Cosa li distingue, e perché conta per il fine-tuning:
 
-| Modello | Taglia | Regola | AUC macro | BAcc @0,5 | BAcc migliore (soglia) | Latenza p50 | Memoria GPU |
-|---|---:|---|---:|---:|---:|---:|---:|
-| d1-3B | 3B | Q1 | 83,51 | 72,48 | 74,97 (0,73) | **38 ms** | **11,6 GB** |
-| d1-3B | | Q4 | 84,41 | 74,30 | 75,59 (0,67) | | |
-| JPT-9B | 9B | Q1 | 84,15 | 74,32 | 76,43 (0,86) | 172 ms | ~43 GB* |
-| JPT-9B | | Q4 | 84,30 | 76,74 | 76,94 (0,63) | | |
-| JPT-9B | | 3 domande | 84,48 | 77,11 | 77,21 (0,61) | | |
-| Winnow-12B | 12B | Q1 | 84,03 | 74,91 | 76,85 (0,93) | 169 ms | ~43 GB* |
-| Winnow-12B | | Q4 | **85,04** | 76,77 | 77,37 (0,26) | | |
-| Winnow-12B | | 3 domande | 84,99 | 76,38 | 77,71 (0,14) | | |
-| Rune-26B-A4B | 26B | Q1 | 84,91 | 76,65 | 77,89 (0,75) | 1.450 ms | ~43 GB* + 17 GB CPU |
-| CLM-v0.1-8B | 8B | Q1 | 65,11 | 58,78 | 58,78 (0,50) | 101 ms | |
-| Bespoke-MiniCheck-7B | 7B | una domanda | | | 77,4 (leaderboard) | | |
-| FactCG-DeBERTa-v3-L | 0,4B | classificatore | | 75,64 (run precedente) | | | |
+| Aspetto | Varianti nei 10 modelli | Conseguenza per il training |
+|---|---|---|
+| Prompt | ognuno il suo (stato come JSON, come righe, come testo indentato; domanda e opzioni in formati diversi) | si renderizza con il codice degli autori, mai con un prompt nostro ([03](03_rendering_formato.md)) |
+| Attenzione | causale (KnowLine, OneJev, Nimble), bidirezionale sul prompt nei layer pieni (elephant-1 a blocchi, StartLux, d3-flash, pplx, Jeffan), non dichiarata (Clef) | la stessa maschera va usata in training, altrimenti si addestra un altro modello |
+| Lettura | due righe della testa del vocabolario (lettere o codici: 8 modelli) o una testa propria (pplx a 255 vie, Clef congiunta) | la loss si calcola sui due punteggi che il modello usa davvero ([04](04_loss.md)) |
+| Training originale | full fine-tune, LoRA (Nimble), media di due LoRA (KnowLine), distillazione (pplx) | si aggiunge sempre una **nuova** LoRA sopra i pesi pubblicati |
 
-\* memoria riservata da vLLM (92% della scheda), non usata davvero. Latenze su NVIDIA L40S, una riga alla volta, tre domande.
+### 4.1 Cosa si sa già
 
-Numeri storici con soglia fittata sul dev di Jev (run precedente): una domanda Q1 76,69 (Winnow, soglia 0,95) e 76,20 (JPT, soglia 0,90).
+Dai run della repo sul test di AggreFact, con la regola a tre domande di Jev e soglia 0,30: elephant-1 76,70, KnowLine-4B 75,65. I numeri dello studio focalizzato (domanda Q1, soglia fittata su AF-dev, tutti e 10 i modelli e i due backbone) arrivano dai run RUN-01…RUN-05 ([../paper_idea/15_focused_10_tdm_experiment_guide.md](../paper_idea/15_focused_10_tdm_experiment_guide.md) §7): quando sono pronti si copiano in [01](01_baseline.md) §1 e non si rifanno.
 
-Quattro fatti:
+Riferimenti esterni: Bespoke-MiniCheck-7B 77,4 e FactCG 75,6 su LLM-AggreFact. Il primo obiettivo del fine-tuning è superare 77,4 con un modello da 4B o 9B.
 
-1. **Già zero-shot, con una sola domanda, i decision model grandi sono al livello di FactCG e MiniCheck dopo il loro training**: con Q4 e soglia fissa 0,5, JPT e Winnow fanno 76,7–76,8, contro 75,6 di FactCG e 75,0 di MiniCheck-FT5.
-2. **Q1 dice "sì" troppo facilmente** (soglie migliori 0,73–0,93). È il difetto principale che il fine-tuning deve correggere.
-3. **Q4 (`unsupported_detail`, con le descrizioni delle opzioni) è una domanda singola migliore di Q1** per d1, JPT e Winnow: AUC più alta e ~2 punti in più di BAcc a soglia 0,5 (Rune fa eccezione). Va confermato sul nostro dev ([02d](02d_varianti_domanda.md)).
-4. **d1-3B è a meno di 1 punto di AUC dai modelli da 9–12B**, con latenza 4–5 volte più bassa e un quarto della memoria. La sua BAcc a soglia fissa è più bassa (72–74), ma la differenza è soprattutto di soglia e calibrazione, cioè ciò che il fine-tuning corregge più facilmente.
+### 4.2 I due modelli su cui si lavora per primi
 
-### 4.1 d1-3B in dettaglio
+| | KnowLine-4B (A11) | elephant-1 (A1) |
+|---|---|---|
+| Repository | `PelaAI/KnowLine-4B-Gen5.5` | `baselabs/elephant-1` |
+| Base e training originale | Qwen3.5-4B; due LoRA SFT mediate e fuse | Qwen3.5-9B; full fine-tune |
+| Codice degli autori | front end nel repository (`knowline_server.py`, `knowline_layout.py`), backend transformers | motore `qev` di OneJev (copiato in `models/elephant-1/qev`) con `serve.patch` |
+| Prompt | stato come testo indentato in un turno utente; turno con istruzione, `Question:` e opzioni `A. Yes: …` / `B. No: …`; risposta aperta con `Answer:`. Richieste fino a 3.000 token **scritte due volte** | sistema + `<state>` (JSON indentato) come prefisso comune; ogni domanda è un suffisso `Question: … Options: A. yes: … B. no: … Answer with one letter: A, B.` |
+| Attenzione | causale | bidirezionale a blocchi nei layer pieni (il prefisso vede sé stesso, ogni suffisso vede prefisso e sé stesso); i layer DeltaNet restano causali |
+| Lettura | softmax sui token delle etichette; temperatura 1,50 già incorporata nella normalizzazione finale | softmax sui logit delle lettere A/B (testa del vocabolario in float32), temperatura 1 |
+| Memoria per il training LoRA in bf16 | ~9 GB di pesi: entra in 24 GB | ~19 GB di pesi: GPU da 45 GB |
 
-| Aspetto | Valore |
-|---|---|
-| Repository | `LiquidAI/d1-3B`, revisione `051bcc464b01b9f92942b364d9586b0ef5912432`, codice proprio (`trust_remote_code=True`) |
-| Base | LFM2.5-VL-3B: 3,12B parametri, di cui ~400M nel codificatore visivo (SigLIP2), non usato qui |
-| Backbone testuale | `lfm2`: 30 layer, 22 a convoluzione corta e 8 ad attenzione piena (layer 2, 5, 9, 13, 17, 21, 24, 27), hidden 2.048, vocabolario 128.000, embedding legate, contesto 32.768 token |
-| Prompt | stato come JSON indentato, poi `QUESTION:` e la domanda; per una `noul` con criteri due righe `Yes: <descrizione di true>` / `No: <descrizione di false>`; poi `Reply with yes or no only.` e l'intestazione dell'assistente ([03](03_rendering_formato.md) §3b) |
-| Lettura | P(sì) = softmax(max(z_yes, z_Yes), max(z_no, z_No, z_NO)); nessuna temperatura |
-| Interfaccia | `system_one(state, questions)` e `system_one_batch(...)`: più domande sullo stesso stato in una passata (lo stato è letto una volta, le domande sono rami) |
-| Licenza | LFM Open License v1.0: uso commerciale consentito solo a entità con fatturato annuo sotto 10 milioni di dollari (vale anche per i modelli derivati) |
-| Dichiarati dagli autori | 8 ms per decisione su RTX 4090 con CUDA graph; primo decision model sotto 10B sul Decision Index 0.2.1 |
-
-Perché conta per il fine-tuning:
-- **training molto più economico**: LoRA in bf16 con 8k token sta comodamente nei 24 GB del portatile (pesi ~7 GB); una corsa del pilota dura una frazione di quella di JPT;
-- **servizio economico**: ~4–5 volte meno latenza, ~4 volte meno memoria, energia per 1.000 righe 12,8 kJ contro ~35 kJ di JPT e Winnow;
-- **rischio**: parte un po' più in basso; la qualità sui documenti lunghi è inferiore (BAcc aggregata 66 sopra 16.000 caratteri, contro 71 di JPT e Winnow).
+Perché si itera su KnowLine-4B: è causale e legge due token della testa del vocabolario, quindi il training è quello standard di un LLM; costa meno della metà di un 9B. Le scelte di ricetta (dati, loss, iperparametri) si fanno qui e si confermano su elephant-1.
 
 ## 5. Perché non cambiare la testa del modello
 
-Nel decision model, all'ultima posizione del prompt il modello produce uno stato nascosto h (un vettore di dimensione d: 2.048 per d1-3B, 4.096 per JPT, 3.840 per Winnow). La testa del vocabolario calcola un logit per ogni token: z_k = w_k · h. Si leggono solo le due risposte:
+All'ultima posizione del prompt il modello produce uno stato nascosto h. Nei modelli con lettura dalla testa del vocabolario, il logit di un token è z_k = w_k · h, e si leggono solo le due opzioni:
 
 ```text
 P(vero) = softmax([z_falso, z_vero] / T)[vero] = σ( (w_vero − w_falso) · h / T )
 ```
 
-È **una regressione logistica su h**, con pesi u = (w_vero − w_falso)/T: esattamente ciò che fa la testa binaria di un classificatore, ma **già inizializzata** con quello che il modello sa. (Per Winnow i logit passano prima da un *softcapping* 30·tanh(z/30): la funzione resta determinata dalle due righe w_vero e w_falso, solo non è più perfettamente lineare. Per d1-3B ogni risposta è il massimo su più forme dello stesso token — `yes`/`Yes` e `no`/`No`/`NO` — quindi il margine è max(z_yes, z_Yes) − max(z_no, z_No, z_NO): ancora una funzione di poche righe della testa.)
+È **una regressione logistica su h**, con pesi già inizializzati da quello che il modello sa. Togliere la testa e metterne una nuova `Linear(d → 2)` non aggiunge capacità, parte da pesi casuali (al passo 0 il modello è al 50% invece che al suo livello) e cambia il modo di servirlo.
 
-Togliere la testa del vocabolario e mettere un `Linear(d → 2)` nuovo:
+Esempio numerico: z_falso = 2,1, z_vero = 0,3 → P(vero) = σ(0,3 − 2,1) = σ(−1,8) = 0,14. Una testa nuova darebbe ~0,5 per qualunque coppia.
 
-- non aggiunge capacità (stessa forma di funzione);
-- parte da pesi casuali: al passo 0 il modello è al 50% invece che al 76–77%;
-- richiede di addestrare anche la testa e di servire il modello con una classe diversa.
+Per i due modelli con una **testa propria** (pplx-decider-flash, Clef-Flash) vale lo stesso principio: si tiene la loro testa, con i suoi pesi, e si addestra insieme alla LoRA (è piccola).
 
-Esempio numerico (Winnow, coppia supportata): z_falso = 2,1, z_vero = 0,3 → P(vero) = σ(0,3 − 2,1) = σ(−1,8) = 0,14. Con u = w_vero − w_falso si ottiene u · h = −1,8 e lo stesso 0,14. Una testa nuova darebbe ~0,5 per qualunque coppia.
+Le due cose utili di una "testa binaria" si ottengono comunque:
+- **memoria**: in training si calcolano solo i due punteggi delle opzioni invece dei ~248.000 logit del vocabolario ([05](05_training.md));
+- **servizio come classificatore**: si può estrarre il vettore (w_vero − w_falso) alla fine ([08](08_merge_export.md)).
 
-Le due cose utili di una "testa binaria" si ottengono senza cambiarla:
+## 6. Decision model o backbone? (B-ctrl)
 
-- **memoria**: in training si calcolano solo le due righe w_vero, w_falso (prodotto [B, d] × [d, 2]) invece dei ~250.000 logit del vocabolario ([05](05_training.md));
-- **servizio come classificatore**: si può estrarre u alla fine ([08](08_merge_export.md)).
-
-## 6. Decision model o LLM base?
+È la domanda dell'esperimento B-ctrl del paper: **a parità di dati e di ricetta di fine-tuning, un checker ottenuto da un decision model è migliore di uno ottenuto dal suo backbone?** Nessuno l'ha misurato: i checker specializzati (MiniCheck, FactCG) partono da LLM generici, le ricette di fine-tuning pubblicate addestrano decision model generali.
 
 | A favore del decision model | Contro |
 |---|---|
-| AUC 83,5–85 con una domanda già zero-shot (BAcc 72–77); LLM generici di taglia simile fanno ~70–73 di BAcc (Llama-3.1-8B 70,3; Qwen2.5-7B 72,8) | con dati buoni la differenza di partenza può sparire: InternLM2.5-7B passa da 63,6 a 77,4 |
-| le probabilità sono già concentrate sulle due lettere | JPT è CC BY-NC 4.0 |
-| meno dati e passi per arrivare allo stesso punto (da verificare) | formati particolari (A = falso in Winnow) |
+| le probabilità sono già concentrate sulle due opzioni; la lettura è già calibrata dagli autori | con dati buoni la differenza di partenza può sparire (InternLM2.5-7B passa da 63,6 a 77,4 con i dati di MiniCheck) |
+| meno dati e passi per arrivare allo stesso punto (da verificare) | ricette con attenzione o testa proprie complicano il training |
 
-Si decide con un controllo: **la stessa ricetta su LFM2.5-VL-3B, Qwen3.5-9B base e Gemma-4-12B-it** (esperimenti A2 e C1 in [07](07_esperimenti.md)). Se il base arriva entro 0,5 punti dal decision model, il backbone si sceglie per licenza e costo.
+Si risponde con le coppie elephant-1 / Qwen3.5-9B e KnowLine-4B / Qwen3.5-4B, poi con gli altri decision model ([07](07_esperimenti.md), fase B). Il backbone si addestra con il prompt neutro dello studio e le opzioni A/B in ordine casuale ([03](03_rendering_formato.md) §2.4).
 
 ## 7. Decision model o encoder stile FactCG?
 
-| | Decision model 9–12B | Decision model 3B (d1) | Encoder 0,4B |
+| | Decision model 9B | Decision model 4B | Encoder 0,4B |
 |---|---|---|---|
-| AggreFact atteso dopo il training | ≥ 77,4 | da misurare (parte da AUC 84,4) | ~75–76 |
-| Contesto | decine di migliaia di token | 32.768 token | 2.048 (DeBERTa) / 8.192 (ModernBERT) |
+| AggreFact atteso dopo il training | ≥ 77,4 | da misurare | ~75–76 |
+| Contesto | 32.768 token (limite dei runtime degli autori) | idem | 2.048 (DeBERTa) / 8.192 (ModernBERT) |
 | Multi-hop fra parti lontane | possibile in un chunk lungo | possibile in un chunk lungo | solo dentro un chunk |
-| Costo | ~170 ms per riga (L40S, 3 domande) | ~40 ms per riga | un forward di 0,4B per chunk (anche CPU) |
+| Costo | un prefill di 9B | un prefill di 4B | un forward di 0,4B per chunk (anche CPU) |
 
-L'encoder vince solo sul costo, e d1-3B riduce molto il divario di costo restando un decision model a contesto lungo. Se serve ancora di meno (CPU, milioni di claim), si **distilla** un encoder dal decision model fine-tunato ([08](08_merge_export.md) §8).
+L'encoder vince solo sul costo. Se serve ancora di meno (CPU, milioni di claim), si **distilla** un encoder dal decision model fine-tunato ([08](08_merge_export.md) §8).
 
 ## 8. La decisione
 
 1. **Backbone**: decision model con **una sola domanda sì/no**.
-   - **d1-3B per iterare**: LoRA in bf16 sul portatile, corse brevi; è anche il candidato per la produzione se contano latenza e costo (verificare la licenza: commerciale solo sotto 10 M$ di fatturato);
-   - **Winnow-12B come modello per la massima accuratezza** (AUC più alta, Apache 2.0);
-   - **JPT-9B** come terzo punto di confronto (licenza non commerciale).
-   Le scelte di ricetta (dati, loss, iperparametri) si fanno su d1-3B e si confermano su Winnow; se dopo il training d1-3B arriva entro ~1 punto da Winnow su dev e test_ood, è il modello da rilasciare.
-2. **Domanda**: Q4 (`unsupported_detail`, letta come 1 − P(sì)) è la candidata principale, Q1 e Q3 le alternative; si sceglie sul nostro dev ([02d](02d_varianti_domanda.md)).
-3. **Uscita**: logit delle due risposte, nessuna testa nuova.
+   - **KnowLine-4B per iterare**: LoRA in bf16 su 24 GB, corse brevi;
+   - **elephant-1 come modello principale a 9B**;
+   - gli altri 8 decision model con la ricetta finale (fase B di [07](07_esperimenti.md)).
+2. **Domanda**: si sceglie sul nostro dev fra Q1, Q2 e Q4 dello studio ([02d](02d_varianti_domanda.md)).
+3. **Uscita**: i punteggi delle due opzioni che il modello usa già; nessuna testa nuova.
 4. **Dati e curriculum**: ricette MiniCheck/FactCG + fonti pubbliche, due stadi.
-5. **Controlli**: stesso training su LLM base (A2) e su encoder (A5) per confermare la scelta con numeri nostri.
-6. **Esclusi**: CLM-8B (AUC 65 con la domanda singola, regola a tre domande inutilizzabile).
+5. **Controlli**: stesso training sui due backbone (B-ctrl) e su un encoder (A5).
 
 ## 9. Cosa si perde
 
-- Il modello fine-tunato **non è più un decision model generale**: altre domande possono peggiorare. Si dichiara nel nome (`d1-3b-fc`, `jpt-9b-fc`, `winnow-12b-fc`) e nella model card.
+- Il modello fine-tunato **non è più un decision model generale**: altre domande possono peggiorare. Si dichiara nel nome (`knowline-4b-fc`, `elephant-1-fc`, …) e nella model card.
 - Non distingue "contraddetto" da "non stabilito": l'uscita è binaria.
+- Le licenze restano quelle dei pesi di partenza: StartLux e Nimble sono non commerciali (CC BY-NC).
 
 ## Criteri per passare allo step successivo
 
-- Decisione registrata: d1-3B per il pilota e gli esperimenti, Winnow per la conferma e la versione di massima accuratezza, JPT come confronto, controlli A2 e A5 in programma.
+- Decisione registrata: KnowLine-4B per gli esperimenti, elephant-1 per la conferma, gli altri 8 e i due backbone per B-ctrl.

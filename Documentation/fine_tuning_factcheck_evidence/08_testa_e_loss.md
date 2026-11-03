@@ -154,7 +154,7 @@ Test per la loss di partenza: 40 frasi, evidenza {1, 40}, α = 10, tutte con pro
 
 Il codice di questo file è stato eseguito su dati finti: forme giuste, gradienti, caso con una sola frase, e i valori sopra tornano.
 
-## 4. Termini aggiuntivi (solo negli esperimenti che li usano)
+## 4. Termine aggiuntivo per le coppie (solo nell'esperimento H-PAIR)
 
 **Coppie (H-PAIR).** Nelle righe con 2 o più frasi di evidenza, il punteggio di coppia deve essere alto per le coppie di frasi di evidenza e basso fra una frase di evidenza e le 5 frasi non di evidenza più "simili". Peso 0,2.
 
@@ -169,12 +169,6 @@ def pair_loss(S, gold, sent_mask, n_hard=5):
     l_neg = F.binary_cross_entropy_with_logits(hard, torch.zeros_like(hard))
     return l_pos + l_neg
 ```
-
-**Fedeltà (H-FAITH).** Si chiede che le frasi scelte siano proprio quelle su cui il modello basa il verdetto:
-- se il modello vede **solo** le frasi scelte, il verdetto deve restare lo stesso (sufficienza);
-- se il modello vede tutto **tranne** le frasi scelte, il verdetto deve scendere (completezza).
-
-Come si "nascondono" le frasi senza rifare il documento è spiegato in [09](09_training.md) §5. Questo termine si usa sempre insieme alla loss del §3: da solo verrebbe soddisfatto scegliendo tutte le frasi. Peso 0,1–0,3.
 
 ## 5. Test
 

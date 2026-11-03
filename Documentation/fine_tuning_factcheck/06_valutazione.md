@@ -23,10 +23,10 @@ Tutte calcolate su P(supportato) già ricalibrato (scala e soglia da dev_select,
 
 | Metrica | Definizione | Codice |
 |---|---|---|
-| BAcc per fonte | ½ (TPR + TNR) | `metrics.metrics(rows, scores, thr)["by_source"]` |
-| BAcc macro | media delle BAcc per fonte | `metrics.metrics(...)["macro_balanced_accuracy"]` |
+| BAcc per fonte | ½ (TPR + TNR) | `core.metrics.metrics(rows, scores, thr)["by_source"]` |
+| BAcc macro | media delle BAcc per fonte | `core.metrics.metrics(...)["macro_balanced_accuracy"]` |
 | AUC per fonte e macro | area sotto la curva ROC | `by_source[s]["roc_auc"]`, media |
-| BAcc a 0,5 | soglia fissa | `metrics.metrics(rows, scores, 0.5)` |
+| BAcc a 0,5 | soglia fissa | `core.metrics.metrics(rows, scores, 0.5)` |
 | ECE | 10 fasce di confidenza | `ece()` di [01](01_baseline.md) §4.3 |
 | Brier | media di (p − y)² | `np.mean((p - y) ** 2)` |
 | Soglia ottimale | da `tune_threshold` su dev_select | segnale del bias "sì" |
@@ -42,7 +42,7 @@ rows = [{"dataset": r["source"], "label": r["label"], "doc": r["document"]} for 
 
 **Esempio di ECE.** 1.000 previsioni con confidenza fra 0,8 e 0,9 (media 0,85), di cui 780 giuste: contributo = (1.000 / N) · |0,85 − 0,78|. Se tutte le fasce hanno scarti simili, ECE ≈ 0,07: modello un po' sovra-confidente.
 
-**Incertezza.** Intervalli al 95% con `metrics.document_cluster_bootstrap(rows, scores, baseline_scores, threshold, baseline_threshold)`: ricampiona i documenti dentro ogni fonte, con le stesse estrazioni per i due modelli, e dà l'intervallo della **differenza** fra modello e baseline. Differenze di BAcc media sotto ~0,5 punti si considerano non conclusive.
+**Incertezza.** Intervalli al 95% con `core.metrics.document_cluster_bootstrap(rows, scores, baseline_scores, threshold, baseline_threshold)`: ricampiona i documenti dentro ogni fonte, con le stesse estrazioni per i due modelli, e dà l'intervallo della **differenza** fra modello e baseline. Differenze di BAcc media sotto ~0,5 punti si considerano non conclusive.
 
 ## 3. Aggregazione
 
@@ -96,22 +96,22 @@ Esempio:
 
 ## 6. Come si esegue
 
+Il modello fuso si valuta con `benchmark.py` e l'adapter del suo modello, puntato alla cartella dei pesi fusi ([08](08_merge_export.md) §2): così il prompt, la maschera e la lettura sono quelli degli autori, e i risultati finiscono accanto a quelli dello studio focalizzato (stesso formato, [README_RESULTS.md](../../README_RESULTS.md)).
+
 ```sh
-# probabilità del modello fuso su ogni blocco
-for s in dev_select dev_confirm test_id test_ood; do
-  conda run -n factcheck python finetune/score.py --model d1 --model-dir finetune/release/d1-3b-fc-v1 \
-      --question finetune/question.json --split $s
+# probabilità del modello fuso su ogni blocco (split esportati come dataset locale, 01 §3)
+for s in dev_select dev_confirm test_id test_ood test_long; do
+  python benchmark.py --model elephant-1 --opt elephant-1:weights=finetune/release/elephant-1-fc-v1 \
+      --gpu 0 --dataset fc_ours --split $s --questions <file della domanda di produzione> --no-profile --tag fc-v1
 done
-# AggreFact con la stessa domanda (nuova inferenza: le cache esistenti sono dei modelli di partenza)
-conda run -n factcheck python finetune/score.py --model d1 --model-dir finetune/release/d1-3b-fc-v1 \
-    --question finetune/question.json --split aggrefact_test
+# AggreFact con la stessa domanda (nuova inferenza: i run dello studio sono dei modelli di partenza)
+python benchmark.py --model elephant-1 --opt elephant-1:weights=finetune/release/elephant-1-fc-v1 \
+    --gpu 0 --split test --questions <file della domanda di produzione> --tag fc-v1
 # calibrazione su dev_select, applicazione a tutti i blocchi, tabelle e intervalli
-conda run -n factcheck python finetune/report.py --run d1-3b-fc-v1 --baseline d1
+python finetune/report.py --run elephant-1-fc-v1 --baseline elephant-1
 ```
 
-Stesso schema per `--model jpt` e `--model winnow`. In alternativa, il modello fuso si può valutare su AggreFact con il nuovo runner del progetto (`benchmark.py`, che scrive in `results/<dataset>/<split>/...` nel formato di [README_RESULTS.md](../../README_RESULTS.md)), aggiungendo una configurazione di modello che punta ai pesi fusi; così i risultati finiscono accanto a quelli di ottobre e `grid_search.py` li confronta direttamente.
-
-(`score.py` va esteso per leggere AggreFact: le righe di `lytang___llm-aggre_fact` hanno `doc`, `claim`, `label`, `dataset`; si mappano su `document`, `claim`, `label`, `source`.)
+(`weights` è l'opzione per il percorso locale dei pesi: se l'adapter non ce l'ha, va aggiunta.) Stesso schema per gli altri modelli e per i backbone fine-tunati. Sul server, ogni comando dentro `gpu-run --batch -- bash -c '…'`.
 
 ## 7. Il report finale — formato
 

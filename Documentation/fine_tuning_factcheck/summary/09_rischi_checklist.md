@@ -13,9 +13,10 @@
 | **Chunking che spezza le catene** | "evidenza divisa" fallisce; LFQA/ExpertQA peggiori | chunk grandi per l'LLM (≥ 4k) | `min`×`max` sulle frasi del claim (K2) |
 | **Positivi troncati in training** | evidenza tagliata → etichetta sbagliata | i positivi non si spezzano ([03](03_rendering_formato.md) §4) | budget più alto o scarto |
 | **Prompt diverso da quello di produzione** | calo appena cambia una parola | domanda unica congelata in `question.json` | normalizzare l'input nel codice chiamante |
-| **Lettere invertite** | la loss non scende o sale | test di rendering (A = falso in Winnow, A = sì in JPT) | correggere i target |
+| **Lettere invertite** | la loss non scende o sale | test di rendering (A = sì in KnowLine ed elephant-1; A = no in d3-flash, Jeffan, pplx) | correggere i target |
+| **Maschera bidirezionale persa in training** | passo zero diverso dalla baseline per elephant-1, StartLux, d3-flash, pplx, Jeffan | test della maschera ([03](03_rendering_formato.md)) | usare il forward degli autori |
 | **Margine ridotto ≠ forward completo** | probabilità del training diverse dall'inferenza | test di [05](05_training.md) §6 (softcapping incluso) | applicare la stessa trasformazione ai logit |
-| **Conclusione sbagliata sull'architettura** | si sceglie D1 senza sapere se un base farebbe uguale | fase A e controllo C1 obbligatori | — |
+| **Conclusione sbagliata sull'architettura** | si sceglie il decision model senza sapere se il backbone farebbe uguale | fase A e fase B (B-ctrl) | — |
 | **Specializzazione non dichiarata** | qualcuno usa il modello per altre domande | nome `-fc`, model card | — |
 | **Overfitting del dev** | ottimo su `dev_select`, peggio su `dev_confirm` | criteri di adozione ≥ 0,5 punti | conferma su `dev_confirm` |
 | **Test guardato troppo presto** | — | test solo dopo `frozen.json` | dichiararlo |
@@ -75,10 +76,10 @@
 
 ### Step 7 — Esperimenti
 - [ ] Fase A completata e interpretata.
-- [ ] C1–C3 eseguiti.
+- [ ] Fase B (B-ctrl) almeno sulle due coppie principali; C2–C3 eseguiti.
 
 ### Step 8 — Export
-- [ ] Fusione su bf16 verificata; GGUF verificato (Winnow).
+- [ ] Fusione su bf16 verificata con l'adapter del benchmark sulla cartella fusa.
 - [ ] `decision.json` con domanda unica, soglia, chunking.
 - [ ] (Opzionale) testa estratta verificata; studente distillato valutato.
 - [ ] `frozen.json` prima del test; model card che dichiara la specializzazione.

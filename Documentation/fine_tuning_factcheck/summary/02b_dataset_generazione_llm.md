@@ -56,7 +56,7 @@ I dati di FactCG non sono rilasciati; il codice sì ([derenlei/FactCG](https://g
 | Negativo: un LLM toglie **una** relazione del sottografo dal documento | si riscrive la frase "... which is found in India" senza il paese |
 | Filtro NLI | si scartano le coppie che un modello NLI (RoBERTa-MNLI) indovina già |
 
-Il filtro NLI di FactCG tiene solo i negativi **difficili**. Da noi si può usare come filtro il nostro modello di partenza (JPT, una domanda), come per ANLI difficile: si tengono le coppie su cui sbaglia o è incerto.
+Il filtro NLI di FactCG tiene solo i negativi **difficili**. Da noi si può usare come filtro il nostro modello di partenza (KnowLine-4B, una domanda), come per ANLI difficile: si tengono le coppie su cui sbaglia o è incerto.
 
 ### 2.2 CG2C-Doc (da documenti in prosa)
 

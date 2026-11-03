@@ -116,7 +116,7 @@ La selezione ha però l'effetto opposto da tenere sotto controllo: un insieme di
 ### 3.2 Procedura
 
 1. Prendere `data/finetune/splits/train/anli.jsonl` (solo train).
-2. Calcolare p = P(supportato) con JPT-9B e la domanda di produzione (`finetune/score.py`, oppure lo stesso codice su un file arbitrario). Premesse corte (~130 token al 95° percentile): ~1 h con vLLM su una L40S per 160k righe.
+2. Calcolare p = P(supportato) con KnowLine-4B e la domanda di produzione (`benchmark.py` sul file delle coppie ANLI esportato come dataset locale, [01](01_baseline.md) §3). Premesse corte (~130 token al 95° percentile): ~1 h con vLLM su una L40S per 160k righe.
 3. Classificare ogni riga:
 
 | Classe | Condizione |
@@ -132,9 +132,9 @@ La selezione ha però l'effetto opposto da tenere sotto controllo: un insieme di
 Codice di riferimento:
 
 ```python
-import json, random
+import glob, json, random
 rng = random.Random(13)
-recs = {json.loads(l)["id"]: json.loads(l) for l in open("results/fc/jpt/anli_train/answers.jsonl")}
+recs = {json.loads(l)["id"]: json.loads(l) for l in open(glob.glob("results/fc_anli/train/knowline-4b_*/answers.jsonl")[0])}
 rows = [json.loads(l) for l in open("data/finetune/splits/train/anli.jsonl")]
 wrong, unsure, right = [], [], []
 for r in rows:
@@ -163,7 +163,7 @@ print(len(wrong), len(unsure), len(right), "->", len(out))
 
 - **Etichette sbagliate**: parte degli "errori sicuri" sono errori di annotazione di ANLI. Leggere 50 righe di `wrong`: se più di ~10 hanno l'etichetta discutibile, nella loss usare label smoothing su questa fonte ([04](04_loss.md) §3).
 - **Con il bias attuale** (il modello dice "sì" facilmente) gli errori sicuri saranno quasi tutti negativi con p > 0,7. Il bilanciamento 50/50 al punto 5 serve a non costruire una fonte di soli negativi.
-- **Selezionare con JPT e addestrare Winnow** va bene (MiniCheck selezionava con modelli diversi da quelli addestrati). In alternativa, una selezione per modello.
+- **Selezionare con KnowLine-4B e addestrare gli altri modelli** va bene (MiniCheck selezionava con modelli diversi da quelli addestrati). In alternativa, una selezione per modello.
 
 ### 3.4 Esempio illustrativo (costruito nello stile di ANLI, non una riga reale)
 
@@ -206,11 +206,11 @@ Le pagine sono Wikipedia, come FEVER e HoVer: il rischio verso AggreFact è bass
 
 ```sh
 conda run -n factcheck python data_prep/build_pairs.py all --splits train dev test   # ri-esecuzione completa
-conda run -n factcheck python finetune/score.py --model jpt --question finetune/question.json --split train_anli   # vedi nota
+python benchmark.py --model knowline-4b --gpu 0 --dataset fc_anli --split train --questions <file della domanda di produzione>   # vedi nota
 conda run -n factcheck python finetune/mine_hard.py
 ```
 
-Nota: per far valutare a `score.py` il solo `train/anli.jsonl`, aggiungere un'opzione `--file <percorso>` che sostituisce la lettura della cartella dello split.
+Nota: `train/anli.jsonl` va copiato come `dataset/fc_anli/train.jsonl` nel formato del benchmark ([01](01_baseline.md) §3). La prima riga di `answers.jsonl` è un'intestazione (`{"identity": …}`) da saltare; P(supportato) si legge da `answers[<domanda>]["probs"]["true"]` (o 1 − quella, con `take = no`).
 
 ## 6. Controllo a mano
 

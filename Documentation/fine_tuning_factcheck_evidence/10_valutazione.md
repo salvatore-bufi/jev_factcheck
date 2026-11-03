@@ -13,7 +13,7 @@ Script: `evidence/eval_evidence.py` (qualità) ed `evidence/latency.py` (velocit
 
 L'evidenza si misura sulle righe supportate **che il modello giudica supportate**: sono le sole in cui il sistema mostra frasi. A parte si riporta quante righe supportate il modello giudica non supportate (e quindi restano senza evidenza).
 
-Per confrontare i tre modelli si usano anche le sole righe giudicate supportate da tutti e tre.
+Per confrontare i modelli si usano anche le sole righe giudicate supportate da tutti.
 
 ## 2. Metriche dell'evidenza
 
@@ -59,20 +59,20 @@ Stesso server ([12](12_export_e_servizio.md)), stessa GPU, 1.000 richieste reali
 | B | con preambolo | solo verdetto |
 | C | con preambolo | verdetto + evidenza |
 
-Obiettivo: C al massimo +3% rispetto a B (d1-3B: +3% o +2 ms). La differenza fra B e A è il costo del preambolo e si riporta a parte. Si misura anche il tempo della sola testa, per sapere dove intervenire se si supera il limite.
+Obiettivo: C al massimo +3% rispetto a B (modelli 4B: +3% o +2 ms). La differenza fra B e A è il costo del preambolo e si riporta a parte. Si misura anche il tempo della sola testa, per sapere dove intervenire se si supera il limite.
 
 ## 6. Comandi
 
 ```sh
 # durante gli esperimenti
-python -m evidence.eval_evidence --model d1-3b --run data/evidence/runs/d1-3b/<id> --block dev_evid_select
+python -m evidence.eval_evidence --model knowline-4b --run data/evidence/runs/knowline-4b/<id> --block dev_evid_select
 
 # test: una volta sola, a configurazione congelata (passo 12)
-gpu-run --batch --name ev-test-d1 -- bash -c \
-  'python -m evidence.eval_evidence --model d1-3b --release <rilascio> \
-     --block test_evid_id test_evid_ood test_evid_sparse --sufficiency > logs/ev-test-d1.out 2>&1'
-gpu-run --batch --name ev-latency-d1 -- bash -c \
-  'python -m evidence.latency --model d1-3b --release <rilascio> > logs/ev-latency-d1.out 2>&1'
+gpu-run --batch --name ev-test-knowline -- bash -c \
+  'python -m evidence.eval_evidence --model knowline-4b --release <rilascio> \
+     --block test_evid_id test_evid_ood test_evid_sparse --sufficiency > logs/ev-test-knowline.out 2>&1'
+gpu-run --batch --name ev-latency-knowline -- bash -c \
+  'python -m evidence.latency --model knowline-4b --release <rilascio> > logs/ev-latency-knowline.out 2>&1'
 ```
 
 Lo script salva `metrics.json` e `predictions.jsonl` (per ogni riga: punteggi, soglia, frasi mostrate, frasi di evidenza), così le metriche si ricalcolano senza rifare i forward.

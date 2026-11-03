@@ -13,7 +13,7 @@ s = (z_vero − z_falso) / T          margine
 P(supportato) = σ(s)
 ```
 
-Per Winnow `s = z_B − z_A` (T = 1); per JPT `s = (z_A − z_B) / 1,087`.
+I due logit vengono dalle righe della testa del vocabolario per le opzioni (8 decision model e i backbone) o dalla testa propria del modello (pplx-decider-flash, Clef-Flash). T è la temperatura degli autori (es. KnowLine 1, già nei pesi; StartLux-9B 1,3396; pplx 1,554). L'ordine delle opzioni cambia da modello a modello (KnowLine: A = sì; d3-flash, Jeffan, pplx: A = no): si usa sempre l'opzione "supportato".
 
 Siccome `z_k = w_k · h` (riga `k` della testa del vocabolario per lo stato nascosto `h`), `s = u · h` con `u = (w_vero − w_falso) / T`. È una **regressione logistica su `h`** con pesi già inizializzati: la stessa struttura della testa `Linear(1024→2)` di FactCG/MiniCheck (2 logit con softmax = 1 margine con sigmoide). Discussione completa in [00a](00a_scelta_approccio.md) §4.
 
@@ -43,7 +43,7 @@ I dati generati e ANLI difficile ([02a](02a_dataset_fonti_esistenti.md) §3) con
 | Loss | Formula | Gradiente su s per y = 1, σ(s) = 0,01 | Quando |
 |---|---|---:|---|
 | CE | −ln σ(s) | −0,99 | default |
-| Brier (2 opzioni) | 2 (σ(s) − y)² | ≈ **−0,04** (calcolo sotto) | molti dati generati; coerente con il training originale di JPT |
+| Brier (2 opzioni) | 2 (σ(s) − y)² | ≈ **−0,04** (calcolo sotto) | molti dati generati |
 | CE con label smoothing ε | y' = y(1−ε) + ε/2 | −(0,975 − 0,01) = −0,965 (ε = 0,05) | rumore moderato; tiene le probabilità lontane da 0 e 1 |
 
 Brier: `L = (σ(s) − y)² + ((1 − σ(s)) − (1 − y))² = 2(σ(s) − y)²`, gradiente su s = `4 (σ(s) − y) σ(s)(1 − σ(s))`. Con σ = 0,01, y = 1: 4 · (−0,99) · 0,0099 ≈ −0,04.
@@ -109,7 +109,7 @@ def pair_loss(s_pos, s_neg):
     return F.softplus(-(s_pos - s_neg)).mean()      # = -log sigmoid(s_pos - s_neg)
 ```
 
-Per non calcolare i logit di tutto il vocabolario su tutta la sequenza: prendere lo stato nascosto finale in `answer_pos` e moltiplicarlo **solo** per le due righe `w_vero`, `w_falso` della testa (un prodotto `[B, d] × [d, 2]`). Attenzione: se il modello applica un *softcapping* o una normalizzazione ai logit finali (alcune versioni di Gemma lo fanno), va applicato anche qui, altrimenti i margini non coincidono con quelli dell'inferenza. Il test di [05](05_training.md) §6 lo verifica.
+Per non calcolare i logit di tutto il vocabolario su tutta la sequenza: prendere lo stato nascosto finale in `answer_pos` e moltiplicarlo **solo** per le due righe `w_vero`, `w_falso` della testa (un prodotto `[B, d] × [d, 2]`). Per pplx e Clef si chiama solo la loro testa. Il margine così calcolato deve dare la stessa P(supportato) dell'adapter del benchmark. Il test di [05](05_training.md) §6 lo verifica.
 
 ## Criteri per passare allo step successivo
 

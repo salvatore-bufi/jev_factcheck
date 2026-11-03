@@ -47,10 +47,10 @@ Con la domanda singola il modello di partenza dice "sì" troppo facilmente (sogl
 ### 3.3 Come preparare p0 (una volta, prima del training)
 
 1. Scrivere il mix in un file temporaneo nel formato degli split (una riga per esempio).
-2. Calcolare p con `finetune/score.py` e il modello di partenza, con la stessa domanda e lo stesso troncamento del training.
+2. Calcolare p con il modello di partenza (`benchmark.py`, o il `forward_model` del renderer in eval), con la stessa domanda e lo stesso troncamento del training.
 3. Salvare p0 nella riga (`meta.p0`), che il rendering copia nel campo `teacher_p` ([03](03_rendering_formato.md)).
 
-Costo: un'inferenza sul mix (~1 h per JPT su una L40S per ~60k esempi brevi; documenti lunghi di più).
+Costo: un'inferenza sul mix con il modello di partenza (un prefill breve per esempio).
 
 Per ANLI difficile p0 c'è già (`meta.p0` da [02a](02a_dataset_fonti_esistenti.md) §3).
 

@@ -423,7 +423,7 @@ Controllo automatico: la frase modificata non contiene più e2 (o e1) se la rela
 
 ### 5.7 Passo 5 — Filtro di difficoltà
 
-FactCG tiene solo le coppie che un modello NLI **sbaglia**. Da noi si usa il modello di partenza (JPT, domanda di produzione):
+FactCG tiene solo le coppie che un modello NLI **sbaglia**. Da noi si usa il modello di partenza (KnowLine-4B, domanda di produzione):
 
 - negativi: si tengono quelli con P(supportato) ≥ 0,3 (il modello è ingannato o incerto) più un 20% scelto a caso fra gli altri;
 - positivi: si tengono quelli con P(supportato) ≤ 0,7 più un 20% a caso fra gli altri.
