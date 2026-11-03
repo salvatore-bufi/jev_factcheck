@@ -1,12 +1,12 @@
 # Fact checking con evidenza evidenziata — piano operativo
 
-## Cosa si costruisce
+## 1. Che cosa si vuole ottenere
 
-Un decision model che, dato un documento e un claim, restituisce in **un solo forward** (nessun token generato):
-- P(supportato) e il verdetto, come nel piano binario ([../fine_tuning_factcheck/](../fine_tuning_factcheck/00_overview.md));
-- **se il claim è supportato**, le frasi del documento che lo stabiliscono.
+Oggi, nel piano binario ([../fine_tuning_factcheck/](../fine_tuning_factcheck/00_overview.md)), un decision model riceve un documento e un claim e risponde con una probabilità: P(supportato). Lo fa con **un solo passaggio del modello sul testo** (un *forward*), senza generare parole: per questo è veloce.
 
-Se il verdetto è "non supportato", non si evidenzia nulla.
+Vogliamo che, quando il claim è supportato, il sistema dica anche **quali frasi del documento lo dimostrano**, senza perdere velocità: sempre un solo forward, nessuna parola generata.
+
+Esempio di risposta:
 
 ```json
 {"p_supported": 0.93, "supported": true,
@@ -14,108 +14,149 @@ Se il verdetto è "non supportato", non si evidenzia nulla.
               {"sentence": 39, "start": 4210, "end": 4262, "score": 0.84}]}
 ```
 
-`start` / `end` sono offset di carattere sul documento originale.
+- `sentence`: numero della frase nel documento (da 0); `start`/`end`: dove inizia e finisce, in caratteri, nel testo originale.
+- Se il claim non è supportato, `evidence` è vuota: non si mostra né cosa manca né cosa lo contraddice.
 
-Il caso da gestire bene è l'**evidenza sparsa**: due frasi lontane che solo insieme stabiliscono il claim.
+Il caso difficile è l'**evidenza sparsa**: due frasi lontane che solo **insieme** dimostrano il claim.
 
 > Claim: "Nancy R. Howell teaches at a seminary in Kansas City."
-> S1: "Saint Paul School of Theology is a seminary located in Kansas City, Missouri."
-> … 38 frasi irrilevanti …
-> S40: "Nancy R. Howell is Professor of Theology at Saint Paul School of Theology."
-> Evidenza: S1 e S40.
+> Frase 1: "Saint Paul School of Theology is a seminary located in Kansas City, Missouri."
+> … 38 frasi che non c'entrano …
+> Frase 40: "Nancy R. Howell is Professor of Theology at Saint Paul School of Theology."
+>
+> Nessuna delle due basta da sola. Evidenza corretta: frasi 1 e 40.
 
-## Modelli
+## 2. Come funziona, passo per passo
 
-| Modello | Ruolo | d | Layer di attenzione piena (0-indicizzati) |
-|---|---|---:|---|
-| **d1-3B** | tutti gli esperimenti si fanno prima qui | 2.048 | 2, 5, 9, 13, 17, 21, 24, 27 (gli altri 22 sono convoluzioni corte) |
-| **JPT-9B** | conferma a 9B | 4.096 | 3, 7, 11, 15, 19, 23, 27, 31 (gli altri 24 sono Gated DeltaNet) |
-| **Winnow-12B** (BF16) | candidato di massima qualità | 3.840 | 5, 11, 17, 23, 29, 35, 41, 47 (gli altri 40 a finestra di 1.024 token) |
+### 2.1 Che cosa fa già il decision model
 
-Il verdetto di ciascun modello è quello già addestrato nel piano binario (domanda, risposte, soglia, temperatura). Caricamento e hook in [01](01_ambiente_e_modelli.md).
+Il modello legge il prompt token per token. Per **ogni token** e per **ogni layer** calcola un vettore di numeri (lo *stato nascosto*, lungo 2.048 numeri per d1-3B, 4.096 per JPT-9B, 3.840 per Winnow-12B). Ogni token "vede" solo i token che lo precedono.
 
-## L'architettura
+Il verdetto si legge dall'**ultimo token del prompt** (la posizione di risposta, chiamata `answer_pos`): lì il modello assegna un punteggio alla risposta "sì" e uno alla risposta "no", e da questi si ricava P(supportato). Questa parte esiste già ed è stata addestrata nel piano binario. **Non la tocchiamo.**
+
+### 2.2 Che cosa aggiungiamo
+
+Mentre il modello fa quel forward, leggiamo alcuni dei vettori che calcola comunque, e li diamo a una **piccola rete separata** (la *testa di evidenza*, circa 3 milioni di parametri contro i 3–12 miliardi del modello). La testa dà un punteggio a ogni frase.
 
 ```text
-prompt: [preambolo: "Claim under review: <claim>"] [prompt nativo del piano binario: documento S1…Sn, claim, domanda] Answer:
-                                     │
-                    forward unico del decision model (pesi del piano binario)
-                                     │
-   per ogni frase k (dagli offset del tokenizer, senza marcatori nel testo):
-     h_end[k]  = stati nell'ultimo token della frase, 4 layer
-     h_mean[k] = media degli stati dei token della frase, 4 layer
-     att[k]    = massa di attenzione di "Answer:" sui token della frase, 8 layer pieni × teste
-   q = stati in "Answer:", 4 layer            ──► logit delle risposte ──► P(supportato)
-                                     │
-   testa: mix dei layer → proiezione a 256 → transformer NON causale a 2 layer su [x_0 = q, x_1 … x_n]
-                                     │
-   s_k = logit della frase k;  s_0 = logit di x_0 = soglia di questa riga
-                                     │
-   mostrate le frasi con s_k > s_0 (min 1, max 5), solo se P(supportato) > soglia del verdetto
+                 ┌───────────────────────────── prompt ──────────────────────────────┐
+                 │ Claim under review: <claim>                                        │  ← preambolo (nuovo)
+                 │ <documento: frase 0, frase 1, …, frase n>                          │  ← prompt del piano
+                 │ <claim> <domanda> <opzioni>                                        │    binario, invariato
+                 │ [ultimo token = posizione di risposta]                             │
+                 └────────────────────────────────────────────────────────────────────┘
+                                              │
+                           un forward del decision model (pesi congelati)
+                                              │
+              ┌───────────────────────────────┴───────────────────────────────┐
+              │                                                               │
+   per ogni frase k: un "riassunto"                         alla posizione di risposta:
+   (vettori letti dentro la frase, §2.3)                    • punteggi di "sì"/"no" → P(supportato)
+              │                                             • il vettore q (§2.3)
+              └──────────────────────────────┬────────────────────────────────┘
+                                             │
+                               TESTA DI EVIDENZA (l'unica parte che si addestra)
+                    1. riduce ogni vettore a 256 numeri
+                    2. 2 layer di transformer in cui tutte le frasi e q si vedono a vicenda
+                    3. un punteggio per ogni frase (s_k) e un punteggio-soglia (s_0, da q)
+                                             │
+                     se P(supportato) > soglia del verdetto:
+                     mostra le frasi con s_k > s_0 (almeno 1, al massimo 5)
 ```
 
-- Il **preambolo** fa sì che ogni frase sia letta sapendo quale claim si verifica. Il resto del prompt è identico a quello del piano binario, quindi il verdetto resta utilizzabile.
-- L'**aggregatore non causale** fa comunicare le frasi fra loro e con `q`: la prima frase "sa" dell'ultima.
-- La **soglia della riga** `s_0` adatta il numero di frasi mostrate al caso; non c'è una soglia fissa da tarare.
+### 2.3 Che cosa entra nella testa
 
-## Sequenza di lavoro
+Per ogni frase k del documento si leggono, dallo stesso forward:
+
+| Nome | Che cos'è | Perché serve |
+|---|---|---|
+| `h_end[k]` | il vettore dell'**ultimo token** della frase | riassume la frase letta fin lì |
+| `h_mean[k]` | la **media** dei vettori di tutti i token della frase | non dipende dal punto finale; tiene conto di tutta la frase |
+| `att[k]` | quanto la posizione di risposta "guarda" i token della frase (pesi di attenzione), negli 8 layer in cui il modello guarda tutto il testo | dice su quali frasi il modello si è basato per decidere |
+
+E dalla posizione di risposta:
+
+| Nome | Che cos'è |
+|---|---|
+| `q` | il vettore della posizione di risposta: ha visto tutto il prompt, quindi "sa" il verdetto e quali frasi servono |
+
+I vettori `h_end`, `h_mean` e `q` si leggono da **4 layer** diversi (non solo dall'ultimo) e la testa impara come pesarli.
+
+### 2.4 Che cosa fa la testa
+
+1. **Comprime** ogni vettore a 256 numeri (una moltiplicazione per una matrice).
+2. **Fa comunicare** le frasi: due layer di transformer *non causale*, cioè ogni frase vede tutte le altre e `q`, in avanti e all'indietro. Questo risolve l'evidenza sparsa: nel modello la frase 1 non può vedere la frase 40 (viene dopo), nella testa sì.
+3. **Dà i punteggi**: `s_k` per ogni frase k, e `s_0` calcolato da `q`, che fa da **soglia di quella riga**. Si mostrano le frasi con `s_k > s_0`. La soglia cambia da documento a documento: se servono 3 frasi può abbassarsi per farle passare tutte.
+
+### 2.5 Perché il preambolo
+
+Ogni token vede solo ciò che lo precede. Nel prompt del piano binario il claim viene **dopo** il documento, quindi quando il modello legge le frasi non sa ancora che cosa deve verificare: i vettori delle frasi non dipendono dal claim.
+
+Mettendo una riga `Claim under review: <claim>` **prima** del documento, ogni frase è letta sapendo che cosa si verifica. Il resto del prompt resta identico a quello del piano binario: il claim compare ancora dopo il documento, nel punto in cui il verdetto è stato addestrato a vederlo. Così il verdetto si può riusare (si verifica al passo [05](05_formato_prompt.md)).
+
+### 2.6 Che cosa si addestra
+
+Solo la testa. Il modello resta congelato, quindi **il verdetto non cambia** e non si rischia di peggiorarlo. La testa impara da documenti in cui si sa quali frasi sono l'evidenza (FEVER, HoVer e dati generati, passi [02](02_dati_fonti.md)–[03](03_dati_generati.md)), e da documenti con claim non supportati, in cui nessuna frase deve superare la soglia.
+
+Siccome il modello è congelato, i suoi vettori si calcolano **una volta sola** e si salvano su disco ([06](06_rendering_ed_estrazione.md)); poi ogni prova di training della testa dura minuti. Solo se questo non basta si addestra anche il modello (con una LoRA), con controlli sul verdetto ([09](09_training.md) §6).
+
+## 3. I modelli
+
+| Modello | Ruolo | Vettore (d) | Layer | Layer che guardano tutto il testo |
+|---|---|---:|---:|---|
+| **d1-3B** | si fanno qui tutte le prove (è il più veloce) | 2.048 | 30 | 8 (numeri 2, 5, 9, 13, 17, 21, 24, 27); gli altri 22 guardano solo 3 token vicini |
+| **JPT-9B** | conferma a 9B | 4.096 | 32 | 8 (3, 7, 11, …, 31); gli altri 24 portano avanti un riassunto del testo letto |
+| **Winnow-12B** (BF16) | candidato di massima qualità | 3.840 | 48 | 8 (5, 11, 17, …, 47); gli altri 40 guardano solo gli ultimi 1.024 token |
+
+Il verdetto di ogni modello è quello del piano binario (stessa domanda, stessa soglia).
+
+## 4. Glossario
+
+| Termine | Significato |
+|---|---|
+| forward | un passaggio del modello su tutto il prompt |
+| stato nascosto, vettore | i numeri che il modello calcola per un token in un layer |
+| posizione di risposta (`answer_pos`) | l'ultimo token del prompt, dove si legge il verdetto |
+| testa di evidenza | la piccola rete aggiunta che dà un punteggio alle frasi |
+| `s_k`, `s_0` | punteggio della frase k; soglia della riga |
+| gold | frasi di evidenza annotate (da persone o note per costruzione) |
+| insieme completo | tutte le frasi gold mostrate (per l'evidenza sparsa conta questo) |
+| sufficienza | le frasi mostrate, da sole come documento, fanno dire "supportato" al modello |
+| fase 1a / 1b / 2 | training della testa su vettori salvati / con il modello in memoria / insieme a una LoRA del modello |
+
+## 5. Sequenza di lavoro
 
 | # | Passo | File | Prodotto |
 |---|---|---|---|
-| 1 | Ambiente, modelli, hook | [01](01_ambiente_e_modelli.md) | modelli caricabili con hook verificati; test di identità del verdetto |
-| 2 | Righe con frasi ed evidenza dalle fonti | [02](02_dati_fonti.md) | `data/evidence/pairs/*.jsonl` |
-| 3 | Etichette generate, ablazione, righe sparse | [03](03_dati_generati.md) | righe `construct`, `ablation`, `sparse` |
-| 4 | Split e mix | [04](04_split_e_mix.md) | blocchi dev/test congelati; mix `ev_head` ed `ev_joint` |
-| 5 | Formato del prompt (preambolo) | [05](05_formato_prompt.md) | preambolo scelto; `question.json` esteso |
-| 6 | Rendering ed estrazione delle feature | [06](06_rendering_ed_estrazione.md) | feature salvate su disco |
-| 7 | Baseline | [07](07_baseline.md) | numeri di riferimento (E-LEX, E-ATT, E-ABL) |
-| 8 | Testa e loss | [08](08_testa_e_loss.md) | `evidence/head.py`, `evidence/losses.py` testati |
-| 9 | Training | [09](09_training.md) | teste addestrate (fasi 1a, 1b, 2) |
-| 10 | Valutazione | [10](10_valutazione.md) | `evidence/eval_evidence.py`, report |
+| 1 | Caricare i modelli e leggere vettori e attenzione | [01](01_ambiente_e_modelli.md) | `evidence/models.py` verificato |
+| 2 | Documenti divisi in frasi, con le frasi di evidenza | [02](02_dati_fonti.md) | righe da FEVER, HoVer, SciFact, WiCE |
+| 3 | Altri dati con evidenza nota | [03](03_dati_generati.md) | dati generati, etichette ricavate col modello, evidenza spostata lontano |
+| 4 | Split e mix di training | [04](04_split_e_mix.md) | set di valutazione congelati; mix di training |
+| 5 | Prompt con il preambolo | [05](05_formato_prompt.md) | preambolo scelto; verdetto verificato |
+| 6 | Calcolo e salvataggio dei vettori | [06](06_rendering_ed_estrazione.md) | vettori su disco |
+| 7 | Metodi semplici di confronto | [07](07_baseline.md) | numeri da battere |
+| 8 | Testa e loss | [08](08_testa_e_loss.md) | codice testato |
+| 9 | Training | [09](09_training.md) | teste addestrate |
+| 10 | Valutazione | [10](10_valutazione.md) | metriche e latenza |
 | 11 | Esperimenti | [11](11_esperimenti.md) | configurazione finale per i tre modelli |
-| 12 | Export e servizio | [12](12_export_e_servizio.md) | server, `decision.json`, rilascio |
-| — | Checklist | [13](13_checklist.md) | |
+| 12 | Server e rilascio | [12](12_export_e_servizio.md) | server che restituisce verdetto ed evidenza |
+| — | Checklist e problemi frequenti | [13](13_checklist.md) | |
 | — | Una strada da esplorare | [14](14_strada_da_esplorare.md) | |
 
-## Codice e dati
-
-Tutto il codice nuovo va in `evidence/` (pacchetto Python nella radice della repo), i dati in `data/evidence/`:
-
-```text
-evidence/
-  sentences.py          # segmentazione unica, usata ovunque
-  build_pairs.py        # FEVER, HoVer, SciFact, WiCE → righe con frasi ed evidenza    (02)
-  gen_marked.py         # C2D e CG2C con posizioni note                                 (03)
-  label_ablation.py     # etichette per ablazione con d1-3B                             (03)
-  augment_sparse.py     # righe sparse                                                  (03)
-  make_splits.py, make_mix.py                                                           (04)
-  render.py             # prompt con preambolo + intervalli di token per frase          (05, 06)
-  models.py             # caricamento dei tre modelli, hook di stati e attenzione       (01, 06)
-  extract.py            # feature su disco                                              (06)
-  baselines.py          # E-RAND, E-LEX, E-EMB, E-ATT, E-ABL                            (07)
-  head.py, losses.py                                                                    (08)
-  train_head.py         # fasi 1a e 1b                                                  (09)
-  train_joint.py        # fase 2                                                        (09)
-  eval_evidence.py, latency.py                                                          (10)
-  serve.py                                                                              (12)
-data/evidence/
-  pairs/  splits/  mixes/  features/<modello>/  runs/<modello>/<id>/
-```
-
-Sul server i job GPU si lanciano con `gpu-run --batch` (job `sbatch`, non dipende dalla sessione). La redirezione del log va dentro il comando, altrimenti l'output finisce in `slurm-<id>.out`:
+Codice in `evidence/` (pacchetto Python nella radice della repo), dati in `data/evidence/`. Sul server i job GPU si lanciano così (il log va rediretto dentro il comando):
 
 ```sh
 gpu-run --batch --name ev-extract-d1 -- bash -c \
   'python -m evidence.extract --model d1-3b --mix ev_head > logs/ev-extract-d1.out 2>&1'
 ```
 
-## Obiettivi
+## 6. Obiettivi
 
 | Obiettivo | Soglia |
 |---|---|
-| Verdetto | invariato rispetto al piano binario (BAcc e AUC su `dev_select` entro 0,3 punti) |
-| F1 per frase | ≥ E-LEX + 15 punti; indicativo ≥ 0,75 su FEVER e HoVer |
-| Recall dell'insieme completo (tutte le frasi gold mostrate) | ≥ 0,65 su HoVer |
-| Calo con la distanza fra frasi gold | < 5 punti di F1 fra "adiacenti" e "≥ 20 frasi" |
-| Sufficienza (le frasi mostrate, da sole, danno "supportato") | ≥ 85% |
-| Latenza | ≤ +3% del solo verdetto (d1-3B: ≤ +3% o ≤ 2 ms, il maggiore dei due) |
+| Verdetto | uguale a quello del piano binario (BAcc e AUC entro 0,3 punti) |
+| F1 sulle frasi | almeno 15 punti sopra il metodo lessicale (E-LEX, [07](07_baseline.md)); indicativo ≥ 0,75 su FEVER e HoVer |
+| Insieme completo su HoVer (evidenza su più pagine) | ≥ 0,65 |
+| Evidenza lontana | F1 con frasi a ≥ 20 frasi di distanza al massimo 5 punti sotto quello con frasi vicine |
+| Sufficienza | ≥ 85% |
+| Latenza | al massimo +3% rispetto al solo verdetto (d1-3B: +3% o +2 ms, il maggiore dei due) |

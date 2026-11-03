@@ -1,76 +1,70 @@
-# Checklist
+# Checklist e problemi frequenti
 
-## 1. Per passo
+## 1. Checklist per passo
 
-### Passo 1 — Ambiente e modelli
-- [ ] `flash-linear-attention` e `causal-conv1d` installati e importabili sulla macchina GPU (JPT).
-- [ ] `evidence/models.py` carica d1-3B, JPT-9B, Winnow-12B con `attn_implementation="sdpa_capture"`.
-- [ ] Self-test superato per i tre modelli: identità del verdetto, layer, riga di attenzione contro "eager", memoria a 8k e 16k token.
+**Passo 1 — Modelli**
+- [ ] Pacchetti per JPT installati (`flash-linear-attention`, `causal-conv1d`).
+- [ ] I tre modelli si caricano con la funzione di attenzione che registra i pesi.
+- [ ] Test superati: verdetto invariato, layer giusti, attenzione uguale alla modalità "eager", memoria.
 
-### Passo 2 — Righe dalle fonti
-- [ ] `sentences.py` scritto, con hash registrato.
-- [ ] Indice sqlite delle pagine FEVER; FEVER detokenizzato (train, paper_dev, paper_test).
-- [ ] `hotpot_qa` (distractor) scaricato; HoVer con distrattori e gold allineate; controllo su 100 pagine.
-- [ ] SciFact (validation) e WiCE (test) come righe di test.
-- [ ] C2D e D2C segmentati.
-- [ ] Gold mappate su una sola frase nostra ≥ 90% per fonte; 30 righe per fonte lette a mano.
+**Passo 2 — Dati dalle fonti**
+- [ ] `sentences.py` scritto e fissato.
+- [ ] FEVER: indice delle pagine, testo rimesso in forma normale, train/dev/test.
+- [ ] HoVer: `hotpot_qa` scaricato, documenti con pagine di disturbo, evidenza allineata (100 pagine controllate).
+- [ ] SciFact e WiCE pronti come test.
+- [ ] Almeno il 90% delle frasi di evidenza originali corrisponde a una nostra frase; 30 righe per fonte lette.
 
-### Passo 3 — Dati generati
-- [ ] C2D con posizioni, varianti negative e sotto-claim; CG2C con indice di frase per tripla.
-- [ ] Ablazione con d1: conferma del giudice ≥ 80%, accordo con JPT ≥ 0,7.
-- [ ] Righe sparse (estremi, distrattori, oltre 1.024 e 4.096 token) e negativi sparsi; nessun riferimento rotto su 30 lette.
+**Passo 3 — Altri dati**
+- [ ] C2D con posizioni (con negativi e claim parziali); CG2C con la frase di ogni fatto.
+- [ ] Etichette ricavate con d1: giudice d'accordo ≥ 80%, accordo con JPT ≥ 0,7.
+- [ ] Righe con evidenza spostata, senza riferimenti rotti.
 
-### Passo 4 — Split e mix
-- [ ] Blocchi `dev_evid_*`, `test_evid_*` congelati con `manifest.json`; distribuzioni delle distanze salvate.
-- [ ] `ev_head` con tutti i vincoli di [04](04_split_e_mix.md) §3 rispettati.
+**Passo 4 — Split e mix**
+- [ ] Set di valutazione congelati, con le distribuzioni delle distanze.
+- [ ] Mix `ev_head` che rispetta tutti i vincoli.
 
-### Passo 5 — Formato
-- [ ] B-SAND e B-FT-SAND misurati; preambolo scelto; verdetto per modello deciso; `question.json` aggiornato.
+**Passo 5 — Preambolo**
+- [ ] Testo scelto; per ogni modello deciso se il verdetto si riusa o si riaddestra; `question.json` aggiornato.
 
-### Passo 6 — Rendering ed estrazione
-- [ ] `escape_with_map` identico a `json.dumps` / `safe_data` su 1.000 documenti.
-- [ ] Test di posizione (200 su 200), escaping, identità del prompt, verdetto dalle feature.
-- [ ] Feature di d1 per `ev_head` e blocchi dev, con `meta.json`.
+**Passo 6 — Token e vettori**
+- [ ] Posizioni dei token giuste (200 su 200), anche con caratteri speciali.
+- [ ] Vettori di d1 salvati per il mix e per i set dev.
 
-### Passo 7 — Baseline
-- [ ] E-RAND, E-LEX, E-EMB, E-ATT (preambolo e nativo) su `dev_evid_select`; E-ABL su 300 righe per fonte e per modello.
+**Passo 7 — Metodi semplici**
+- [ ] E-RAND, E-LEX, E-EMB, E-ATT su `dev_evid_select`; E-ABL su 300 righe per fonte.
 
-### Passo 8 — Testa e loss
-- [ ] Test numerici delle loss superati; test della testa (forme, maschere, righe `none`, una sola frase).
+**Passo 8 — Testa e loss**
+- [ ] Test automatici superati.
 
-### Passo 9 — Training
-- [ ] Overfit di 64 righe; H0 riproducibile.
-- [ ] Regola di selezione (`τ_e` o δ) fissata sul dev e confermata.
-- [ ] (Fase 2) passo zero e verdetto entro i limiti a ogni checkpoint.
+**Passo 9 — Training**
+- [ ] La testa impara a memoria 64 righe; H0 riproducibile.
+- [ ] Regola per le frasi mostrate scelta e confermata.
 
-### Passo 10 — Valutazione
-- [ ] Metriche per fonte, fasce di distanza (frasi e token), sufficienza, negativi accesi.
-- [ ] Test comportamentali generati e congelati.
-- [ ] Latenza A / B / C.
+**Passo 10 — Valutazione**
+- [ ] Tutte le metriche, le prove di comportamento e la latenza A/B/C.
 
-### Passo 11 — Esperimenti
-- [ ] Scala H0 → H2c, ablazioni H3–H9, condizionati decisi; registro compilato.
-- [ ] J0 e W0; controlli C1–C4.
+**Passo 11 — Esperimenti**
+- [ ] Esperimenti principali e controlli su d1; configurazione ripetuta su JPT e Winnow; registro compilato.
 
-### Passo 12 — Export
-- [ ] Verifiche del server superate; `frozen.json` prima dei test; test eseguiti una volta; model card.
+**Passo 12 — Rilascio**
+- [ ] Controlli del server superati; `frozen.json` scritto prima dei test; test eseguiti una volta; model card.
 
 ## 2. Se succede…
 
-| Sintomo | Prima cosa da controllare | Poi |
+| Problema | Prima cosa da controllare | Poi |
 |---|---|---|
-| La testa non impara, F1 vicino a E-RAND | decodifica di `sent_tok_spans` ([06](06_rendering_ed_estrazione.md) §6): mappa degli offset, escaping, preambolo | `meta.json` delle feature contro la configurazione |
-| H0 ≈ E-LEX, fallisce sulle parafrasi e sulle frasi ponte | quota di righe HoVer, CG2C, C2D nel mix | più negativi lunghi con frasi simili al claim; H-MIL con μ_neg = 1 |
-| F1 buono su FEVER, basso su HoVer e oltre 10 frasi | H3a: l'aggregatore sta lavorando? | più righe sparse; H-PAIR; H3c con 4 layer |
-| Crollo oltre 1.024 token (Winnow) o 4.096 (d1, JPT) | quota di righe lontane nel mix | H2b (attenzione), layer del mix più profondi; fase 2 |
-| Mostra molte più frasi delle gold | `s_0` con i negativi: H-MIL attivo? | δ sul dev; ω più alto |
-| Si spegne sui positivi incerti | recall nella fascia soglia … soglia + 0,15 | μ_neg più basso |
-| Evidenzia spesso la prima frase o il titolo | distribuzione delle posizioni gold nel mix | H9 (senza embedding di posizione) |
-| Precisione bassa ma sufficienza alta | lettura a mano dei "falsi positivi" (spesso frasi valide non annotate) | ω FEVER più basso; metrica principale sulla sufficienza per quella fonte |
-| Aggiungere le etichette per ablazione peggiora (H8) | conferma del giudice e accordo d1–JPT | solo righe concordi, o `mil_pos` al posto dell'ablazione |
-| Grande differenza fra semi | feature di attenzione (pesi concentrati su una testa) | dropout delle feature più alto, o togliere l'attenzione |
-| Verdetto cambiato in fase 1 | non deve succedere: rendering diverso fra estrazione e piano binario | test di identità del prompt |
-| Verdetto peggiorato in fase 2 | λ, lr della LoRA | ancoraggio β·KL; `stop_grad` su `mil_neg`; tornare alla fase 1 |
-| Latenza oltre il budget | tempo di testa e pooling misurati a parte | meno layer nel mix, togliere la media o l'attenzione, aggregatore a 1 layer |
-| JPT molto lento in estrazione o nel server | kernel DeltaNet importati davvero (`fla`) | batch per lunghezza; estrazione su più job |
-| Spazio su disco insufficiente per le feature | numero di layer del mix | solo i layer con peso su d1; attenzione in fp16; shard per blocco |
+| La testa non impara (F1 vicino al caso) | le posizioni dei token di ogni frase (passo 6, test) | le impostazioni dei vettori salvati (`meta.json`) |
+| La testa fa come E-LEX: sbaglia frasi riscritte e frasi ponte | quante righe HoVer, CG2C, C2D ci sono nel mix | più negativi con frasi simili al claim; H-MIL con peso 1 |
+| Bene su FEVER, male su HoVer e con frasi lontane | H3a: il transformer fra le frasi serve? | più righe spostate; H-PAIR; 4 layer |
+| Male quando l'evidenza è lontana dal preambolo | quante righe lontane ci sono nel mix | attenzione come feature (H2b); fase 2 |
+| Mostra troppe frasi | la regola di selezione (δ) e i negativi nel training | peso più alto per le frasi non di evidenza |
+| Non mostra quasi nulla sui positivi incerti | peso dei negativi | abbassarlo |
+| Mostra spesso la prima frase o il titolo | dove stanno le frasi di evidenza nel mix | H9 (senza posizione) |
+| Precisione bassa ma sufficienza alta | leggere a mano le frasi "sbagliate": spesso sono evidenza valida non annotata | peso più basso per le frasi non segnate di quella fonte |
+| Le etichette ricavate col modello peggiorano (H8) | accordo del giudice e fra d1 e JPT | usare solo le righe concordi, o i positivi senza evidenza |
+| Risultati molto diversi fra semi | se la testa dipende da poche teste di attenzione | più dropout sull'attenzione, o toglierla |
+| Il verdetto cambia nelle fasi 1a/1b | non deve succedere: il prompt è diverso da quello del passo 5 | test di identità del prompt |
+| Il verdetto peggiora nella fase 2 | learning rate della LoRA, peso dell'evidenza | termine che tiene il verdetto vicino a quello di partenza; tornare alla fase 1 |
+| Troppo lento | tempo della testa misurato a parte | meno layer, togliere media o attenzione, 1 layer di transformer |
+| JPT molto lento | i pacchetti per DeltaNet sono davvero usati? | batch per lunghezza, più job |
+| Spazio su disco insufficiente | quanti layer si salvano | solo i layer utili su d1 |

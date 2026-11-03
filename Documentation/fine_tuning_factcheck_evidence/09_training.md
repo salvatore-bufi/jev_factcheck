@@ -1,139 +1,114 @@
 # Passo 9 — Training
 
-## Obiettivo
+## In breve
 
-Addestrare la testa sopra il verdetto senza cambiarlo. Tre fasi, nell'ordine:
+Si addestra la testa in tre modi, dal più semplice al più costoso. Si passa al successivo solo se il precedente non basta.
 
-| Fase | Backbone | Dati della testa | Script | Si usa per |
-|---|---|---|---|---|
-| **1a** | congelato, feature salvate | feature del passo [06](06_rendering_ed_estrazione.md) | `train_head.py --phase 1a` | quasi tutti gli esperimenti |
-| **1b** | congelato, forward a ogni passo | stati di tutti i token | `train_head.py --phase 1b` | pooling attentivo (H2d), fedeltà (H-FAITH) |
-| **2** | LoRA aggiornata con la testa | come 1a, dal forward con gradiente | `train_joint.py` | solo se 1a/1b non raggiungono gli obiettivi |
+| Fase | Il modello | Su cosa si addestra la testa | Quando |
+|---|---|---|---|
+| **1a** | congelato, non in memoria | sui vettori salvati al passo 6 | quasi sempre: ogni prova dura minuti |
+| **1b** | congelato, in memoria | sui vettori ricalcolati a ogni passo | solo per due esperimenti che hanno bisogno di dati non salvabili (H2d, H-FAITH) |
+| **2** | addestrato anche lui, con una LoRA | come 1a | solo se, alla fine degli esperimenti, gli obiettivi non sono raggiunti |
 
-Ogni corsa scrive in `data/evidence/runs/<modello>/<id>/`: `config.json` (tutti i flag della testa, loss, iperparametri, hash di feature e mix), `head.safetensors`, `log.jsonl` (loss e metriche dev per epoca), `dev_metrics.json`.
+Nelle fasi 1a e 1b il verdetto **non può cambiare**: il modello non viene toccato.
 
-## 1. Fase 1a — sulle feature salvate
+Ogni prova scrive in `data/evidence/runs/<modello>/<id>/`: `config.json` (tutte le opzioni), `head.safetensors` (pesi della testa), `log.jsonl` (andamento), `dev_metrics.json`.
 
-Nessun LLM in memoria: si addestra su CPU o su una GPU qualsiasi.
+## 1. Fase 1a
 
-| Iperparametro | Valore |
+| Impostazione | Valore |
 |---|---|
-| Ottimizzatore | AdamW, lr 1e-3, weight decay 0,01, warmup 5%, cosine |
-| Epoche | fino a 10, early stopping su `dev_evid_select` (pazienza 2) |
-| Batch | 64 righe; righe con > 200 frasi in batch propri |
-| Dropout | 0,1 nell'aggregatore; 0,1 sulle feature di attenzione (intera feature a zero per frase) |
-| Criterio di checkpoint | F1 per frase + recall dell'insieme completo (media) su `dev_evid_select` |
-| Loss | H0: `ref_loss`; poi quella scelta in H-LOSS ([11](11_esperimenti.md)) |
+| Ottimizzatore | AdamW, learning rate 1e-3 con riscaldamento iniziale (5%) e discesa a coseno, weight decay 0,01 |
+| Epoche | fino a 10; ci si ferma se per 2 epoche `dev_evid_select` non migliora |
+| Batch | 64 righe |
+| Dropout | 0,1; in più, per ogni frase, la feature di attenzione si azzera con probabilità 0,1 (per non dipendere da una sola testa) |
+| Checkpoint tenuto | quello con la media più alta di F1 e insieme completo su `dev_evid_select` |
 
 ```sh
 python -m evidence.train_head --phase 1a --model d1-3b --features data/evidence/features/d1-3b \
     --mix ev_head --config configs/h0.json --run h0
 ```
 
-Le configurazioni (`configs/*.json`) contengono i flag di `EvidenceHead`, la loss e i suoi parametri. Ogni esperimento è un file di configurazione.
+Ogni esperimento è un file in `configs/` con le opzioni della testa e della loss.
 
-## 2. Selezione delle frasi in uscita
+Prima della prima prova: la testa deve riuscire a imparare a memoria 64 righe (F1 ≈ 1 su quelle righe). Se non ci riesce, c'è un errore nei dati o nel codice.
 
-Si fissa dopo il training, su `dev_evid_select`, fra le righe supportate che il verdetto giudica supportate:
+## 2. Quali frasi si mostrano
 
-| Loss | Regola | Cosa si sceglie sul dev |
+Si decide dopo il training, su `dev_evid_select`, guardando solo le righe che il verdetto giudica supportate:
+
+| Loss usata | Regola | Cosa si sceglie |
 |---|---|---|
-| `ref_loss` | `σ(s_k) > τ_e` | `τ_e` che massimizza l'F1 per frase |
-| `zlpr_loss` | `s_k > s_0 + δ` | δ ∈ [−1, 1] a passi di 0,1; si tiene δ ≠ 0 solo se guadagna ≥ 1 punto di F1 |
+| loss di partenza | probabilità della frase > `τ_e` | il valore di `τ_e` che dà l'F1 migliore |
+| loss con soglia per riga | `s_k > s_0 + δ` | δ fra −1 e 1; si tiene δ diverso da 0 solo se guadagna almeno 1 punto di F1 |
 
-Sempre: almeno 1 frase (la migliore) se il verdetto è "supportato", al massimo 5. Conferma su `dev_evid_confirm`: F1 entro 1 punto da quello del dev di scelta.
+Sempre almeno 1 frase (la migliore) e al massimo 5. Si conferma su `dev_evid_confirm`: l'F1 non deve scendere di più di 1 punto.
 
-## 3. Controlli durante il training
+## 3. Che cosa guardare durante il training
 
-| Metrica | Su | Allarme |
-|---|---|---|
-| F1 per frase, insieme completo | `dev_evid_select` | non sale sopra E-LEX dopo 2 epoche → controllare le posizioni ([06](06_rendering_ed_estrazione.md) §6) prima di toccare la testa |
-| F1 per distanza fra frasi gold | righe sparse di `dev_evid_select` | crollo oltre 10 frasi |
-| F1 per distanza in token dal preambolo | `dev_evid_select` | crollo oltre 1.024 (Winnow) o oltre 4.096 |
-| Frasi mostrate per riga | `dev_evid_select` | media lontana dal numero gold (> +1 o < −0,5) |
-| Righe con almeno una frase sopra `s_0` | `dev_evid_neg` | sopra il 30% |
-| Recall dell'insieme completo con P(supportato) fra la soglia e soglia + 0,15 | `dev_evid_select` | molto sotto la media → μ_neg troppo alto |
-| Pesi del mix | testa | tutto su un layer → il mix si può ridurre a quel layer |
+| Cosa | Su | Segnale di problema | Cosa fare |
+|---|---|---|---|
+| F1 e insieme completo | `dev_evid_select` | non supera E-LEX dopo 2 epoche | controllare le posizioni dei token ([06](06_rendering_ed_estrazione.md) §6) prima di cambiare la testa |
+| F1 per distanza fra frasi di evidenza | righe spostate | crolla oltre 10 frasi | più righe spostate; esperimenti H3c, H-PAIR |
+| F1 per distanza dal preambolo | `dev_evid_select` | crolla oltre 1.024 token (Winnow) o oltre 4.096 | più righe lontane; attenzione come feature (H2b) |
+| Frasi mostrate per riga | `dev_evid_select` | molto più o molto meno delle frasi di evidenza | rivedere δ o il peso dei negativi |
+| Negativi con frasi sopra soglia | `dev_evid_neg` | oltre il 30% | peso dei negativi più alto |
+| Positivi incerti (P appena sopra la soglia del verdetto) | `dev_evid_select` | la testa non mostra quasi nulla | peso dei negativi più basso |
+| Pesi dei 4 layer | testa | tutto su un layer | basta quel layer (meno spazio, meno latenza) |
 
-## 4. Fase 1b — backbone congelato, forward a ogni passo
+## 4. Fase 1b
 
-Il modello del verdetto è in memoria in bf16, `requires_grad=False`. Per H2d il forward è in `torch.no_grad()` e la testa riceve gli stati di tutti i token del documento.
+Il modello è caricato in memoria e congelato; a ogni passo si rifà il forward per avere i vettori. Serve per:
+- **H2d**: invece della media fissa dei token di una frase, una media pesata in cui la testa decide quali token contano (per esempio il nome proprio dentro una frase lunga). Richiede i vettori di tutti i token, che non si salvano su disco.
+- **H-FAITH** (§5).
 
-| Parametro | d1-3B | JPT-9B, Winnow-12B |
+| Impostazione | d1-3B | JPT-9B, Winnow-12B |
 |---|---|---|
 | GPU | 24 GB | 48 GB |
-| Batch | 4–8 righe, accumulo fino a 32 | 1–2 righe, accumulo fino a 32 |
+| Righe per passo | 4–8 (accumulando fino a 32) | 1–2 (accumulando fino a 32) |
 | Lunghezza massima | 8.192 token | 8.192 token |
-| lr della testa | 5e-4 | 5e-4 |
-| Epoche | 2 | 1 |
-| Inizializzazione | la testa migliore della fase 1a | idem |
+| Learning rate | 5e-4 | 5e-4 |
+| Partenza | la testa migliore della fase 1a | idem |
 
-Pooling attentivo (H2d): per ogni layer del mix, proiezione `d → 256` di tutti i token del documento (`nn.Linear` condiviso fra i layer, dopo il mix); query `u = W_u [c ; q]`, dove `c` è la media degli stati dei token del preambolo; per ogni frase, softmax di `uᵀ v_i` sui suoi token; il vettore pesato si concatena a `h_end` al posto di `h_mean`.
+## 5. H-FAITH: nascondere frasi al modello
 
-```sh
-gpu-run --batch --name ev-h2d-d1 -- bash -c \
-  'python -m evidence.train_head --phase 1b --model d1-3b --mix ev_head --config configs/h2d.json \
-     --init data/evidence/runs/d1-3b/<migliore 1a>/head.safetensors --run h2d > logs/ev-h2d-d1.out 2>&1'
-```
+L'idea: dopo che la testa ha scelto le frasi, si verifica col modello stesso che quelle frasi reggano il verdetto, e si corregge la testa se non è così. Si fa solo in training.
 
-## 5. H-FAITH — fedeltà con maschera per frase (fase 1b)
+Per "nascondere" una frase senza riscrivere il documento si agisce sull'attenzione: si aggiunge un valore molto negativo ai pesi con cui gli altri token guardano i token di quella frase, così il modello la ignora. Invece di nascondere del tutto, si usa la probabilità `p_k` che la testa dà alla frase: le frasi poco probabili vengono quasi nascoste, quelle probabili restano visibili.
 
-Solo su d1-3B e Winnow-12B. Per ogni batch di righe positive giudicate supportate:
+Per ogni riga positiva giudicata supportata:
+1. forward normale → punteggio del verdetto `z_full`;
+2. forward in cui restano visibili solo le frasi scelte (valore aggiunto `log p_k`) → `z_suff`; deve restare vicino a `z_full`;
+3. forward in cui sono nascoste le frasi scelte (valore aggiunto `log(1 − p_k)`) → `z_comp`; deve scendere;
+4. la differenza diventa una loss ([08](08_testa_e_loss.md) §4) e corregge la testa. I pesi del modello non cambiano.
 
-1. **Forward 1** (`no_grad`): feature, `s`, `s_0` dalla testa; margine `z_full` delle risposte.
-2. `p_k = σ(s_k − s_0)`, con gradiente verso la testa.
-3. **Bias di attenzione**: matrice `bias[b, i, j]` = `log(p_{frase(j)} + 1e-4)` se il token chiave j appartiene a una frase del documento e il token query i **non** appartiene alla stessa frase; 0 altrimenti (preambolo, stato fuori dal documento, domanda e token della stessa frase restano visibili). Si costruisce come `[B, 1, T, T]` e si somma alla maschera causale in `CAPTURE["bias"]` ([01](01_ambiente_e_modelli.md) §5).
-   - d1-3B: il bias si applica negli 8 layer di attenzione;
-   - Winnow-12B: in tutti i 48 layer (anche quelli a finestra).
-4. **Forward 2** con il bias di sufficienza → `z_suff`; **forward 3** con `log(1 − p_k + 1e-4)` → `z_comp`. Gradiente attivo rispetto al bias (pesi congelati); gradient checkpointing sui layer.
-5. Loss = `zlpr_loss` + 0,2 · `L_faith` ([08](08_testa_e_loss.md) §4).
+Restano sempre visibili il preambolo, il claim e la domanda. Si fa solo su:
+- **d1-3B**: si agisce sugli 8 layer di attenzione; gli altri layer guardano solo 3 token vicini, quindi la frase è quasi del tutto nascosta;
+- **Winnow-12B**: tutti i suoi 48 layer sono di attenzione, quindi la frase è nascosta del tutto.
 
-Vincoli pratici:
-- `[B, 1, T, T]` in fp32 con T = 4.096 occupa 64 MB per riga: batch 1, documenti ≤ 4.096 token;
-- SDPA accetta una maschera additiva; FlashAttention no: per H-FAITH si carica il modello con `attn_implementation="sdpa_capture"` e la maschera esplicita;
-- test prima di partire: con `p_k = 1` per tutte le frasi, `z_suff = z_full` entro 1e-3; con `p_k = 0` per tutte, `z_suff` uguale al margine ottenuto togliendo davvero tutte le frasi dal documento entro 0,5 (su Winnow) — su d1 la differenza è dovuta alle convoluzioni ai confini e si registra.
+Su JPT-9B no: 24 dei suoi 32 layer non usano l'attenzione e la frase passerebbe comunque.
 
-## 6. Fase 2 — LoRA + testa
+Limiti pratici: documenti fino a 4.096 token, una riga per passo, circa 3–4 volte il costo della fase 1b. Prima di partire si controlla che, rendendo visibili tutte le frasi, `z_suff` sia uguale a `z_full`.
 
-Quando: dopo la scala di esperimenti su d1, F1 o insieme completo restano sotto gli obiettivi ([00](00_overview.md)).
+## 6. Fase 2: training anche del modello
 
-| Parametro | Valore |
+Solo se gli obiettivi non sono raggiunti dopo gli esperimenti della fase 1.
+
+| Impostazione | Valore |
 |---|---|
-| Inizializzazione | LoRA del verdetto del piano binario (o quella riaddestrata col preambolo) + testa migliore della fase 1 |
-| Moduli LoRA, rank | quelli del piano binario |
-| lr | LoRA 5e-6 – 1e-5; testa 2e-4 |
-| Loss | CE del verdetto sulle risposte (piano binario) + λ · loss di evidenza, λ = 0,3 |
-| Dati | `ev_joint`: tutte le righe hanno il termine del verdetto; il termine di evidenza secondo `evidence_term` |
+| Partenza | LoRA del verdetto del piano binario + testa migliore della fase 1 |
+| Learning rate | LoRA 5e-6 – 1e-5 (basso: il verdetto è già addestrato); testa 2e-4 |
+| Loss | loss del verdetto del piano binario + 0,3 × loss di evidenza |
+| Dati | `ev_joint` |
 | Epoche | 1 |
-| Ancoraggio (se la calibrazione si sposta) | + β · KL(p_verdetto_congelato ‖ p), β = 0,1, con le probabilità del verdetto congelato precalcolate sul mix |
-| GPU | d1: 24 GB; JPT e Winnow: 48 GB (JPT anche con QLoRA su 24 GB) |
 
-Nel forward: hook sui layer del mix (con gradiente), riga di attenzione degli 8 layer pieni, logit delle risposte solo in `answer_pos` con le righe del vocabolario delle risposte (come nel piano binario).
-
-Se il termine `mil_neg` sposta la calibrazione del verdetto, nella fase 2 si applica con `stop_grad` sulle feature (agisce solo sulla testa).
+Il verdetto ora può cambiare, quindi:
+- prima del primo passo si controlla che il verdetto sia identico a quello di partenza;
+- a ogni checkpoint si misura il verdetto su `dev_select`; un checkpoint si accetta solo se BAcc resta entro 0,3 punti ed ECE entro 0,01 da quello del piano binario;
+- se la calibrazione si sposta, si aggiunge un termine che tiene le probabilità vicine a quelle del verdetto di partenza.
 
 ```sh
 gpu-run --batch --name ev-joint-d1 -- bash -c \
   'python -m evidence.train_joint --model d1-3b --mix ev_joint --config configs/<migliore>.json \
      --lambda 0.3 --run joint > logs/ev-joint-d1.out 2>&1'
 ```
-
-## 7. Protezione del verdetto
-
-| Controllo | Quando | Regola |
-|---|---|---|
-| Verdetto identico | fasi 1a e 1b | P(supportato) dalle feature = P del verdetto scelto al passo [05](05_formato_prompt.md), differenza < 0,005 |
-| Passo zero | fase 2, prima del primo aggiornamento | verdetto identico al modello di partenza |
-| Verdetto a ogni checkpoint | fase 2 | BAcc, AUC, ECE, soglia ottimale su `dev_select`: un checkpoint si accetta solo entro 0,3 punti di BAcc e 0,01 di ECE |
-
-## 8. Test prima di ogni nuova configurazione
-
-| Test | Atteso |
-|---|---|
-| Overfit di 64 righe (fase 1a) | F1 ≈ 1 sul training in poche centinaia di passi |
-| H0 riprodotto con i flag spenti | stessi numeri di H0 (stesso seme) |
-| Righe `none` | contributo zero alla loss e al gradiente |
-
-## Prodotto
-
-- Testa migliore per ogni modello, con `config.json`, regola di selezione (`τ_e` o δ) e metriche dev.

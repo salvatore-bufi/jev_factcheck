@@ -1,58 +1,53 @@
-# Una strada da esplorare: distillare nella testa l'effetto controfattuale delle frasi
+# Una strada da esplorare: insegnare alla testa quanto ogni frase regge il verdetto
 
-## Il problema che risolve
+## Il problema
 
-Le etichette di evidenza buone (gold) vengono quasi tutte da Wikipedia (FEVER, HoVer). I documenti su cui il modello lavora in produzione sono altri: riassunti, risposte RAG, notizie, documenti tecnici. Su quei domini abbiamo solo il verdetto, non l'evidenza. Le etichette per ablazione ([03](03_dati_generati.md) §3) coprono questo buco solo in parte: danno un insieme sì/no per riga, non dicono quanto conta ogni frase, e costano una ricerca greedy.
+Le frasi di evidenza annotate vengono quasi tutte da Wikipedia (FEVER, HoVer). In produzione arrivano altri testi: riassunti, risposte di sistemi RAG, notizie, documenti tecnici. Su questi abbiamo il verdetto ma non sappiamo quali frasi sono l'evidenza, quindi la testa non impara a lavorarci.
 
-C'è un segnale che si può calcolare **su qualunque riga positiva, in qualunque dominio, senza annotazioni**: di quanto cambia il verdetto del modello togliendo ogni frase. Se la testa impara a prevederlo in un forward, impara cosa regge davvero il verdetto (la sufficienza, uno degli obiettivi) e lo impara sul dominio di produzione.
+Le etichette ricavate col modello (passo [03](03_dati_generati.md) §2) aiutano solo in parte: dicono quali frasi bastano, ma non quanto conta ciascuna, e costano una ricerca per riga.
 
 ## L'idea
 
-Per ogni riga positiva giudicata supportata, con il verdetto del modello e il prompt di produzione:
+Su **qualunque** riga supportata, di qualunque tipo di testo, si può misurare senza annotazioni quanto ogni frase regge il verdetto: si toglie la frase dal documento e si guarda di quanto scende il punteggio del verdetto.
 
 ```text
-z_full     = margine del verdetto sul documento intero
-z_{−k}     = margine col documento senza la frase k            (n forward)
-Δ_k        = z_full − z_{−k}                                    quanto la frase k regge il verdetto
+z            = punteggio del verdetto sul documento intero
+z senza k    = punteggio col documento senza la frase k        (un forward per frase)
+importanza_k = z − z senza k                                     quanto la frase k regge il verdetto
 ```
 
-Più l'insieme greedy dell'ablazione ([03](03_dati_generati.md) §3), che gestisce il caso in cui l'evidenza è ripetuta (togliendo una delle due copie Δ ≈ 0 per entrambe).
+La testa impara a prevedere questo ordinamento in un solo forward. Così impara, sui testi di produzione, quali frasi reggono davvero il verdetto, che è anche la metrica di sufficienza.
 
-La testa riceve, oltre alla loss principale, un termine che allinea l'ordinamento dei suoi punteggi a quello di Δ:
-
-```text
-L_cf = KL( softmax(Δ / T) ‖ softmax(s / T') )      sulle frasi della riga, T scelto in modo che le 3 frasi con Δ più alto abbiano ~80% della massa
-L    = zlpr_loss (con l'insieme greedy come gold, peso 0,5)  +  η · L_cf        η ∈ {0,3; 1}
-```
+Se la stessa informazione è ripetuta in due frasi, togliendone una il verdetto non cambia, e entrambe sembrano poco importanti. Per questo si tiene anche il gruppo trovato con l'ablazione del passo 3, che gestisce questo caso.
 
 ## Come farlo
 
-1. **Righe**: i positivi del mix del piano binario fuori da Wikipedia (C2D, D2C, SummEdits, AVeriTeC e le altre fonti di training del piano binario), più quelli di FEVER e HoVer per poter confrontare Δ con le gold. Esclusi tutti i dati di test e le fonti di AggreFact.
-2. **Calcolo di Δ con d1-3B** (`evidence/label_counterfactual.py`): per ogni riga, i prompt col documento senza la frase k condividono il prefisso fino alla frase k−1: si ordinano per k e si riusa la cache del prefisso. Si limita a documenti ≤ 80 frasi; oltre, si calcola Δ solo per le 40 frasi con punteggio più alto della testa della fase 1a più 10 a caso.
-3. **Controllo del segnale**, prima di addestrare: su `dev_evid_select`, AUPRC di Δ come punteggio di evidenza rispetto alle gold. Se Δ non supera E-LEX, il segnale è troppo rumoroso (o il modello usa scorciatoie): ci si ferma qui.
-4. **Accordo fra modelli**: Δ con JPT-9B su 300 righe; correlazione di rango per riga con Δ di d1. Se bassa, per JPT e Winnow si ricalcola Δ col modello stesso.
-5. **Training**: fase 1a ([09](09_training.md) §1) con un nuovo campo `delta` nel mix; esperimento H-CF con η = 0,3 e 1, sopra la configurazione vincente di [11](11_esperimenti.md).
-6. **Valutazione** in tre punti:
-   - `dev_evid_select` (gold Wikipedia): non deve scendere di più di 1 punto di F1;
-   - `test_evid_ood` (SciFact, WiCE): F1 e insieme completo;
-   - un piccolo blocco nuovo sul dominio di produzione: 200 righe positive di riassunti / RAG dal dev del piano binario, evidenza annotata dal giudice e controllata a mano; F1 e sufficienza.
+1. **Righe**: i positivi del training del piano binario non Wikipedia (C2D, D2C, SummEdits, AVeriTeC e le altre fonti), più FEVER e HoVer per confrontare con le annotazioni. Niente righe di test né fonti di AggreFact.
+2. **Calcolo con d1-3B** (`evidence/label_counterfactual.py`): per ogni riga, un forward per frase tolta. I prompt sono uguali fino alla frase tolta, quindi si riusa il calcolo della parte comune. Documenti fino a 80 frasi; oltre, solo per le 50 frasi più promettenti.
+3. **Prima verifica, senza training**: su `dev_evid_select`, si usa l'importanza come punteggio delle frasi e si confronta con le annotazioni. Se non fa meglio di E-LEX, il segnale è troppo rumoroso e ci si ferma.
+4. **Accordo fra modelli**: su 300 righe si rifà il calcolo con JPT-9B. Se gli ordinamenti sono molto diversi, per JPT e Winnow si ricalcola col modello stesso.
+5. **Training** (fase 1a, esperimento H-CF): alla loss della testa si aggiunge un termine che avvicina l'ordinamento dei punteggi della testa a quello dell'importanza (KL fra le due distribuzioni normalizzate sulle frasi), con peso 0,3 e 1. Il gruppo trovato con l'ablazione fa da evidenza, con peso 0,5.
+6. **Valutazione** su tre set:
+   - `dev_evid_select` (Wikipedia): non deve peggiorare di più di 1 punto di F1;
+   - `test_evid_ood` (SciFact, WiCE);
+   - un nuovo piccolo set di 200 righe di riassunti e risposte RAG dal dev del piano binario, con evidenza indicata dal giudice e controllata a mano.
 
-## Regola di adozione
+## Quando tenerlo
 
-Si adotta se, rispetto alla configurazione vincente senza H-CF:
-- sufficienza + ≥ 3 punti su tutti i blocchi;
-- F1 sul blocco del dominio di produzione + ≥ 2 punti;
+Rispetto alla configurazione migliore senza questa aggiunta:
+- sufficienza almeno +3 punti su tutti i set;
+- F1 almeno +2 punti sul set di riassunti e RAG;
 - F1 su `dev_evid_select` non più di 1 punto sotto.
 
 ## Rischi
 
 | Rischio | Cosa fare |
 |---|---|
-| Δ segue le scorciatoie del modello (es. frasi con parole del claim che il verdetto sopravvaluta) | il controllo del punto 3; tenere sempre la loss principale con le gold dove esistono |
-| Frasi ridondanti: Δ ≈ 0 per tutte le copie | l'insieme greedy come gold (peso 0,5) copre questo caso |
-| Costo del calcolo (n forward per riga) | d1-3B, cache del prefisso, tetto di 80 frasi; un'estrazione per tutti e tre i modelli se l'accordo del punto 4 è alto |
-| Δ calcolato con un verdetto che poi cambia (fase 2) | H-CF solo con il backbone congelato, oppure ricalcolare Δ dopo la fase 2 |
+| L'importanza segue le scorciatoie del modello (per esempio frasi con parole del claim che il modello sopravvaluta) | la verifica del punto 3; tenere sempre le annotazioni dove ci sono |
+| Informazione ripetuta: importanza bassa per tutte le copie | il gruppo dell'ablazione come evidenza |
+| Costo: un forward per frase | d1-3B, riuso della parte comune, limite di 80 frasi |
+| Se il modello viene riaddestrato (fase 2), l'importanza calcolata prima non vale più | usarla solo col modello congelato, o ricalcolarla |
 
 ## Perché vale la pena
 
-È l'unico modo, fra quelli del piano, di avere etichette di evidenza **sul dominio di produzione** senza annotarle, ed è allineato con la metrica che conta per l'utente (le frasi mostrate bastano a reggere il verdetto). Il costo è tutto offline e riusa codice già previsto (ablazione, cache del prefisso, fase 1a); in produzione non cambia nulla.
+È l'unico modo, fra quelli del piano, di avere un segnale di evidenza sui testi di produzione senza annotarli a mano, ed è legato direttamente a ciò che interessa all'utente: che le frasi mostrate bastino a reggere il verdetto. Il costo è tutto prima del rilascio e riusa codice già previsto; in produzione non cambia nulla.

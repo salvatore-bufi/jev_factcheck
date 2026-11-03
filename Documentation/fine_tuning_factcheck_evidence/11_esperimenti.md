@@ -1,98 +1,87 @@
 # Passo 11 — Esperimenti
 
-## Obiettivo
+## In breve
 
-Arrivare alla configurazione finale della testa per d1-3B, JPT-9B e Winnow-12B. Gli esperimenti si fanno su **d1-3B in fase 1a** (feature salvate: ogni prova è un training della sola testa); JPT e Winnow ripetono la configurazione vincente.
+Si parte da una testa semplice (H0) e si aggiunge **un pezzo alla volta**, tenendolo solo se migliora. Tutto si fa su **d1-3B** con i vettori salvati (fase 1a): ogni prova è un training della sola testa. Alla fine JPT-9B e Winnow-12B ripetono la configurazione migliore.
 
 ## Regole
 
-1. **Una variazione per esperimento**, registrata con il suo `configs/<id>.json`.
-2. Gli esperimenti della scala principale si fanno in ordine; una variazione adottata entra nel riferimento dei successivi.
-3. Metriche di decisione, su `dev_evid_select`: F1 per frase, recall dell'insieme completo, F1 ≥ 10 frasi, F1 > 1.024 token; più i negativi accesi su `dev_evid_neg`.
-4. **Si adotta** una variazione se migliora l'F1 di ≥ 1 punto o l'insieme completo di ≥ 2 punti, e non peggiora nessuna delle altre metriche di più di 1 punto. Se aggiunge feature lette dal modello (attenzione, media, layer), deve anche stare nel budget di latenza.
-5. A parità, si tiene la variante più semplice (meno layer, meno feature, meno spazio su disco).
-6. Ogni esperimento con 1 seme; le variazioni adottate per un margine < 2 punti si ripetono con 2 semi in più prima di adottarle.
+1. Una modifica per prova, con il suo file `configs/<id>.json`.
+2. Si decide su `dev_evid_select` guardando quattro numeri: F1, insieme completo, F1 con evidenza a 10 o più frasi di distanza, F1 con evidenza oltre 1.024 token. In più, i negativi accesi su `dev_evid_neg`.
+3. **Una modifica si tiene** se aumenta l'F1 di almeno 1 punto o l'insieme completo di almeno 2, senza far scendere gli altri numeri di più di 1 punto. Se aggiunge dati da leggere dal modello, deve anche restare nel limite di latenza.
+4. A parità di risultato si tiene la versione più semplice.
+5. Se il guadagno è sotto i 2 punti, si ripete con 2 semi in più prima di tenerlo.
 
-## Fase 0 — Prerequisiti
+## Prima degli esperimenti
 
-| ID | Cosa | Passo |
-|---|---|---|
-| B-SAND, B-FT-SAND | scelta del preambolo e del verdetto per modello | [05](05_formato_prompt.md) |
-| E-RAND, E-LEX, E-EMB, E-ATT, E-ABL | baseline | [07](07_baseline.md) |
-
-## Fase H — d1-3B
-
-### H0 — riferimento
-
-Ultimo layer del mix, solo stato di fine frase, niente attenzione, embedding di posizione, aggregatore 2 layer, `ref_loss` (γ = 0,5), soglia `τ_e`, solo righe `supervised` di `ev_head`.
-
-Prima domanda: H0 batte E-LEX ed E-ATT? Se no, prima di tutto si ricontrollano posizioni e feature ([06](06_rendering_ed_estrazione.md) §6).
-
-### Scala principale (in quest'ordine)
-
-| ID | Variazione rispetto al riferimento corrente | Cosa guardare |
-|---|---|---|
-| H-LOSS | `zlpr_loss` con soglia `s_0` invece di `ref_loss` e `τ_e` | insieme completo, errore sul numero di frasi |
-| H-LOSS-b | variante: KL fra softmax(s) e l'uniforme sulle gold | solo se H-LOSS non è adottata |
-| H-MIL | righe `mil_neg` nel mix, μ_neg = 0,3 e 1 | negativi accesi; recall sui positivi incerti (fascia soglia … soglia + 0,15) |
-| H2a | mix di layer: 4 layer contro l'ultimo; poi 2 layer (quelli con più peso) | F1 globale; pesi del mix |
-| H2b | feature di attenzione degli 8 layer pieni | F1 ≥ 10 frasi, F1 > 1.024 token |
-| H2c | media dei token della frase accanto allo stato di fine frase | F1 sulle frasi lunghe (> 25 parole) |
-
-### Ablazioni della configurazione vincente
-
-| ID | Variazione | Cosa dice |
-|---|---|---|
-| H3a | testa lineare per frase, senza aggregatore | quanto serve l'aggregatore: atteso un calo forte su HoVer e sulle righe sparse |
-| H3b | solo `x_0ᵀ W x_k` (pointer) | se una testa più semplice basta |
-| H3c | aggregatore a 1 e a 4 layer | capacità necessaria |
-| H4 | feature estratte col prompt nativo (senza preambolo) | quanto vale il preambolo per l'evidenza; se vale poco, il preambolo si toglie |
-| H5 | mix senza righe sparse | atteso un calo oltre 10 frasi e oltre 1.024 token |
-| H7 | ω FEVER = 1 invece di 0,3; insieme FEVER "almeno uno" invece dell'unione | gestione delle annotazioni incomplete |
-| H8 | etichette: solo gold / + construct / + ablation / gold + `mil_pos` al posto di ablation | quanto valgono le etichette generate; se il MIL sui positivi sostituisce l'ablazione |
-| H9 | senza embedding di posizione | bias verso inizio o fine |
-
-Lettura di H3a: se la testa lineare è vicina su FEVER (una frase) ma molto sotto su HoVer e sulle sparse, l'aggregatore fa il suo lavoro; se è vicina anche sulle sparse, si può semplificare.
-
-Lettura di H4: se il sandwich vince solo sotto i 1.024 token, il claim del preambolo non arriva alle frasi lontane; la fascia > 4.096 lo mostra.
-
-### Esperimenti condizionati
-
-Si fanno solo se si presenta la condizione.
-
-| ID | Condizione | Variazione | Fase |
-|---|---|---|---|
-| H2d | H2c adottata, con guadagno sulle frasi lunghe | pooling attentivo guidato da `[c ; q]` ([09](09_training.md) §4) | 1b |
-| H-PAIR | insieme completo HoVer < 0,65, o calo fra adiacenti e ≥ 20 frasi > 5 punti | `use_pair=True` + `pair_loss` (peso 0,2); variante con `att_pair` sommata a `S` come prior | 1a |
-| H-FAITH | sufficienza < 85% | `L_faith` ([09](09_training.md) §5); si adotta solo se la sufficienza sale **e** l'F1 non scende di più di 1 punto | 1b |
-| H6 | obiettivi non raggiunti dopo tutto il resto | fase 2, λ = 0,1 / 0,3 / 1 | 2 |
-
-## Fase W — JPT-9B e Winnow-12B
-
-| ID | Cosa |
+| Che cosa | Dove |
 |---|---|
-| J0 / W0 | estrazione delle feature (con i layer che hanno avuto peso su d1, riportati alla stessa profondità relativa) e configurazione vincente di d1 |
-| J0-mix / W0-mix | controllo rapido di H2a: i layer del mix possono essere diversi |
-| W-FAITH | H-FAITH su Winnow (maschera esatta), solo se su d1 è stata adottata o è risultata vicina all'adozione |
-| J6 / W6 | fase 2, solo se su d1 la fase 2 ha dato un guadagno chiaro e il modello è sotto gli obiettivi |
-| L1 | latenza A / B / C ([10](10_valutazione.md) §5) per i tre modelli |
+| Testo del preambolo e verdetto da usare per ogni modello | [05](05_formato_prompt.md) |
+| Metodi semplici di confronto (E-LEX, E-ATT, E-ABL, …) | [07](07_baseline.md) |
+
+## La testa di partenza: H0
+
+Solo l'ultimo layer, solo il vettore dell'ultimo token di ogni frase, niente attenzione, 2 layer di transformer fra le frasi, loss di partenza con soglia fissa, solo righe positive.
+
+Prima domanda: H0 batte E-LEX ed E-ATT? Se no, si cerca un errore nelle posizioni o nei vettori ([06](06_rendering_ed_estrazione.md) §6) prima di provare altro.
+
+## Gli esperimenti principali (in quest'ordine)
+
+| Nome | Che cosa si cambia | Che cosa si guarda |
+|---|---|---|
+| **H-LOSS** | loss con soglia per riga invece di soglia fissa ([08](08_testa_e_loss.md) §3) | insieme completo; numero di frasi mostrate |
+| **H-MIL** | si aggiungono i claim non supportati al training (nessuna frase sopra soglia), con peso 0,3 e 1 | negativi accesi; che non si perdano frasi nei positivi incerti |
+| **H2a** | vettori da 4 layer invece che dal solo ultimo; poi solo i 2 più usati | F1; quali layer pesano |
+| **H2b** | si aggiunge l'attenzione ricevuta da ogni frase | F1 con evidenza lontana |
+| **H2c** | si aggiunge la media dei token della frase | F1 sulle frasi lunghe (oltre 25 parole) |
+
+## Controlli sulla configurazione migliore
+
+Ognuno toglie o cambia un pezzo, per capire quanto conta:
+
+| Nome | Che cosa si cambia | Che cosa dice |
+|---|---|---|
+| H3a | niente transformer fra le frasi: ogni frase ha un punteggio da sola | se le frasi devono comunicare. Atteso: crollo su HoVer e sull'evidenza lontana. Se non crolla, si può semplificare |
+| H3b | punteggio = somiglianza fra `x_0` e la frase | se basta una testa più semplice |
+| H3c | 1 o 4 layer di transformer invece di 2 | quanta capacità serve |
+| H4 | vettori calcolati senza preambolo | quanto aiuta il preambolo. Se poco, si toglie |
+| H5 | niente righe con evidenza spostata nel training | se servono. Atteso: calo sull'evidenza lontana |
+| H7 | peso 1 invece di 0,3 per le frasi non segnate di FEVER; per FEVER basta un gruppo di evidenza invece di tutti | come trattare annotazioni incomplete |
+| H8 | solo evidenza annotata / + dati generati / + etichette ricavate col modello / + positivi senza evidenza (al posto delle etichette ricavate) | quanto valgono i dati del passo 3 |
+| H9 | niente informazione sulla posizione della frase | se la testa preferisce troppo l'inizio o la fine |
+
+## Esperimenti da fare solo se serve
+
+| Nome | Quando | Che cosa |
+|---|---|---|
+| H2d | se H2c ha aiutato sulle frasi lunghe | media pesata dei token decisa dalla testa (fase 1b, [09](09_training.md) §4) |
+| H-PAIR | se l'insieme completo su HoVer resta sotto 0,65, o l'F1 cala di oltre 5 punti con frasi lontane | punteggio per coppie di frasi ([08](08_testa_e_loss.md) §4) |
+| H-FAITH | se la sufficienza resta sotto l'85% | far verificare al modello che le frasi scelte reggano il verdetto ([09](09_training.md) §5); si tiene solo se la sufficienza sale e l'F1 non scende di più di 1 punto |
+| H6 | se gli obiettivi non sono raggiunti dopo tutto il resto | fase 2, con peso dell'evidenza 0,1 / 0,3 / 1 |
+
+## JPT-9B e Winnow-12B
+
+| Nome | Che cosa |
+|---|---|
+| J0, W0 | si salvano i vettori e si addestra la configurazione migliore di d1; controllo rapido di quali layer usare (possono essere diversi) |
+| W-FAITH | H-FAITH su Winnow, solo se su d1 è stato utile |
+| J6, W6 | fase 2, solo se su d1 ha dato un guadagno chiaro e il modello è sotto gli obiettivi |
+| L1 | latenza per i tre modelli ([10](10_valutazione.md) §5) |
 
 ## Controlli finali
 
-| ID | Cosa |
+| Nome | Che cosa |
 |---|---|
-| C1 | 3 semi della testa finale per modello: media e deviazione standard su `dev_evid_select` |
-| C2 | sufficienza e necessità su tutti i blocchi di test |
-| C3 | testa contro E-ABL: distanza fra un forward e molti forward |
-| C4 | confronto fra i modelli sull'intersezione delle righe giudicate supportate |
+| C1 | 3 semi della testa finale per modello: media e variabilità |
+| C2 | sufficienza e necessità su tutti i set di test |
+| C3 | testa contro E-ABL: quanto ci si avvicina con un forward a un metodo con centinaia di forward |
+| C4 | confronto fra i tre modelli sulle righe giudicate supportate da tutti |
 
 ## Registro
 
-`data/evidence/runs/registry.md`, una riga per corsa:
+`data/evidence/runs/registry.md`, una riga per prova (scritta in automatico da `train_head.py`, tranne la decisione):
 
-| ID | Modello | Fase | Variazione | F1 | Insieme completo | F1 ≥ 10 frasi | F1 > 1.024 tok | Neg. accesi | Sufficienza | Δ verdetto | Δ latenza | Decisione |
+| Nome | Modello | Fase | Modifica | F1 | Insieme completo | F1 ≥ 10 frasi | F1 > 1.024 token | Negativi accesi | Sufficienza | Δ verdetto | Δ latenza | Decisione |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| E-LEX | — | — | — | | | | | | | — | — | baseline |
+| E-LEX | — | — | — | | | | | | | — | — | riferimento |
 | H0 | d1-3B | 1a | — | | | | | | | 0 | | |
-
-`evidence/train_head.py` aggiunge la riga automaticamente a fine corsa (tranne la decisione).

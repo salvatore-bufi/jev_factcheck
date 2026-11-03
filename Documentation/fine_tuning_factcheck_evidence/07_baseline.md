@@ -1,62 +1,62 @@
-# Passo 7 — Baseline dell'evidenza
+# Passo 7 — Metodi semplici da battere
 
-## Obiettivo
+## In breve
 
-Avere, per ciascun modello, i numeri che la testa deve battere, su `dev_evid_select` e con le metriche di [10](10_valutazione.md). Script: `evidence/baselines.py`.
+Prima di addestrare la testa si misura quanto ottengono metodi semplici, sullo stesso set (`dev_evid_select`) e con le stesse metriche ([10](10_valutazione.md)). Servono a due cose: sapere se la testa vale la pena (deve batterli con margine) e capire quanto è difficile il problema sui nostri dati (soprattutto con l'evidenza lontana).
 
-Le baseline producono, per ogni riga, un punteggio per frase; la selezione delle frasi mostrate segue la stessa regola per tutte (§2), così il confronto è sulla qualità del punteggio.
+Script: `evidence/baselines.py`.
 
-## 1. Le baseline
+## 1. I metodi
 
-| ID | Punteggio della frase k | Serve il modello? |
+| Nome | Come dà un punteggio a ogni frase | Costo |
 |---|---|---|
-| E-RAND | casuale (seme fisso) | no |
-| E-LEX | BM25 della frase rispetto al claim (`rank_bm25`, token minuscoli senza stopword, sui soli documenti della riga) | no |
-| E-EMB | coseno fra gli embedding di claim e frase, con un modello di embedding piccolo (es. `BAAI/bge-small-en-v1.5`, da scaricare) | un encoder |
-| E-ATT | massa di attenzione di `answer_pos` sulla frase, dalla feature `att` già estratta ([06](06_rendering_ed_estrazione.md) §4), combinata come sotto | no: legge le feature |
-| E-ABL | ablazione greedy con il verdetto del modello (algoritmo del passo [03](03_dati_generati.md) §3); qui si usa direttamente l'insieme scelto | molti forward |
+| **E-RAND** | a caso | nullo; è il pavimento |
+| **E-LEX** | quante parole ha in comune col claim (BM25) | nullo; è il riferimento principale da battere |
+| **E-EMB** | somiglianza di significato fra frase e claim, con un piccolo modello di embedding (es. `BAAI/bge-small-en-v1.5`) | un modello in più |
+| **E-ATT** | quanta attenzione il decision model dà alla frase dalla posizione di risposta (la feature `att` già salvata al passo 6) | nullo: legge i dati salvati |
+| **E-ABL** | gruppo di frasi trovato con l'ablazione del passo [03](03_dati_generati.md) §2, col modello stesso | molti forward per riga: solo come riferimento |
 
-### E-ATT nel dettaglio
+E-LEX ed E-EMB non possono trovare una frase ponte che non ha parole in comune col claim (come la frase 1 dell'esempio Nancy Howell): sull'evidenza lontana ci si aspetta che crollino.
 
-1. Dividere `dev_evid_select` in due metà per `doc_id` (A e B).
-2. Su A, per ogni layer pieno e testa (8 × H combinazioni), punteggio = `att[k, l, h] / n_tok[k]^β` con β ∈ {0; 0,5; 1}; misurare l'AUPRC per frase.
-3. Prendere le 8 combinazioni (l, h, β) migliori su A; punteggio finale = media dei loro ranghi normalizzati.
-4. Misurare su B. Riportare anche la migliore combinazione singola.
+E-ABL è il riferimento "di qualità": dice quanto ci si avvicina, con un solo forward, a un metodo che ne usa centinaia.
 
-Si misura nel formato con preambolo e, per confronto, nel formato nativo (serve un'estrazione col prompt nativo solo per `dev_evid_select`).
+## 2. Come si calcola E-ATT
 
-### E-ABL nel dettaglio
+L'attenzione è misurata in 8 layer e 16–32 teste: non tutte le combinazioni sono utili.
+1. Si divide `dev_evid_select` in due metà, A e B.
+2. Su A si prova ogni combinazione di layer e testa, con il punteggio diviso o no per la lunghezza della frase, e si tengono le 8 migliori.
+3. Il punteggio finale è la media delle 8; si misura su B.
 
-300 righe per fonte (FEVER, HoVer, C2D con posizioni) di `dev_evid_select`, per ciascun modello. È il riferimento "fedele per costruzione": dice quanto si avvicina la testa in un forward a un metodo con molti forward.
+Si calcola sia con il preambolo sia senza (per il secondo serve un'estrazione col prompt senza preambolo, solo su `dev_evid_select`): dice se il preambolo aiuta il modello a guardare le frasi giuste.
+
+## 3. Quali frasi si mostrano
+
+I metodi semplici non hanno una soglia propria. Per ciascuno si prova:
+- le **k migliori**, con k = numero medio di frasi di evidenza;
+- una **soglia** sul punteggio, scelta su A (da 1 a 5 frasi).
+
+Si riporta la migliore delle due, misurata su B.
+
+## 4. Comandi
 
 ```sh
-gpu-run --batch --name ev-eabl-jpt -- bash -c \
-  'python -m evidence.baselines --method abl --model jpt-9b --block dev_evid_select --per-source 300 \
-     > logs/ev-eabl-jpt.out 2>&1'
+python -m evidence.baselines --method rand lex emb --block dev_evid_select
+python -m evidence.baselines --method att --model d1-3b --block dev_evid_select
+gpu-run --batch --name ev-eabl-d1 -- bash -c \
+  'python -m evidence.baselines --method abl --model d1-3b --block dev_evid_select --per-source 300 > logs/ev-eabl-d1.out 2>&1'
 ```
 
-## 2. Regola di selezione per le baseline
+E-ABL: 300 righe per fonte e per modello.
 
-Le baseline non hanno una soglia propria. Per ciascuna:
-- **top-k**: le k frasi con punteggio più alto, k = numero medio di frasi gold sul blocco A (arrotondato);
-- **soglia**: soglia sul punteggio scelta su A per massimizzare l'F1 per frase, con almeno 1 e al massimo 5 frasi.
+## 5. Tabella da compilare (una per modello)
 
-Si riporta la migliore delle due, misurata su B. E-ABL ha già il suo insieme.
+| Metodo | F1 FEVER | F1 HoVer | Insieme completo HoVer | F1 evidenza a ≥ 10 frasi | F1 evidenza oltre 1.024 token |
+|---|---:|---:|---:|---:|---:|
+| E-RAND | | | | | |
+| E-LEX | | | | | |
+| E-EMB | | | | | |
+| E-ATT con preambolo | | | | | |
+| E-ATT senza preambolo | | | | | |
+| E-ABL | | | | | |
 
-## 3. Tabella da compilare (una per modello)
-
-| Metodo | F1 frase FEVER | F1 frase HoVer | Insieme completo HoVer | AUPRC | F1 ≥ 10 frasi | F1 > 1.024 token |
-|---|---:|---:|---:|---:|---:|---:|
-| E-RAND | | | | | | |
-| E-LEX | | | | | | |
-| E-EMB | | | | | | |
-| E-ATT (preambolo) | | | | | | |
-| E-ATT (nativo) | | | | | | |
-| E-ABL (300 per fonte) | | | | | | |
-
-E-RAND, E-LEX ed E-EMB non dipendono dal modello: si calcolano una volta. Righe sparse (`≥ 10 frasi`) e lontane (`> 1.024 token`) sono i casi in cui E-LEX ed E-EMB dovrebbero cadere: è la misura di quanto il problema sia reale sui nostri dati.
-
-## Prodotto
-
-- `data/evidence/runs/baselines.json` con la tabella per i tre modelli.
-- Il valore di E-LEX su `dev_evid_select` è la soglia da superare di 15 punti di F1 ([00](00_overview.md)).
+Risultati in `data/evidence/runs/baselines.json`.
