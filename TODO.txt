@@ -1,29 +1,16 @@
-~/.cache/huggingface/hub/datasets--quotientai--HalluMix   
-
- LLM-Oasis
+Documentation/paper_idea/15_focused_10_tdm_experiment_guide.md
 
 
+LAST COMMAND SENT:
+# RUN-14: AF-4k, QF1, documents cut at 32,000 characters, the 10 TDMs
+nohup gpu-run -- python benchmark.py --model elephant-1 --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/elephant-1_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-9b-instant --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/startlux-9b-instant_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model d3-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/d3-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model onejev-9b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/onejev-9b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model nimble-9b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/nimble-9b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model clef-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/clef-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model knowline-4b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/knowline-4b_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model startlux-4b-instant --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/startlux-4b-instant_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model pplx-decider-flash --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/pplx-decider-flash_test4k_trunc32k.out 2>&1 &
+nohup gpu-run -- python benchmark.py --model jeffan-4b --gpu 0 --split test4k --max-doc-chars 32000 --tag trunc32k --no-profile > logs/jeffan-4b_test4k_trunc32k.out 2>&1 &
 
-todo
-d3 flash
-starlux
-
-
-
-vllm-sr/d3-turbo
-startlux-models/StartLux-Decision-v1.1-27B-AutoThink
-startlux-models/StartLux-Decision-v1.1-27B-Instant
-
-
-startlux-models/StartLux-Decision-v1.1-9B-AutoThink
-StartLux-Decision-v1.1-9B-Instant   latency 39 ms
-vllm-sr/d3-flash                   latency 54 ms
-PelaAI/KnowLine-4B-Gen5.5         latency 35 ms
-baselabs/elephant-1               latency 114 ms
-
-
-nohup python -u benchmark.py --model d3-flash --gpu 3 > d3-flash_test.out 2>&1 &
-nohup python -u benchmark.py --model starlux-9b-instant --gpu 3 > starlux-instant_test.out 2>&1 &
-
-nohup python -u benchmark.py --model elephant-1  --gpu 2 > elephant-1_test.out 2>&1 &
-nohup python -u benchmark.py --model knowline-4b  --gpu 2 > knowline-4b_test.out 2>&1 &
