@@ -8,13 +8,15 @@ time after "Read the same input again before answering:". Each question is one p
 the label tokens. The readout temperature (T = 1.50) is folded into the weights, so the front end uses temperature 1.
 
 Backends, as in the repo's knowline_engine.py:
-  hf      transformers in process, bf16 (no server; the authors report it matches their runs on 81 of 82 answers);
+  hf      transformers in process, bf16 (no server; the authors report it matches their runs on 81 of 82 answers),
+          scored by hf_score (the last position's logits only);
   sglang  an SGLang server with the flags of serve_knowline.sh (FP8 at load), started by the adapter: the setting of
           the authors' Decision Index runs. Needs sglang==0.5.21 in this environment (or sglang_python).
 
 The adapter runs the steps of knowline_server.KnowLine.run with its own functions (render_request, warm, score) and keeps
 the label log-probabilities, which run() turns into probabilities and drops, so answers can be re-tempered afterwards.
 """
+from functools import partial
 import os
 from pathlib import Path
 import signal
@@ -38,6 +40,18 @@ def snapshot(revision):
         raise SystemExit(f"{REPO} (revision {revision}) is not complete in the Hugging Face cache {hub_cache()}; "
                          f"run `hf download {REPO}`")
     return path
+
+
+def hf_score(hf, text, media, ids):
+    """knowline_server.HF.score with logits_to_keep=1: the logits of the last position only. The front end's version
+    computes them for every position and keeps the last (~0.5 MB a token at a 248k vocabulary: ~9 GB at 18k tokens)."""
+    if media:
+        raise ValueError("--backend hf here takes text only; use --backend sglang for images")
+    torch = hf.torch
+    inputs = torch.tensor([hf.tok.encode(text, add_special_tokens=False)], device=hf.model.device)
+    with hf.lock, torch.no_grad():
+        logits = hf.model(input_ids=inputs, logits_to_keep=1).logits[0, -1].float().log_softmax(-1)
+    return [float(logits[i]) for i in ids], int(inputs.shape[1])
 
 
 def free_port():
@@ -78,6 +92,7 @@ class Adapter(BaseAdapter):
             if not torch.cuda.is_available():
                 raise SystemExit(f"{self.NAME} needs a GPU")
             backend = ks.HF(str(self.folder), device="cuda:0")
+            backend.score = partial(hf_score, backend)
         elif self.opt["backend"] == "sglang":
             backend = ks.SGLang(self.start_sglang())
         else:
