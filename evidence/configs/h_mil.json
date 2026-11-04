@@ -1,0 +1,40 @@
+{
+  "id": "h_mil",
+  "description": "H-MIL: H-LOSS + negatives (mil_neg, weight 0.3)",
+  "layers_read": [
+    31
+  ],
+  "parts": [
+    "end"
+  ],
+  "head": {
+    "d": 256,
+    "layers": 2,
+    "heads": 4,
+    "use_mix": false,
+    "use_mean": false,
+    "use_att": false,
+    "use_pos": true,
+    "use_pair": false,
+    "att_dropout": 0.1,
+    "dropout": 0.1
+  },
+  "loss": {
+    "name": "zlpr",
+    "mu_neg": 0.3,
+    "mu_pos": 0.3,
+    "rho": 0.1
+  },
+  "train": {
+    "epochs": 10,
+    "batch": 64,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "patience": 2,
+    "seed": 13,
+    "terms": [
+      "supervised",
+      "mil_neg"
+    ]
+  }
+}

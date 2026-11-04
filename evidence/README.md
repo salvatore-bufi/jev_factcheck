@@ -1,5 +1,7 @@
 # evidence — dati per il fine-tuning con evidenza
 
+> Tutta la pipeline della testa di evidenza (split, rendering, hook, estrazione, testa, training, valutazione, server) è spiegata in [code_report.md](code_report.md). Questo file descrive solo la costruzione dei dataset.
+
 Codice per il piano [Documentation/fine_tuning_factcheck_evidence/](../Documentation/fine_tuning_factcheck_evidence/00_overview.md): un decision model che, oltre al verdetto, indica le frasi del documento che dimostrano il claim.
 
 Per ora c'è la prima parte: **portare i dataset in un formato unico**, pronto per la loss. Ogni riga dice dove inizia e finisce ogni frase del documento e quali frasi sono l'evidenza. Split, mix, rendering per modello e training vengono dopo (§7).

@@ -1,0 +1,14 @@
+{
+  "name": "ev_head",
+  "description": "Training mix of the evidence head (doc 04 §3). Each training row takes the FIRST family whose 'match' fits it. 'match' keys are row fields or meta fields (e.g. gold_alignment). A family gives the loss term, the row weight and omega (weight of the non-gold sentences), or drops the row.",
+  "seed": 13,
+  "neg_fraction": null,
+  "families": [
+    {"name": "hover_exact",    "match": {"source": "hover", "label": 1, "gold_alignment": "exact"},    "term": "supervised", "row_weight": 1.0, "omega": 0.5},
+    {"name": "hover_db_split", "match": {"source": "hover", "label": 1, "gold_alignment": "db_split"}, "term": "supervised", "row_weight": 0.5, "omega": 0.5},
+    {"name": "scifact_pos",    "match": {"source": "scifact", "label": 1},                             "term": "supervised", "row_weight": 1.0, "omega": 0.5},
+    {"name": "wice_pos",       "match": {"source": "wice", "label": 1},                                "term": "supervised", "row_weight": 1.0, "omega": 0.3},
+    {"name": "wice_partial",   "match": {"evidence_term": "none"},                                     "drop": true},
+    {"name": "negatives",      "match": {"label": 0, "evidence_term": "mil_neg"},                      "term": "mil_neg",    "row_weight": 1.0, "omega": 1.0}
+  ]
+}

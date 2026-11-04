@@ -1,0 +1,44 @@
+{
+  "id": "h3a",
+  "description": "H3a: full head without the transformer (each sentence alone)",
+  "layers_read": [
+    19,
+    23,
+    27,
+    31
+  ],
+  "parts": [
+    "end",
+    "mean"
+  ],
+  "head": {
+    "d": 256,
+    "layers": 0,
+    "heads": 4,
+    "use_mix": true,
+    "use_mean": true,
+    "use_att": true,
+    "use_pos": true,
+    "use_pair": false,
+    "att_dropout": 0.1,
+    "dropout": 0.1
+  },
+  "loss": {
+    "name": "zlpr",
+    "mu_neg": 0.3,
+    "mu_pos": 0.3,
+    "rho": 0.1
+  },
+  "train": {
+    "epochs": 10,
+    "batch": 64,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "patience": 2,
+    "seed": 13,
+    "terms": [
+      "supervised",
+      "mil_neg"
+    ]
+  }
+}
