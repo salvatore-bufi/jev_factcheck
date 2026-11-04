@@ -1,60 +1,68 @@
-# Passo 4 — Split e mix
+# Passo 4 — Split e mix di training
 
 ## In breve
 
-1. **Split**: train / dev / test congelati, per documento (`doc_id`), con le fonti già costruite.
+1. **Split**: si decide una volta quali righe servono per addestrare (train), per scegliere (dev) e per la misura finale (test), e non si cambia più. Si divide per documento (`doc_id`): lo stesso documento non può stare in due split.
 2. **Mix** `ev_tok_head`: le righe di training con il loro tipo di loss e i loro pesi.
 
-Script: `evidence/data/make_splits.py`, `evidence/data/make_mix.py`. Uscita in `dataset/evidence/splits/` e `dataset/evidence/mixes/`.
+Script: `evidence/data/make_splits.py`, `evidence/data/make_mix.py`. Uscita in `dataset/evidence/splits/` e `dataset/evidence/mixes/`, con un `manifest.json` (hash dei file, conteggi, seme 13).
 
 ## 1. Regole degli split
 
-- Per `doc_id`: lo stesso documento sta in un solo split.
-- **WiCE**: le righe con `meta.aggrefact_overlap = "dev"` o `"test"` (tutto il dev e il test di WiCE, più 2 righe del train) **non vanno in training**. Vanno in test (`test_evid_ood`), così restano utili come misura fuori dominio.
-- **SciFact**: train d'origine → training e dev (90/10 per `doc_id`); validation d'origine → test.
-- **HoVer**: train d'origine → training e dev (95/5 per `doc_id`); dev d'origine → test. Nei set di dev e test di HoVer si tengono solo le righe con `gold_alignment = exact`.
-- Seme fisso (13); `manifest.json` con gli hash dei file e i conteggi.
+| Fonte | Train | Dev | Test |
+|---|---|---|---|
+| SciFact | 90% del train d'origine (per `doc_id`) | 10% del train d'origine | validation d'origine |
+| HoVer | 95% del train d'origine (per `doc_id`) | 5% del train d'origine, solo righe `exact` | dev d'origine, solo righe `exact` |
+| WiCE | train d'origine **senza** le righe con `aggrefact_overlap` | — | dev + test d'origine (tutte con `aggrefact_overlap`): test fuori dominio |
+
+Perché:
+- **WiCE**: le pagine del suo dev e test sono le stesse del dev e test di LLM-AggreFact, il benchmark finale; addestrare su di esse falserebbe quella misura. Restano utili come test fuori dominio (pagine web, non Wikipedia).
+- **HoVer `db_split`** (pagine prese dal db, etichetta sfasata nel 2% dei casi): si usano in training con peso minore, ma non per misurare.
+- I `doc_id` di dev e test non compaiono mai nel train; i dati generati e spostati nascono solo dal train.
 
 ## 2. I set
 
 | Set | Contenuto | Uso |
 |---|---|---|
 | `train` | il resto | training della testa |
-| `dev_evid_select` | positivi del dev (SciFact, HoVer) | scelte: configurazione, soglia di decodifica, esperimenti |
-| `dev_evid_confirm` | metà del dev, separata per `doc_id` | conferma delle scelte |
+| `dev_evid_select` | metà dei positivi di dev (SciFact, HoVer), divisa per `doc_id` | tutte le scelte: configurazione, decodifica, esperimenti |
+| `dev_evid_confirm` | l'altra metà | conferma delle scelte |
 | `dev_evid_neg` | negativi del dev con documenti lunghi | controllare che la testa non accenda tratti su claim non supportati |
 | `test_evid_id` | test di HoVer (`exact`) e SciFact | misura finale |
-| `test_evid_ood` | WiCE dev + test | misura finale fuori dominio (pagine web) |
-| `test_evid_sparse` | da `test_evid_id`, con evidenza spostata lontano (passo 3) | evidenza lontana |
+| `test_evid_ood` | WiCE dev + test | misura finale fuori dominio |
+| `test_evid_sparse` | da `test_evid_id`, con l'evidenza spostata lontano (passo 3, solo con frasi di disturbo del test) | evidenza lontana |
+| `test_nopunct` | `test_evid_id` con la punteggiatura tolta dal documento (gli intervalli gold si ricalcolano) | documento senza frasi riconoscibili |
 
-Per ogni set si salvano: frasi gold per riga, distanza fra la prima e l'ultima (in frasi e in token), lunghezza in token.
+Per ogni set si salvano: frasi gold per riga, distanza fra la prima e l'ultima frase gold (in frasi e in token), lunghezza in token.
 
 ## 3. Il mix `ev_tok_head`
 
-Ogni riga riceve dal suo `evidence_term` il tipo di loss ([08](08_testa_e_loss.md) §3), più due pesi:
+Ogni riga riceve il tipo di loss dal suo `evidence_term` ([08](08_testa_e_loss.md) §3) e due pesi:
+- **peso della riga** (`row_weight`): quanto conta la riga nella media del batch;
+- **ω** (`omega`): quanto pesano i token **fuori** dalle frasi gold. Basso dove le annotazioni sono incomplete (frasi valide non segnate).
 
-| Famiglia | Termine | Peso della riga | ω (peso dei token non gold) |
+| Famiglia | Termine | Peso della riga | ω |
 |---|---|---:|---:|
 | HoVer supportati, `exact` | `supervised` | 1,0 | 0,5 |
 | HoVer supportati, `db_split` | `supervised` | 0,5 | 0,5 |
 | SciFact SUPPORT | `supervised` | 1,0 | 0,5 |
-| WiCE train supportati | `supervised` | 1,0 | 0,3 |
-| C2D con intervalli esatti (passo 3) | `supervised` | 1,0 | 1,0 |
+| WiCE supportati (train) | `supervised` | 1,0 | 0,3 |
+| Generati con posizioni esatte (passo 3) | `supervised` | 1,0 | 1,0 |
 | Etichettati col modello (passo 3) | `supervised` | 0,5 | 0,5 |
-| Negativi (HoVer NOT_SUPPORTED, SciFact CONTRADICT/NEI, WiCE not_supported) | `mil_neg` | 1,0 | — |
-| WiCE parzialmente supportati | `none` (escluse dal mix della testa) | — | — |
+| Negativi: HoVer NOT_SUPPORTED, SciFact CONTRADICT/NEI, WiCE not_supported | `mil_neg` | 1,0 | — |
+| WiCE parzialmente supportati | `none`: fuori dal mix della testa | — | — |
 
-ω è più basso per WiCE perché i suoi gruppi di evidenza sono spesso incompleti (altre righe della pagina possono supportare il claim).
+Con le sole tre fonti il mix ha circa 14.000 positivi e 10.000 negativi (HoVer ne è la gran parte).
 
 Vincoli che lo script controlla e stampa:
 
 | Vincolo | Valore |
 |---|---|
-| Negativi | 20–30% delle righe |
+| Negativi | 20–45% delle righe (con le tre fonti sono ~40%: si può sottocampionare a 30%) |
 | Positivi con 2 o più frasi gold | ≥ 40% |
 | Positivi con evidenza oltre 1.024 token dall'inizio del documento | ≥ 15% |
 | Documenti in comune con dev o test | 0 |
-| Righe WiCE con `aggrefact_overlap` nel training | 0 |
+| Righe WiCE con `aggrefact_overlap` | 0 |
 
 ## 4. Comandi
 
@@ -62,3 +70,5 @@ Vincoli che lo script controlla e stampa:
 python -m evidence.data.make_splits --out dataset/evidence/splits
 python -m evidence.data.make_mix --recipe recipes/ev_tok_head.json --out dataset/evidence/mixes/ev_tok_head.jsonl
 ```
+
+La ricetta (`recipes/ev_tok_head.json`) contiene famiglie, numeri, pesi e seme: lo stesso mix si ricostruisce identico.

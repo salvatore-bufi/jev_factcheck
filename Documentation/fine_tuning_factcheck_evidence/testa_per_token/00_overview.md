@@ -2,9 +2,11 @@
 
 ## 1. Che cosa si vuole ottenere
 
-Come nel piano per frase ([../testa_per_frase/00_overview.md](../testa_per_frase/00_overview.md)): un decision model che, dato un documento e un claim, restituisce in **un solo forward** P(supportato) e, se il claim è supportato, **le parti del documento che lo dimostrano**.
+Abbiamo un **decision model** fine-tunato come fact checker: riceve un documento e un claim e risponde con P(supportato), in **un solo passaggio del modello sul testo** (un *forward*), senza generare parole. È veloce perché fa un solo forward.
 
-La differenza è l'unità di uscita. Qui la testa dà un punteggio a **ogni token** del documento, non a ogni frase, e l'uscita sono **tratti di testo** (inizio e fine in caratteri):
+Vogliamo che, quando il claim è supportato, dica anche **quali parti del documento lo dimostrano**, senza perdere velocità: sempre un solo forward, nessuna parola generata.
+
+Esempio di risposta:
 
 ```json
 {"p_supported": 0.93, "supported": true,
@@ -12,126 +14,153 @@ La differenza è l'unità di uscita. Qui la testa dà un punteggio a **ogni toke
               {"start": 4210, "end": 4262, "score": 0.84}]}
 ```
 
-Perché: così il sistema **non dipende da come il testo è diviso in frasi**. Nessun divisore (NLTK o altro) serve al modello, né in training né in produzione. Funziona anche su testo senza punteggiatura, elenchi, tabelle in testo; se una frase lunga contiene l'evidenza solo in una sua parte, si può evidenziare solo quella.
+- `start` / `end`: inizio e fine, in caratteri, di un tratto di testo del documento originale (`document[start:end]`).
+- Se il claim non è supportato, `evidence` è vuota: non si indica né cosa manca né cosa lo contraddice.
 
-Se poi si vogliono mostrare frasi intere all'utente, i tratti si "allargano" alla frase con qualunque divisore, solo in visualizzazione: la testa non ne dipende (§2.5).
+Il caso difficile è l'**evidenza sparsa**: due parti lontane che solo **insieme** dimostrano il claim.
 
-## 2. Come funziona, passo per passo
+> Claim: "Nancy R. Howell teaches at a seminary in Kansas City."
+> Inizio del documento: "Saint Paul School of Theology is a seminary located in Kansas City, Missouri."
+> … 38 frasi che non c'entrano …
+> Fine del documento: "Nancy R. Howell is Professor of Theology at Saint Paul School of Theology."
+>
+> Nessuna delle due basta da sola. Evidenza corretta: entrambe.
 
-### 2.1 Il forward non cambia
+## 2. Perché "per token"
 
-Il decision model fa **un solo forward su tutto il prompt** (preambolo con il claim, documento intero, claim, domanda), esattamente come nel piano binario. Il verdetto si legge dall'ultimo token, che ha visto tutto il documento. Non c'è nessun passaggio per frase o per token.
+La testa dà un punteggio a **ogni token** del documento, e le parti mostrate sono i tratti di token sopra soglia. Non c'è nessuna divisione del documento in frasi, né in training né in produzione. Quindi:
+- il risultato **non dipende da come il testo è diviso in frasi** (nessun NLTK, nessuna regola di punteggiatura da mantenere identica fra training e produzione);
+- funziona anche su testo senza punteggiatura, elenchi, tabelle scritte come testo;
+- può evidenziare **solo la parte utile** di una frase lunga.
 
-### 2.2 Che cosa entra nella testa
+Se all'utente si vogliono mostrare frasi intere, i tratti si allargano alla frase che li contiene **solo in visualizzazione**, con qualunque divisore: la testa non ne dipende.
 
-Dallo stesso forward, per **ogni token t del documento**:
+## 3. Come funziona, passo per passo
 
-| Nome | Che cos'è |
-|---|---|
-| `h[t]` | il vettore del token in alcuni layer (ridotto a 256 numeri, §2.3) |
-| `att[t]` | quanto la posizione di risposta "guarda" quel token, negli 8 layer ad attenzione piena × 16 teste = 128 numeri |
+### 3.1 Che cosa fa già il decision model
 
-e dalla posizione di risposta:
+Il modello legge il prompt (documento, claim, domanda). Per **ogni token** e per **ogni layer** calcola un vettore di numeri (lo *stato nascosto*): 2.560 numeri nei modelli da 4B, 4.096 in quelli da 9B. Il verdetto si legge dall'**ultimo token del prompt** (la *posizione di risposta*): lì il modello dà un punteggio alla risposta "sì" e uno alla risposta "no", da cui P(supportato). Questa parte esiste già: è il modello del fine-tuning binario, addestrato con una LoRA sulla domanda di fact checking. **Non la tocchiamo.**
 
-| Nome | Che cos'è |
-|---|---|
-| `q` | il vettore della posizione di risposta: ha visto tutto, sa il verdetto e quali parti servono |
+### 3.2 Che cosa aggiungiamo
 
-### 2.3 Che cosa fa la testa
+Durante quel forward leggiamo alcuni dei vettori che il modello calcola comunque, e li diamo a una **piccola rete separata**, la *testa di evidenza* (4,5 milioni di parametri contro i 4–9 miliardi del modello), che dà un punteggio a ogni token del documento.
 
 ```text
-            per ogni token t del documento                          posizione di risposta
-     h[t] (2–4 layer, ridotti a 256)   att[t] (128)                         q
-                 │                         │                                │
-                 └──────── somma di proiezioni ─────────┐                   │
-                                                        ▼                   │
-   1. CONTESTO LOCALE   3 convoluzioni 1D sui token (finestra ~30 token): capisce parole e frasi vicine
-                                                        │
-   2. CONTESTO GLOBALE  media a blocchi fissi di 16 token → transformer NON causale (2 layer) su [q, blocco 1 … blocco B]
-                        → ogni blocco riceve il contesto di tutto il documento e di q → torna ai suoi token
-                                                        │
-   3. PUNTEGGI          s[t] per ogni token;  s0 dalla posizione di risposta = soglia di questo documento
-                                                        │
-   4. DECODIFICA        token con s[t] > s0 → tratti consecutivi → si chiudono buchi piccoli, si tolgono tratti minuscoli
-                        → offset in caratteri sul testo originale
+                 ┌──────────────────────────────── prompt ─────────────────────────────────┐
+                 │ Claim under review: <claim>                         ← preambolo (nuovo)   │
+                 │ <documento: token 1 … token n>                      ← prompt del fine-    │
+                 │ <claim> <domanda> <opzioni>                           tuning binario,     │
+                 │ [ultimo token = posizione di risposta]                invariato           │
+                 └──────────────────────────────────────────────────────────────────────────┘
+                                                 │
+                          UN forward del decision model (pesi congelati)
+                                                 │
+            ┌────────────────────────────────────┴───────────────────────────────┐
+            │ per ogni token t del documento:                                     │ alla posizione di risposta:
+            │   h[t]   vettori di 2 layer (23 e 31), ridotti a 256 numeri ciascuno │   punteggi "sì"/"no" → P(supportato)
+            │   att[t] attenzione che la posizione di risposta dà al token:        │   q = vettore della posizione
+            │          8 layer × 16 teste = 128 numeri                             │
+            └────────────────────────────────────┬───────────────────────────────┘
+                                                 │
+   ┌──────────────────────────────────── TESTA DI EVIDENZA ─────────────────────────────────────┐
+   │ A. vettore del token     x[t] = proiezione di [h[t], att[t], q] → 256 numeri                  │
+   │ B. contesto locale       3 convoluzioni sui token vicini (finestra di 29 token)               │
+   │ C. contesto globale      media per blocchi fissi di 16 token → transformer non causale        │
+   │                          a 2 layer su [q, blocco 1 … blocco B] → ogni blocco vede tutto       │
+   │ D. punteggi              s[t] per ogni token; s0 da q = soglia di QUESTO documento            │
+   └──────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                                  │
+   DECODIFICA: token con s[t] > s0 → tratti consecutivi → buchi piccoli chiusi, tratti minuscoli tolti
+               → al massimo 5 tratti → inizio e fine in caratteri sul documento originale
+                                                  │
+   mostrati solo se P(supportato) > soglia del verdetto
 ```
 
-- **Contesto locale**: un token da solo non basta (una parola è evidenza perché sta in una certa frase); le convoluzioni guardano i token vicini.
-- **Contesto globale**: l'evidenza sparsa (frase 1 e frase 40 insieme) richiede che parti lontane del documento si vedano. Un'attenzione piena su migliaia di token costa troppo; i **blocchi fissi di 16 token** (decisi solo dalla posizione, non dal significato) la rendono economica: un documento di 2.000 token diventa 125 blocchi. I blocchi sono interni alla testa: l'uscita resta per token.
-- **Soglia del documento** `s0`: come nel piano per frase, si mostra ciò che supera la soglia di quel documento; nei casi multi-hop la soglia può scendere per far passare la parte "ponte".
+L'architettura completa, con forme dei tensori, parametri e costo di ogni parte, è nel passo [08](08_testa_e_loss.md).
 
-### 2.4 Perché il preambolo
+### 3.3 Perché ogni pezzo
 
-Identico al piano per frase ([../testa_per_frase/05_formato_prompt.md](../testa_per_frase/05_formato_prompt.md)): una riga `Claim under review: <claim>` prima del documento, così nei modelli causali (KnowLine) i token del documento sono letti sapendo cosa si verifica. Il resto del prompt è quello del piano binario.
+| Pezzo | Perché serve |
+|---|---|
+| vettori da 2 layer, non solo dall'ultimo | l'ultimo layer è specializzato a predire la risposta; un layer intermedio rappresenta meglio il contenuto dei token |
+| attenzione della posizione di risposta | dice su quali token il modello si è basato per decidere: un indizio forte, già calcolato |
+| `q` sommato a ogni token | dice alla testa qual è il claim e cosa ha deciso il modello |
+| contesto locale | un token da solo non basta: una parola è evidenza perché sta in una certa frase |
+| contesto globale a blocchi | l'evidenza sparsa richiede che parti lontane si vedano; un'attenzione piena su migliaia di token costa troppo, su ~100–400 blocchi è trascurabile. I blocchi sono fissi (16 token per posizione): nessuna dipendenza dal significato o dalla punteggiatura |
+| soglia `s0` del documento | non c'è una soglia unica da tarare; in un caso multi-hop la soglia può scendere per far passare la parte "ponte" |
 
-### 2.5 Che cosa si mostra all'utente
+### 3.4 Perché il preambolo
 
-La testa restituisce tratti di caratteri. Due modi di mostrarli, scelti dal client:
-- **tratti esatti** (default);
-- **frasi intere**: ogni tratto si allarga alla frase che lo contiene, con qualunque divisore. Il divisore sta nel client o nel server, fuori dal modello: cambiarlo non tocca la testa.
+Nei modelli **causali** (come KnowLine-4B) ogni token vede solo ciò che lo precede. Nel prompt del fine-tuning binario il claim viene **dopo** il documento: quando il modello legge il documento non sa ancora cosa deve verificare, e i vettori dei token del documento non "parlano" del claim. Mettendo una riga `Claim under review: <claim>` **prima** del documento, ogni token è letto sapendo cosa si verifica. Il resto del prompt resta identico, compreso il claim dopo il documento dove il verdetto è abituato a vederlo. Dettagli nel passo [05](05_formato_prompt.md).
 
-### 2.6 Che cosa si addestra
+### 3.5 Che cosa si addestra
 
-Solo la testa, a modello congelato: il verdetto non cambia. Le etichette sono le frasi di evidenza delle fonti, trasformate in intervalli di caratteri e poi in token (un token è "evidenza" se cade dentro una di quelle frasi). Le frasi delle fonti servono solo a creare le etichette: la testa impara token per token.
+Solo la testa. Il modello resta congelato, quindi **il verdetto non cambia**. Le etichette sono le frasi di evidenza annotate nei dataset (SciFact, WiCE, HoVer), trasformate in intervalli di caratteri e poi in token: un token è "evidenza" se sta dentro una di quelle frasi. La loss è pensata per il fatto che le annotazioni sono a livello di frase: chiede che ogni frase gold sia colpita e che nulla si accenda fuori, non che ogni token della frase sia acceso.
 
-## 3. Differenze con il piano per frase
-
-| | Testa per frase | Testa per token |
-|---|---|---|
-| Unità | frase (da un divisore) | token del modello |
-| Divisore in produzione | sì, identico a quello del training | **no** |
-| Uscita | indici di frase | tratti di caratteri |
-| Elementi per documento | decine (mediana 46 su HoVer) | migliaia (mediana ~1.500 su HoVer) |
-| Aggregatore | transformer su tutte le frasi | convoluzioni locali + transformer su blocchi fissi di token |
-| Etichette | frasi gold sulla nostra divisione | frasi gold come intervalli di caratteri, poi token |
-| Rumore delle etichette | basso | più alto: in una frase gold anche le parole irrilevanti sono "evidenza" (§[04](04_split_e_mix.md), loss in [08](08_testa_e_loss.md)) |
-| Salvataggio dei vettori | n frasi × d | n token × 256 (ridotti con una proiezione fissa, [06](06_rendering_ed_estrazione.md)) |
+Siccome il modello è congelato, i suoi vettori si calcolano **una volta** e si salvano su disco (ridotti a 256 numeri per token); poi ogni prova di training della testa dura minuti.
 
 ## 4. I modelli
 
-Gli stessi del piano per frase ([../testa_per_frase/01_ambiente_e_modelli.md](../testa_per_frase/01_ambiente_e_modelli.md)): i 10 decision model dello studio, tutti Qwen3.5 (32 layer, 8 ad attenzione piena ai layer 3, 7, …, 31). Si itera su **KnowLine-4B** (d = 2.560), si conferma su **elephant-1** (d = 4.096), poi gli altri.
+I 10 decision model dello studio focalizzato, tutti costruiti su **Qwen3.5**: 32 layer, di cui 8 ad attenzione piena (layer 3, 7, 11, 15, 19, 23, 27, 31) e 24 Gated DeltaNet (attenzione lineare, sempre causale).
+
+| Modello | Ruolo | d | Attenzione nei layer pieni |
+|---|---|---:|---|
+| **KnowLine-4B** (`PelaAI/KnowLine-4B-Gen5.5`) | tutte le prove si fanno qui | 2.560 | causale |
+| **elephant-1** (`baselabs/elephant-1`) | conferma a 9B | 4.096 | bidirezionale a blocchi |
+| Jeffan-4B, d3-flash, OneJev1.6-9B, Nimble-9B-v3 | estensione | 2.560 / 4.096 | Jeffan, d3: bidirezionale; OneJev, Nimble: causale |
+| StartLux 9B/4B, pplx-decider-flash, Clef-Flash | estensione, più lavoro | 2.560 / 4.096 | StartLux, pplx: bidirezionale; Clef: come caricato |
+
+Ogni modello si esegue **con il codice dei suoi autori** (prompt, maschera di attenzione, lettura della risposta), come nei benchmark della repo. Dettagli nel passo [01](01_ambiente_e_modelli.md).
 
 ## 5. Glossario
 
 | Termine | Significato |
 |---|---|
-| token del documento | i token del prompt che appartengono al documento (per KnowLine, nelle richieste lette due volte, quelli della seconda copia) |
-| tratto (span) | sequenza di token consecutivi segnati come evidenza, convertita in `[inizio, fine)` di caratteri |
-| blocco | 16 token consecutivi del documento, unità interna della testa per il contesto globale |
+| forward | un passaggio del modello su tutto il prompt |
+| stato nascosto, vettore | i numeri che il modello calcola per un token in un layer |
+| posizione di risposta | il token del prompt dove si legge il verdetto (l'ultimo) |
+| token del documento | i token del prompt che appartengono al documento |
+| testa di evidenza | la piccola rete che dà un punteggio a ogni token del documento |
 | `s[t]`, `s0` | punteggio del token t; soglia del documento |
-| frase gold | frase di evidenza indicata dalla fonte (SciFact, WiCE, HoVer), come intervallo di caratteri |
-| colpita | una frase gold è "colpita" se almeno metà dei suoi caratteri è dentro i tratti mostrati |
+| blocco | 16 token consecutivi del documento: unità interna della testa per il contesto globale |
+| tratto | sequenza di token consecutivi mostrati come evidenza, convertita in `[inizio, fine)` di caratteri |
+| frase gold | frase di evidenza annotata nel dataset, come intervallo di caratteri |
+| colpita | una frase gold è colpita se almeno metà dei suoi caratteri è dentro i tratti mostrati |
 | insieme completo | tutte le frasi gold di una riga colpite |
-| sufficienza | il documento ridotto ai tratti mostrati fa ancora dire "supportato" al modello |
+| sufficienza | il documento ridotto ai soli tratti mostrati fa ancora dire "supportato" al modello |
+| fase 1a / 1b / 2 | training della testa su vettori salvati / con il modello in memoria / insieme a una LoRA del modello |
 
 ## 6. Sequenza di lavoro
 
 | # | Passo | File | Prodotto |
 |---|---|---|---|
-| 1 | Modelli e hook per token | [01](01_ambiente_e_modelli.md) | `evidence/models.py` con cattura per token |
-| 2 | Dati dalle fonti (già costruiti) + intervalli gold di caratteri | [02](02_dati_fonti.md) | `dataset/evidence/*.jsonl` con `gold_char_sets` |
-| 3 | Dati generati | [03](03_dati_generati.md) | righe `construct`, `ablation`, sparse |
-| 4 | Split e mix | [04](04_split_e_mix.md) | set congelati, mix `ev_tok_head` |
-| 5 | Prompt con preambolo | [05](05_formato_prompt.md) | come nel piano per frase |
-| 6 | Rendering, etichette per token, estrazione | [06](06_rendering_ed_estrazione.md) | vettori ridotti su disco |
+| 1 | Modelli e hook per token | [01](01_ambiente_e_modelli.md) | forward con cattura dei vettori e dell'attenzione per token |
+| 2 | Dati dalle fonti | [02](02_dati_fonti.md) | `dataset/evidence/*.jsonl` con le frasi gold in caratteri |
+| 3 | Dati generati (facoltativo per le prime prove) | [03](03_dati_generati.md) | evidenza esatta, etichette dal modello, evidenza spostata |
+| 4 | Split e mix | [04](04_split_e_mix.md) | set di valutazione congelati, mix di training |
+| 5 | Prompt con il preambolo | [05](05_formato_prompt.md) | preambolo scelto, verdetto verificato |
+| 6 | Dai caratteri ai token, estrazione | [06](06_rendering_ed_estrazione.md) | etichette per token, vettori su disco |
 | 7 | Baseline | [07](07_baseline.md) | numeri da battere |
-| 8 | Testa, loss, decodifica | [08](08_testa_e_loss.md) | `evidence/token_head.py`, `token_losses.py`, `decode.py` |
+| 8 | Architettura, loss, decodifica | [08](08_testa_e_loss.md) | `evidence/token_head.py`, `token_losses.py`, `decode.py` |
 | 9 | Training | [09](09_training.md) | teste addestrate |
-| 10 | Valutazione | [10](10_valutazione.md) | metriche su caratteri e su frasi |
+| 10 | Valutazione | [10](10_valutazione.md) | metriche e latenza |
 | 11 | Esperimenti | [11](11_esperimenti.md) | configurazione finale |
-| 12 | Server e rilascio | [12](12_export_e_servizio.md) | server senza divisore |
+| 12 | Server e rilascio | [12](12_export_e_servizio.md) | server che restituisce verdetto e tratti |
 | — | Checklist | [13](13_checklist.md) | |
 | — | Una strada da esplorare | [14](14_strada_da_esplorare.md) | |
+
+Codice già pronto nella repo: `evidence/data/` (costruzione dei dataset dal passo 2) e `tests/test_evidence_data.py`. Il resto è da scrivere, con i file indicati in ogni passo.
 
 ## 7. Obiettivi
 
 | Obiettivo | Soglia |
 |---|---|
-| Verdetto | uguale al piano binario (BAcc e AUC entro 0,3 punti) |
-| F1 sui caratteri (tratti mostrati contro frasi gold) | ≥ E-LEX + 15 punti |
-| Frasi gold colpite (recall) | ≥ 0,80 su HoVer |
+| Verdetto | uguale a quello del fine-tuning binario (BAcc e AUC entro 0,3 punti) |
+| Frasi gold colpite | ≥ 0,80 su HoVer |
 | Insieme completo su HoVer | ≥ 0,65 |
-| Evidenza lontana | F1 con frasi gold a ≥ 20 frasi di distanza al massimo 5 punti sotto quello con frasi vicine |
+| F1 sui caratteri | almeno 15 punti sopra la baseline lessicale (E-LEX, [07](07_baseline.md)) |
+| Evidenza lontana | frasi colpite con evidenza a ≥ 20 frasi di distanza al massimo 5 punti sotto quelle vicine |
+| Documento senza punteggiatura | frasi colpite al massimo 5 punti sotto il documento normale |
 | Sufficienza | ≥ 85% |
-| Tratti mostrati per riga | in media al massimo 5; nessun tratto sotto 4 token |
+| Tratti | in media al massimo 5 per riga; nessun tratto sotto 4 token |
 | Latenza | al massimo +3% del solo verdetto (modelli 4B: +3% o +3 ms) |
