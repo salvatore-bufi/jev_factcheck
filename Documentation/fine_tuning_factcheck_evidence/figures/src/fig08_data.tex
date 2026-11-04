@@ -1,0 +1,19 @@
+\documentclass[border=6pt]{standalone}
+\input{common}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[name=a, ybar, bar width=7pt, width=95mm, height=55mm, ymin=0,
+  xlabel={distanza fra prima e ultima frase gold (frasi, intervalli di 5; 60 = $\ge 60$)},
+  ylabel={positivi del mix}, xtick={0,10,20,30,40,50,60}, font=\footnotesize,
+  title={evidenza lontana nel mix \texttt{ev\_head} (12.363 positivi)}, fill=cdata!60, draw=cdata!80!black]
+\addplot[fill=cdata!60, draw=cdata!80!black] coordinates {(0,2444) (5,1714) (10,1510) (15,1504) (20,1311) (25,1126) (30,911) (35,703) (40,465) (45,247) (50,169) (55,88) (60,171)};
+\end{axis}
+\begin{axis}[at={(a.east)}, anchor=west, xshift=18mm, ybar, bar width=9pt, width=70mm, height=55mm, ymin=0,
+  xlabel={frasi gold per positivo (6 = $\ge 6$)}, ylabel={positivi}, xtick={1,...,6}, font=\footnotesize,
+  title={quante frasi servono}]
+\addplot[fill=cgold!60, draw=cgold!80!black] coordinates {(1,848) (2,4601) (3,3892) (4,2131) (5,641) (6,250)};
+\end{axis}
+\end{tikzpicture}
+\end{document}

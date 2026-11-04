@@ -10,7 +10,8 @@ Writes:  dataset/evidence/splits/<set>.jsonl          the rows of each set, unch
          dataset/evidence/splits/<set>.stats.json     counts, labels, gold sentences, distance between gold sentences
          dataset/evidence/splits/manifest.json        input hashes, output hashes, dropped rows with reason, options
 
-Rules (plan: Documentation/fine_tuning_factcheck_evidence/testa_per_frase/04_split_e_mix.md; decisions: CLAUDE_README.md):
+Rules (plan: Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/04_split_e_mix.md;
+       docs: Documentation/fine_tuning_factcheck_evidence/testa_per_frase/04_split_e_mix.md; decisions: CLAUDE_README.md):
     SciFact  train + validation pooled, then 80 / 10 / 10 by doc_id (the original split is by claim, not by
              document: 295 train rows share their abstract with validation)
     HoVer    original train -> 90 / 10 train / dev by doc_id, dev with "exact" rows only;

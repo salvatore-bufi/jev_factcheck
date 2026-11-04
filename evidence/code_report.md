@@ -1,6 +1,6 @@
 # Code report — testa di evidenza per frase (KnowLine-4B)
 
-Questo documento spiega il codice in `evidence/`: cosa fa ogni file, come si collegano, in che ordine si lanciano, e cosa ci si deve aspettare. Il piano da cui nasce è in [Documentation/fine_tuning_factcheck_evidence/testa_per_frase/](../Documentation/fine_tuning_factcheck_evidence/testa_per_frase/00_overview.md). Le decisioni prese lungo la strada sono in [CLAUDE_README.md](../CLAUDE_README.md).
+Questo documento spiega il codice in `evidence/`: cosa fa ogni file, come si collegano, in che ordine si lanciano, e cosa ci si deve aspettare. La documentazione completa dell'implementazione, con formule e figure, è in [Documentation/fine_tuning_factcheck_evidence/](../Documentation/fine_tuning_factcheck_evidence/README.md) (anche in PDF). Il piano da cui nasce, con tutte le varianti, è in [Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/00_overview.md). Le decisioni prese lungo la strada sono in [CLAUDE_README.md](../CLAUDE_README.md).
 
 ## 1. L'idea in tre righe
 
@@ -62,7 +62,7 @@ Il modello è congelato: il verdetto non cambia. Si addestra solo la testa.
 | File | Cosa fa |
 |---|---|
 | `extract.py` | Per ogni riga: render, poi forward, poi salvataggio. Scrive shard `safetensors` da 250 righe, con **un tensore per layer** (`h_end.19`, `h_end.23`, …): così chi legge solo il layer 31 legge un ottavo dei dati. In più `index.jsonl` (una riga per riga: dove sta, frasi gold, pesi, posizioni in token, P(supportato)), `meta.json` (impostazioni e hash del codice: il training rifiuta di mescolare feature diverse) e `skipped.json`. Riprende dagli shard già completi. Le righe di training troppo lunghe (> 16.384 token) vengono **accorciate** (`shorten`/`rebuild`): i positivi perdono frasi non gold, a partire dalle più lontane dall'evidenza, e i negativi perdono la fine. Dev e test troppo lunghi vengono saltati. |
-| `features.py` | `FeatureStore`: legge le feature dal disco **solo quando servono** (safetensors in mmap), e solo i layer e le parti richiesti. Le feature complete (circa 100 GB) non devono stare in RAM. |
+| `features.py` | `FeatureStore`: legge le feature dal disco **solo quando servono** (safetensors in mmap), e solo i layer e le parti richiesti. Le feature complete (circa 40 GB per il mix, circa 50 GB con dev e test) non devono stare in RAM. |
 
 ### Testa, loss, metriche (STEP 7)
 
@@ -116,7 +116,7 @@ python -m evidence.model --selftest
 # 4. scelta del preambolo (GPU, ~1.200 righe x 3 forward ≈ 25 min)
 python -m evidence.check_preamble
 
-# 5. estrazione (GPU; ~2,5 righe/s su RTX 5090 Laptop: mix ≈ 2,3 h, dev ≈ 8 min, test ≈ 25 min; ~120 GB)
+# 5. estrazione (GPU; ~2,5 righe/s su RTX 5090 Laptop: mix ≈ 2,3 h, dev ≈ 8 min, test ≈ 25 min; ~2 MB per riga: mix ~40 GB, tutto ~50 GB)
 F=data/evidence/features/knowline-4b; S=dataset/evidence/splits
 python -m evidence.extract --rows dataset/evidence/mixes/ev_head.jsonl $S/dev_evid_select.jsonl \
     $S/dev_evid_confirm.jsonl $S/dev_evid_neg.jsonl

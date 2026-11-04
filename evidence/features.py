@@ -4,7 +4,7 @@ Where it sits in the workflow:
     evidence.extract  ->  data/evidence/features/<model>/<set>/  ->  [evidence.features]  ->  train_head / eval / baselines
 
 The shards are opened lazily (safetensors memory-maps the files): only the rows asked for are read from disk, and
-only the layers asked for. The full features (~100 GB for the whole mix) never need to fit in RAM.
+only the layers asked for. The full features (~40 GB for the whole mix, ~50 GB with dev and test) never need to fit in RAM.
 
 Use:
     store = FeatureStore(config.FEATURES / "knowline-4b" / "ev_head")

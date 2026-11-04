@@ -9,7 +9,8 @@ What is here:
     limits          token limits, verdict threshold, how many sentences may be shown
 
 Every other file imports from here: `from evidence import config`.
-Plan: Documentation/fine_tuning_factcheck_evidence/testa_per_frase/ (00_overview.md first).
+Docs of this implementation (formulas, figures): Documentation/fine_tuning_factcheck_evidence/testa_per_frase/ (00_overview.md first).
+Plan it comes from: Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/ (section numbers "§" in the code refer to the plan).
 """
 from pathlib import Path
 

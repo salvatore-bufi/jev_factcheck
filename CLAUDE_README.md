@@ -5,7 +5,8 @@
 
 ## 1. Che cosa stiamo facendo
 
-Implementiamo il piano in `Documentation/fine_tuning_factcheck_evidence/testa_per_frase/` (file 00–15), **solo per KnowLine-4B**.
+Implementiamo il piano in `Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/` (file 00–15), **solo per KnowLine-4B**.
+La documentazione dell'implementazione, con formule, figure e PDF, è in `Documentation/fine_tuning_factcheck_evidence/` (README + `testa_per_frase/` 00–15).
 
 Al decision model si aggiunge una piccola testa (circa 3,7 M parametri) che, dallo **stesso forward** del verdetto, dà un punteggio a ogni frase del documento e indica le frasi di evidenza quando il claim è supportato. Il modello è congelato, quindi il verdetto non cambia.
 
@@ -49,7 +50,7 @@ Al decision model si aggiunge una piccola testa (circa 3,7 M parametri) che, dal
 | 2 | Rendering | `render.py` | ✅ verificato (frasi = token su circa 2.700 righe) |
 | 3 | Hook e forward | `model.py` | ✅ self-test superato |
 | 4 | Scelta del preambolo | `check_preamble.py` | ✅ scritto, ⏳ **da lanciare** (circa 25 min GPU) |
-| 5 | Estrazione | `extract.py`, `features.py` | ✅ provata su 300 righe, ⏳ **estrazione completa da lanciare** (circa 2,5 h, 120 GB) |
+| 5 | Estrazione | `extract.py`, `features.py` | ✅ provata su 300 righe, ⏳ **estrazione completa da lanciare** (circa 2,5 h, ~40 GB per il mix, ~50 GB con dev e test) |
 | 6 | Baseline | `baselines.py` | ✅ provata su un campione |
 | 7 | Testa e loss | `head.py`, `losses.py`, `metrics.py` | ✅ test superati |
 | 8 | Training 1a | `train_head.py`, `configs/*.json` (12 esperimenti) | ✅ provato (overfit 64 = F1 1; training di prova) |
@@ -82,3 +83,4 @@ Gli artefatti di prova (feature di 300 righe, run `*_smoke`, `releases/smoke-tes
 
 - 2026-11-04: letta tutta la doc; deciso il metodo di lavoro; decise le regole degli split (SciFact B, HoVer al 10%).
 - 2026-11-04: l'utente passa al metodo "Claude scrive tutto". Scritta e provata l'intera pipeline (sezione 4); scritto `evidence/code_report.md`.
+- 2026-11-04 — piano rinominato dall'utente in `fine_tuning_factcheck_evidence_complete/`; scritta la documentazione dell'implementazione in `Documentation/fine_tuning_factcheck_evidence/` (16 doc, 8 figure TikZ, PDF); corretta la stima del disco (~50 GB, non 120); aggiornati i riferimenti in code_report, README, config, make_splits.

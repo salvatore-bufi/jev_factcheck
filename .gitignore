@@ -54,6 +54,6 @@ __pycache__/
 /legacy/results/validation_error_analysis/error_manifest.jsonl
 /legacy/results_runs/
 
-# Evidence head: saved features (~120 GB), trained heads, release folders (see evidence/code_report.md)
+# Evidence head: saved features (~50 GB), trained heads, release folders (see evidence/code_report.md)
 /data/
 /releases/

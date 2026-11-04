@@ -1,0 +1,34 @@
+\documentclass[border=6pt]{standalone}
+\input{common}
+\tikzset{ch/.style={draw=black!30, minimum width=4.2mm, minimum height=5mm, inner sep=0pt, font=\scriptsize\ttfamily, anchor=west}}
+\begin{document}
+\begin{tikzpicture}
+% original document: Rose "B" is.\nShe ...
+\def\orig{{"R","o","s","e"," ","\textquotedbl","B","\textquotedbl"," ","i","s","."," ","H","i","!","\textbackslash n","S","h","e"," ","a","c","t","s","."}}
+\node[anchor=east, font=\footnotesize, align=right] at (-10mm,0) {documento\\originale};
+\foreach \i in {0,...,25}{ \pgfmathsetmacro{\c}{\orig[\i]} \node[ch, fill=cdata!8] (o\i) at (\i*4.4mm,0) {\c}; \node[font=\tiny, text=black!50] at (\i*4.4mm+2.1mm,3.6mm) {\i}; }
+% sentences braces
+\draw[decorate, decoration={brace, amplitude=4pt}, thick, cgold] ($(o0.north west)+(0,5mm)$) -- node[above=4pt, font=\scriptsize] {frase 0: [0,12)} ($(o11.north east)+(0,5mm)$);
+\draw[decorate, decoration={brace, amplitude=4pt}, thick, chead!70!black] ($(o13.north west)+(0,5mm)$) -- node[above=4pt, font=\scriptsize] {frase 1: [13,16)} ($(o15.north east)+(0,5mm)$);
+\draw[decorate, decoration={brace, amplitude=4pt}, thick, cdata] ($(o17.north west)+(0,5mm)$) -- node[above=4pt, font=\scriptsize] {frase 2: [17,26)} ($(o25.north east)+(0,5mm)$);
+% prompt text: "  Rose..." with indentation, and "\n  She"
+\def\prm{{"\textvisiblespace","\textvisiblespace","R","o","s","e"," ","\textquotedbl","B","\textquotedbl"," ","i","s","."," ","H","i","!","\textbackslash n","\textvisiblespace","\textvisiblespace","S","h","e"," ","a","c","t","s","."}}
+\def\org{{0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,17,17,18,19,20,21,22,23,24,25}}
+\node[anchor=east, font=\footnotesize, align=right] at (-10mm,-22mm) {documento\\nel prompt};
+\foreach \i in {0,...,29}{ \pgfmathsetmacro{\c}{\prm[\i]} \node[ch, fill=cmodel!10] (p\i) at (\i*4.4mm-8.8mm,-22mm) {\c}; }
+\foreach \i in {0,2,5,7,13,16,18,19,21,29}{ \pgfmathtruncatemacro{\j}{\org[\i]} \draw[black!35, -{Stealth[length=1.3mm]}] (p\i.north) -- (o\j.south); }
+\node[note, anchor=west] at (27*4.4mm,-11mm) {\texttt{origin[i]}: da quale carattere\\originale viene il carattere $i$\\(indentazione $\to$ inizio riga)};
+% tokens
+\def\tokA{{0,2,6,7,8,9,10,12,14,15,17,18,19,21,24,25,29}}
+\def\tokB{{1,5,6,7,8,9,11,13,14,16,17,18,20,23,24,28,29}}
+\node[anchor=east, font=\footnotesize, align=right] at (-10mm,-30mm) {token};
+\foreach \t in {0,...,16}{
+  \pgfmathtruncatemacro{\a}{\tokA[\t]} \pgfmathtruncatemacro{\b}{\tokB[\t]}
+  \draw[rounded corners=1pt, thick, black!60, fill=black!4] ($(p\a.south west)+(0.3mm,-6mm)$) rectangle ($(p\b.south east)+(-0.3mm,-10mm)$);
+  \node[font=\tiny] at ($($(p\a.south west)!0.5!(p\b.south east)$)+(0,-8mm)$) {\t};
+}
+\node[note, anchor=north west, align=left] at (-8.8mm,-46mm) {un token va alla frase che contiene il suo \textbf{ultimo carattere non spazio}:\\
+il token 8 (spazio) e il token 11 (\textbackslash n) non vanno a nessuna frase; i token 0 e 12 (indentazione) vanno alla frase della loro riga, perché \texttt{origin} li porta su "R" e "S".\\
+risultato (indici relativi al documento): \texttt{[[0, 7], [9, 10], [12, 16]]}; nel prompt si somma l'indice del primo token del documento};
+\end{tikzpicture}
+\end{document}

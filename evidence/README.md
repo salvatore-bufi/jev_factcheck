@@ -2,7 +2,7 @@
 
 > Tutta la pipeline della testa di evidenza (split, rendering, hook, estrazione, testa, training, valutazione, server) è spiegata in [code_report.md](code_report.md). Questo file descrive solo la costruzione dei dataset.
 
-Codice per il piano [Documentation/fine_tuning_factcheck_evidence/](../Documentation/fine_tuning_factcheck_evidence/00_overview.md): un decision model che, oltre al verdetto, indica le frasi del documento che dimostrano il claim.
+Codice per il piano [Documentation/fine_tuning_factcheck_evidence_complete/](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/00_overview.md) (documentazione dell'implementazione: [Documentation/fine_tuning_factcheck_evidence/](../Documentation/fine_tuning_factcheck_evidence/README.md)): un decision model che, oltre al verdetto, indica le frasi del documento che dimostrano il claim.
 
 Per ora c'è la prima parte: **portare i dataset in un formato unico**, pronto per la loss. Ogni riga dice dove inizia e finisce ogni frase del documento e quali frasi sono l'evidenza. Split, mix, rendering per modello e training vengono dopo (§7).
 
@@ -108,7 +108,7 @@ Uscita in `dataset/evidence/`:
 | `evidence` | indici delle frasi di evidenza; vuoto se `label = 0` |
 | `evidence_sets` | gruppi alternativi di frasi che dimostrano il claim (WiCE ne ha più di uno); `evidence` è la loro unione |
 | `contra` | frasi che contraddicono il claim (SciFact), solo per analisi |
-| `evidence_term` | che termine di loss riceve la riga ([08_testa_e_loss.md](../Documentation/fine_tuning_factcheck_evidence/08_testa_e_loss.md) §3): `supervised` (le frasi di evidenza sopra la soglia, le altre sotto), `mil_neg` (nessuna frase sopra la soglia), `none` (nessun termine di evidenza) |
+| `evidence_term` | che termine di loss riceve la riga ([08_testa_e_loss.md](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/08_testa_e_loss.md) §3): `supervised` (le frasi di evidenza sopra la soglia, le altre sotto), `mil_neg` (nessuna frase sopra la soglia), `none` (nessun termine di evidenza) |
 | `doc_id` | righe con lo stesso documento: lo split si fa per `doc_id` |
 | `meta.gold_alignment` | `exact` (frasi della fonte) o `db_split` (pagina HoVer presa dal db e divisa da noi) |
 | `meta.doc_tokens`, `meta.prompt_tokens` | lunghezze in token (tokenizer di `--length-model`) |
@@ -146,12 +146,12 @@ Divisione in frasi (`evidence/sentences.py`):
 
 1. Rendere privata `~/nltk_data` (§3) e ricostruire i dataset con `--hover-db-fallback`, se non è già fatto.
 2. Leggere a mano 30 positivi per fonte con `show` (§6) e annotare gli errori.
-3. Scegliere il limite di token per il training (`--max-tokens`) in base alla memoria disponibile ([06](../Documentation/fine_tuning_factcheck_evidence/06_rendering_ed_estrazione.md) §3 propone 16.384 per l'estrazione sui 4B).
+3. Scegliere il limite di token per il training (`--max-tokens`) in base alla memoria disponibile ([06](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/06_rendering_ed_estrazione.md) §3 propone 16.384 per l'estrazione sui 4B).
 4. **Prossimo codice da scrivere**, nell'ordine del piano:
-   - **split** train/val/test per `doc_id`, tenendo fuori dal training le righe WiCE con `aggrefact_overlap` ([04](../Documentation/fine_tuning_factcheck_evidence/04_split_e_mix.md));
-   - **mix** con pesi e quote ([04](../Documentation/fine_tuning_factcheck_evidence/04_split_e_mix.md) §3);
-   - **rendering** con il preambolo e le posizioni in token di ogni frase, per KnowLine-4B ([05](../Documentation/fine_tuning_factcheck_evidence/05_formato_prompt.md), [06](../Documentation/fine_tuning_factcheck_evidence/06_rendering_ed_estrazione.md));
-   - **estrazione dei vettori** e **training della testa** ([09](../Documentation/fine_tuning_factcheck_evidence/09_training.md)).
+   - **split** train/val/test per `doc_id`, tenendo fuori dal training le righe WiCE con `aggrefact_overlap` ([04](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/04_split_e_mix.md));
+   - **mix** con pesi e quote ([04](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/04_split_e_mix.md) §3);
+   - **rendering** con il preambolo e le posizioni in token di ogni frase, per KnowLine-4B ([05](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/05_formato_prompt.md), [06](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/06_rendering_ed_estrazione.md));
+   - **estrazione dei vettori** e **training della testa** ([09](../Documentation/fine_tuning_factcheck_evidence_complete/testa_per_frase/09_training.md)).
 
 ### Aggiungere una fonte
 

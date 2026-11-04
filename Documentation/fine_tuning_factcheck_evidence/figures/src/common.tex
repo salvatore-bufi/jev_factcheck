@@ -1,0 +1,21 @@
+% Shared preamble of every figure (included by each fig*.tex)
+\usepackage{fontspec}
+\setmainfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,decorations.pathreplacing,shapes.geometric,backgrounds}
+\definecolor{cdata}{HTML}{4C78A8}
+\definecolor{cmodel}{HTML}{F58518}
+\definecolor{chead}{HTML}{54A24B}
+\definecolor{cgold}{HTML}{E45756}
+\definecolor{cgrey}{HTML}{9D9D9D}
+\definecolor{cfull}{HTML}{B279A2}
+\tikzset{
+  box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, font=\small, minimum height=8mm},
+  data/.style={box, fill=cdata!15, draw=cdata!80!black},
+  model/.style={box, fill=cmodel!18, draw=cmodel!80!black},
+  head/.style={box, fill=chead!18, draw=chead!70!black},
+  note/.style={font=\footnotesize, align=center, text=black!70},
+  arr/.style={-{Stealth[length=2.2mm]}, thick, black!70},
+}

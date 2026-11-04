@@ -1,0 +1,32 @@
+\documentclass[border=6pt]{standalone}
+\input{common}
+\begin{document}
+\begin{tikzpicture}[x=11mm, y=10mm]
+\newcommand{\axis}[2]{%
+  \draw[-{Stealth}, thick, black!60] (-4,#1) -- (3.2,#1) node[right, font=\footnotesize] {$s$};
+  \foreach \v in {-3,-2,-1,0,1,2,3}{ \draw[black!50] (\v,#1-0.08) -- (\v,#1+0.08); \node[font=\tiny, below] at (\v,#1-0.08) {\v}; }
+  \draw[dashed, very thick, cmodel] (0,#1-0.6) -- (0,#1+0.9) node[right, font=\footnotesize, text=cmodel!80!black] {$s_\star = 0$};
+  \node[anchor=east, font=\footnotesize\bfseries] at (-4.2,#1) {#2};
+}
+\axis{3}{prima}
+\foreach \d in {-0.25,-0.15,-0.05,0.05,0.15,0.25}{ \fill[cgrey] (-3+\d*2,3.25) circle (2.2pt); }
+\node[font=\tiny, text=black!60] at (-3,3.6) {37 frasi non gold};
+\fill[cgrey!70!black] (0.5,3.25) circle (3pt); \node[font=\tiny, above] at (0.5,3.35) {frase simile al claim};
+\fill[cgold] (2,3.25) circle (3pt); \node[font=\tiny, above] at (2,3.35) {gold 1};
+\fill[cgold] (-0.5,3.25) circle (3pt); \node[font=\tiny, above] at (-0.75,3.35) {gold 40};
+\node[anchor=west, font=\footnotesize, align=left] at (3.8,3) {$L = 2{,}526$\\non gold sopra soglia, gold sotto};
+\axis{0}{dopo}
+\foreach \d in {-0.25,-0.15,-0.05,0.05,0.15,0.25}{ \fill[cgrey] (-3+\d*2,0.25) circle (2.2pt); }
+\fill[cgrey!70!black] (-1,0.25) circle (3pt); \node[font=\tiny, above] at (-1.2,0.35) {frase simile};
+\fill[cgold] (2,0.25) circle (3pt); \node[font=\tiny, above] at (2,0.35) {gold 1};
+\fill[cgold] (1.5,0.25) circle (3pt); \node[font=\tiny, above] at (1.35,0.35) {gold 40};
+\node[anchor=west, font=\footnotesize, align=left] at (3.8,0) {$L = 1{,}473$\\tutte dal lato giusto};
+\draw[-{Stealth}, cgold, thick] (-0.5,2.85) to[bend right=20] (1.5,0.6);
+\draw[-{Stealth}, cgrey!70!black, thick] (0.5,2.85) to[bend left=20] (-1,0.6);
+% formula
+\node[anchor=north west, font=\footnotesize, align=left, draw=black!20, fill=black!2, rounded corners] at (-4,-1.2)
+{$\displaystyle L_{sup} = \underbrace{\log\Big(1+\sum_{i\notin G}\omega_i\, e^{\,s_i-s_\star}\Big)}_{\text{spinge giù le non gold sopra } s_\star}
+ + \underbrace{\log\Big(1+\sum_{j\in G} e^{\,s_\star-s_j}\Big)}_{\text{spinge su le gold sotto } s_\star}
+ \ \approx\ \big[\max_{i\notin G} s_i - s_\star\big]_+ + \big[s_\star-\min_{j\in G} s_j\big]_+$};
+\end{tikzpicture}
+\end{document}
