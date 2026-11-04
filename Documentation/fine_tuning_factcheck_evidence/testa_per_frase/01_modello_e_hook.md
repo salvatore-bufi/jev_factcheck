@@ -12,7 +12,7 @@ Il verdetto e le feature delle frasi escono dallo **stesso forward** di KnowLine
 KnowLine-4B (`PelaAI/KnowLine-4B-Gen5.5`, revisione `779944d`) è un Qwen3.5-4B fine-tunato dagli autori come decision model. Le impostazioni sono in [`evidence/config.py`](../../../evidence/config.py) (`MODEL_REPO`, `MODEL_REVISION`).
 
 | Parametro (`config.json` dello snapshot) | Valore |
-|---|---|
+|--------------------------------------|----------------------------------------------|
 | layer | 32 |
 | dimensione $D$ | 2.560 |
 | layer ad attenzione piena | 3, 7, 11, 15, 19, 23, 27, 31 (uno ogni quattro) |
@@ -128,7 +128,7 @@ Siccome $\sum_i A^{(l,j)}_i = 1$, ogni componente è la **quota di attenzione** 
 `model.forward_sentences(model, ex, features=True, to_cpu=True)`, dove `ex` è l'uscita di `render.render` ([06](06_rendering_ed_estrazione.md)):
 
 | Chiave | Forma | Tipo | Contenuto |
-|---|---|---|---|
+|----------------------|------------------|-------------|-------------------|
 | `answer_logits` | [2] | fp32 | $(\ell_A, \ell_B)$ |
 | `q` | [4, D] | fp32 | $q_l$, $l \in \mathcal{L}$ |
 | `h_end` | [n, 4, D] | bf16 | $h^{end}_{k,l}$ |
@@ -143,7 +143,7 @@ Siccome $\sum_i A^{(l,j)}_i = 1$, ogni componente è la **quota di attenzione** 
 ## 6. Verifiche (`python -m evidence.model --selftest`)
 
 | Test | Come | Risultato (RTX 5090 Laptop, 10 righe di dev) |
-|---|---|---|
+|---------------------------|-------------------------------------------------------------|----------------------------------------|
 | Verdetto invariato | P con hook e cattura contro "sdpa" senza hook | $\max\lvert\Delta P\rvert = 0$ |
 | Riassunti delle frasi | `h_end`/`h_mean` contro `output_hidden_states` (layer 19, 23, 27; nel 31 `hidden_states` ha già la norma finale) | differenza relativa massima 0,0027 (bf16) |
 | Attenzione | $att_k$ contro la modalità "eager" (pesi in bf16) su un prompt di 2.500 token | correlazione 0,9994, differenza massima 0,006 |
@@ -153,7 +153,7 @@ Velocità: un forward su circa 3.100 token richiede circa 0,37 s, e gli hook non
 ## 7. Codice
 
 | Funzione / classe | File | Ruolo |
-|---|---|---|
+|--------------------------------------|-------------------------|-----------------------------------------|
 | `sdpa_capture`, `register_attention`, `CAPTURE` | `evidence/model.py` | riga di attenzione della posizione di risposta |
 | `load_model`, `text_layers` | `evidence/model.py` | caricamento come il front end degli autori |
 | `SentenceTap`, `get_tap` | `evidence/model.py` | hook: $h^{end}$, $h^{mean}$, $q$ |

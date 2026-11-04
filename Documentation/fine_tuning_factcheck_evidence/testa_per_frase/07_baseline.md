@@ -50,20 +50,21 @@ Servono centinaia di forward per riga, ma su documenti ridotti e quindi corti: c
 ## 3. Prima prova (300 righe di `dev_evid_select`, metà B: 146 righe valutate)
 
 | Metodo | F1 per frase | Insieme completo | AUPRC | F1 con gold a ≥ 10 frasi |
-|---|---:|---:|---:|---:|
+|-----------------------|---------------------:|------------------------:|-------------:|-----------------------------:|
 | E-RAND | 0,07 | 0,01 | 0,06 | 0,06 |
 | E-LEX | 0,60 | 0,22 | 0,58 | 0,60 |
 | E-ATT | 0,75 | 0,42 | 0,81 | 0,76 |
 | E-ABL (5 righe) | 0,45 | 0,00 | — | — |
 
 **Che cosa dicono:**
+
 - l'attenzione del modello è già un segnale forte, molto sopra BM25;
 - E-ABL trova spesso **una sola** frase sufficiente al modello, anche quando le annotazioni ne indicano più di una: KnowLine sembra dire "supportato" con evidenza parziale. Va verificato sul set completo, perché pesa anche sulla metrica di sufficienza ([10](10_valutazione.md) §2).
 
 ## 4. Codice
 
 | Funzione | Ruolo |
-|---|---|
+|------------------------------------------|------------------------------------------|
 | `words`, `bm25`, `lex_scores` | E-LEX |
 | `rand_scores` | E-RAND |
 | `att_columns`, `ranks`, `choose_att_combos`, `att_scores` | E-ATT |

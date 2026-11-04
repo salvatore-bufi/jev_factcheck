@@ -23,7 +23,7 @@ Una regola come "$u < 0{,}1 \Rightarrow$ dev" dà così uno split al 10% **stabi
 ## 2. Le regole per fonte
 
 | Fonte | Train | Dev | Test |
-|---|---|---|---|
+|----------------|-----------------------------------------|----------------------------------|------------------------------------|
 | **SciFact** | $u < 0{,}8$ | $0{,}8 \le u < 0{,}9$ | $u \ge 0{,}9$ |
 | **HoVer** | train d'origine, $u \ge 0{,}1$ (`exact` e `db_split`) | train d'origine, $u < 0{,}1$, solo `exact` | dev d'origine, solo `exact` |
 | **WiCE** | train d'origine con `aggrefact_overlap is False` | — | dev + test d'origine (fuori dominio) |
@@ -42,7 +42,7 @@ Poi `remove_shared_documents` fa passare ogni documento conteso allo stadio più
 ## 3. I set (prodotti il 2026-11-04)
 
 | Set | Contenuto | Righe | Uso |
-|---|---|---:|---|
+|------------------------|-----------------------------------------|---------------:|-------------------------------|
 | `train` | tutto il train, tutte le etichette | 20.717 | input del mix |
 | `dev_evid_select` | metà dei positivi del dev (per documento, $u_{dev\_half} < 0{,}5$) | 391 | **tutte** le scelte |
 | `dev_evid_confirm` | l'altra metà | 391 | conferma delle scelte |
@@ -63,7 +63,7 @@ Ogni riga del train prende la **prima** famiglia della ricetta il cui `match` le
 - `omega` $\omega$: peso delle frasi **non** gold. È basso dove gli annotatori possono aver dimenticato frasi valide.
 
 | Famiglia | `match` | Termine | $w_b$ | $\omega$ | Righe |
-|---|---|---|---:|---:|---:|
+|----------------------|-----------------------------|-------------------|------------:|------------:|-------------:|
 | `hover_exact` | hover, label 1, exact | `supervised` | 1,0 | 0,5 | 6.846 |
 | `hover_db_split` | hover, label 1, db_split | `supervised` | 0,5 | 0,5 | 3.063 |
 | `scifact_pos` | scifact, label 1 | `supervised` | 1,0 | 0,5 | 404 |
@@ -80,7 +80,7 @@ Totale: **20.249 righe**. Con `neg_fraction` i negativi si possono sottocampiona
 ### 4.1 Vincoli (stampati e salvati nel manifest)
 
 | Vincolo | Obiettivo | `ev_head` |
-|---|---|---:|
+|---------------------------------------|-------------------|---------------------------------------------:|
 | quota di negativi | 0,20–0,45 | 0,389 |
 | positivi con ≥ 2 frasi gold | ≥ 0,40 | 0,931 |
 | positivi con gold a ≥ 10 frasi di distanza | ≥ 0,25 | 0,664 |
@@ -91,7 +91,7 @@ Totale: **20.249 righe**. Con `neg_fraction` i negativi si possono sottocampiona
 ## 5. Codice
 
 | Funzione | File | Ruolo |
-|---|---|---|
+|--------------------------------------|---------------------------------------|-----------------------------------------|
 | `unit` | `make_splits.py` | hash deterministico per documento |
 | `assign_scifact`, `assign_hover`, `assign_wice` | `make_splits.py` | regole per fonte |
 | `remove_shared_documents`, `make_sets`, `check` | `make_splits.py` | nessun documento condiviso; i 6 set; controlli |

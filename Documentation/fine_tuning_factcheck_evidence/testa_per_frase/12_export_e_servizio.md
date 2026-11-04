@@ -37,6 +37,7 @@ $$
 ```
 
 **Regole del servizio:**
+
 - `start` / `end` si riferiscono al documento così come l'ha mandato il client;
 - `score` vale $\sigma(s_k - \theta)$;
 - un documento oltre 32.768 token (`config.MAX_TOKENS_SERVE`) dà l'errore `document_too_long` e non viene mai troncato; un documento vuoto dà `empty_document`;
@@ -46,7 +47,7 @@ $$
 ## 2. La cartella di rilascio (`release.build`)
 
 | File | Contenuto |
-|---|---|
+|----------------------------------------|----------------------------------------------------------------------|
 | `head.safetensors`, `config.json`, `selection.json` | la testa, la sua configurazione (impostazioni delle feature comprese), la regola di selezione |
 | `decision.json` | tutte le impostazioni: modello e revisione, domanda, preambolo, soglia, layer, feature, selezione, divisore, limite di token |
 | `sentences/` | copia di `sentences.py` e dei parametri inglesi di NLTK `punkt_tab` |
@@ -63,7 +64,7 @@ La testa lavora su **frasi**. Se in produzione il documento fosse diviso anche d
 ## 4. Controlli prima del rilascio
 
 | Controllo | Deve dare | Misurato (prova, 2026-11-04) |
-|---|---|---|
+|-----------------------------------|--------------------------------|--------------------------------|
 | Server = valutazione, stesse righe | stesse frasi; $\lvert\Delta P\rvert < 0{,}005$ | 60/60 righe, $\Delta P = 0$ |
 | `release --verify` | hash uguali | sì |
 | Latenza | C − B ≤ 3% o 2 ms | +1,8 ms (+0,5%) |
@@ -72,7 +73,7 @@ La testa lavora su **frasi**. Se in produzione il documento fosse diviso anche d
 ## 5. Codice
 
 | Funzione / classe | File | Ruolo |
-|---|---|---|
+|----------------------------------------|-------------------|---------------------------------------|
 | `Service.__init__`, `Service.answer` | `serve.py` | caricamento (con verifica) e una richiesta |
 | `make_handler`, `main` | `serve.py` | HTTP e `--demo` |
 | `build`, `hashes`, `verify`, `punkt_dir`, `model_card` | `release.py` | cartella di rilascio e hash |

@@ -49,7 +49,7 @@ Le fasi 1b (modello in memoria, media pesata dei token) e 2 (LoRA del modello in
    Si tiene lo stato migliore e ci si ferma dopo 2 epoche senza miglioramento (`patience`).
 
 | Iperparametro | Valore |
-|---|---|
+|----------------------|-------------------------------------------------|
 | learning rate | $10^{-3}$, riscaldamento 5%, coseno |
 | weight decay | 0,01 |
 | batch | 64 righe, raggruppate per lunghezza |
@@ -62,7 +62,7 @@ Le fasi 1b (modello in memoria, media pesata dei token) e 2 (LoRA del modello in
 Si fissa **dopo** il training, su `dev_evid_select`. Si valutano solo i positivi che il verdetto giudica supportati ([10](10_valutazione.md) §1).
 
 | Loss | Regola | Griglia | Scelta |
-|---|---|---|---|
+|--------|--------------------------|------------------------------|--------------------------|
 | `ref` | $\sigma(s_k) > \tau_e$, cioè soglia $\mathrm{logit}(\tau_e)$ | $\tau_e \in \{0{,}05, \ldots, 0{,}95\}$ | F1 migliore |
 | `zlpr` | $s_k > s_\star + \delta$ | $\delta \in \{-1{,}0; -0{,}9; \ldots; 1{,}0\}$ | F1 migliore, ma $\delta \neq 0$ solo se guadagna almeno 1 punto |
 
@@ -73,7 +73,7 @@ Sempre almeno 1 frase e al massimo 5. La regola va in `selection.json`, la confe
 `data/evidence/runs/knowline-4b/<id>[_<tag>]/`:
 
 | File | Contenuto |
-|---|---|
+|------------------------|------------------------------------------------------|
 | `config.json` | la configurazione, le cartelle di feature, il loro `meta.json`, $D$ |
 | `head.safetensors` | i pesi dell'epoca migliore |
 | `selection.json` | la regola scelta |
@@ -87,7 +87,7 @@ Il training rifiuta dev e train estratti con impostazioni diverse (`same_feature
 ## 5. Che cosa guardare
 
 | Cosa | Dove | Problema | Cosa fare |
-|---|---|---|---|
+|-------------------------------|------------------------------------|----------------------------------|------------------------------------------|
 | F1 e insieme completo | `log.jsonl` | non superano E-LEX dopo 2 epoche | controllare il rendering ([06](06_rendering_ed_estrazione.md) §5) prima della testa |
 | F1 per distanza in frasi | `dev_metrics.json`: `f1_by_sent_distance` | crollo oltre 10 frasi | H3c (4 layer), H-PAIR |
 | F1 per distanza in token | `f1_by_tok_distance` | crollo oltre 1.024 o 4.096 | H2b (attenzione) |
@@ -99,7 +99,7 @@ Il training rifiuta dev e train estratti con impostazioni diverse (`same_feature
 ## 6. Controlli prima di ogni nuova configurazione
 
 | Controllo | Atteso | Misurato (2026-11-04) |
-|---|---|---|
+|--------------------------------------------------|-----------------------------------|-----------------------------|
 | `--overfit 64`: la testa impara a memoria 64 righe (30 epoche, batch 16) | score ≈ 1 | 1,000 con H0 e con H2c |
 | righe `none` | loss e gradiente 0 | sì (test) |
 | riempimento | stessi punteggi da sola o in batch | differenza < $10^{-4}$ (test) |
@@ -109,7 +109,7 @@ Prova end-to-end su 300 righe del mix (circa 190 positivi) e 300 di `dev_evid_se
 ## 7. Codice
 
 | Funzione | Ruolo |
-|---|---|
+|-----------------------------|------------------------------------------|
 | `collate`, `length_batches` | batch riempiti e raggruppati per lunghezza |
 | `run_head`, `batch_loss` | forward e loss del batch |
 | `scores_of`, `predictions` | punteggi → predizioni nel formato delle metriche |

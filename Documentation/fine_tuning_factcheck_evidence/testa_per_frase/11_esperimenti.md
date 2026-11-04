@@ -19,7 +19,7 @@ Il registro `data/evidence/runs/registry.md` è scritto in automatico da `train_
 ## 2. Le configurazioni pronte
 
 | File | Che cosa cambia rispetto al precedente | Layer | Parti | Loss | Righe | Che cosa si guarda |
-|---|---|---|---|---|---|---|
+|--------------------------|----------------------------------------|----------|------------|------------|----------------------|------------------------------------|
 | `h0.json` | testa di partenza: niente miscela, niente media, niente attenzione | [31] | end | `ref` | supervised | batte E-LEX ed E-ATT? Se no, cercare errori nel rendering |
 | `h_loss.json` | soglia del documento (ZLPR) | [31] | end | `zlpr` | supervised | insieme completo, frasi mostrate |
 | `h_mil.json` | + negativi, $\mu_{neg} = 0{,}3$ | [31] | end | `zlpr` | + mil_neg | negativi accesi, `recall_uncertain` |
@@ -37,7 +37,7 @@ Le configurazioni H3a, H3c, H9 e H-PAIR partono dalla testa completa. Se gli esp
 ## 3. Esperimenti che richiedono altre feature o un altro mix
 
 | Nome | Come si fa |
-|---|---|
+|------------------------------------|-------------------------------------------------------------------------------------|
 | **H4** (senza preambolo) | `python -m evidence.extract --rows <mix> <dev...> --preamble none --suffix _nopre`, poi `train_head` con `--train $F/ev_head_nopre --dev $F/dev_evid_select_nopre` |
 | **H7** ($\omega$ = 0,3 / 0,5 / 1) | copiare `recipes/ev_head.json`, cambiare `omega`, fare un nuovo `make_mix`. Le feature **non** dipendono da $\omega$, che sta solo nell'indice: basta ri-estrarre il nuovo mix oppure modificare `omega` in `index.jsonl` |
 | **H12** (peso di `db_split` = 0 / 0,5 / 1) | come H7, con `row_weight` della famiglia `hover_db_split` |

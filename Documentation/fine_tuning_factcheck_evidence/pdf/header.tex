@@ -1,0 +1,18 @@
+% LaTeX additions for the PDF (used by pdf/build.sh)
+% 1. figures: never taller than 45% of the page, so a page never overflows
+\makeatletter
+\def\maxheight{\ifdim\Gin@nat@height>0.45\textheight 0.45\textheight\else\Gin@nat@height\fi}
+\makeatother
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% 2. code blocks: long lines wrap instead of being cut at the right margin
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,breakanywhere,commandchars=\\\{\}}
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines,breakanywhere}
+% 3. paragraphs and table cells with long code names: allow looser spacing instead of overflowing
+\sloppy
+\emergencystretch=3em
+% 4. code names in text and tables (\texttt): allow a line break after "_" (outside math), hyphenate monospace words
+\usepackage[htt]{hyphenat}
+\makeatletter
+\DeclareRobustCommand{\_}{\ifmmode\nfss@text{\textunderscore}\else\textunderscore\allowbreak\fi}
+\makeatother

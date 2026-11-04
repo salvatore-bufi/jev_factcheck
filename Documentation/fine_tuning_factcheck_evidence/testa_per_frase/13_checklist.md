@@ -53,23 +53,28 @@ python -m evidence.serve --run releases/knowline-4b-fc-ev-v1 --port 8090
 ## 2. Checklist
 
 **Passo 1–2, dati**
+
 - [x] dataset costruiti con `--hover-db-fallback`; allineamento ≥ 90% per fonte
 - [x] split per `doc_id`, nessun documento condiviso; WiCE con `aggrefact_overlap` mai in train
 - [x] mix `ev_head` con i vincoli rispettati
 
 **Passo 2–3, rendering e modello**
+
 - [x] `python -m evidence.render 400`: tutte le righe corrette
 - [x] `python -m evidence.model --selftest` superato
 - [x] `tests/test_evidence_render.py` superato
 
 **Passo 4, preambolo**
+
 - [ ] `check_preamble` lanciato; `preamble_choice.json` scritto; `acceptable` verificato
 
 **Passo 5, estrazione**
+
 - [ ] mix e dev estratti con il preambolo scelto; `report` stampa la quota di evidenza oltre 1.024 token (≥ 0,15)
 - [ ] `skipped.json` controllato (righe saltate e motivo)
 
 **Passo 6–9, baseline, testa, training, valutazione**
+
 - [ ] baseline su `dev_evid_select`
 - [x] `tests/test_evidence_head.py` superato
 - [ ] `--overfit 64` sulle feature vere: score ≈ 1
@@ -77,13 +82,14 @@ python -m evidence.serve --run releases/knowline-4b-fc-ev-v1 --port 8090
 - [ ] configurazione finale con 3 semi; sufficienza ≥ 85%; latenza nell'obiettivo
 
 **Passo 11, rilascio**
+
 - [ ] release creata e verificata; server = valutazione su 200 righe
 - [ ] test misurati una volta sola; `report.md` aggiornato
 
 ## 3. Se succede…
 
 | Problema | Prima cosa da controllare | Poi |
-|---|---|---|
+|------------------------------------------|--------------------------------------------------|---------------------------------------------------|
 | La testa non impara (F1 vicino a E-RAND) | `python -m evidence.render` sulle righe del mix | `meta.json` delle feature (preambolo, layer) |
 | `--overfit 64` non arriva a ≈ 1 | posizioni delle frasi, etichette `gold` in `index.jsonl` | il codice della loss (`tests/test_evidence_head.py`) |
 | Fa come E-LEX (sbaglia frasi "ponte") | quante righe HoVer ci sono nel mix | H3c4; H-PAIR; `h_mil1` |

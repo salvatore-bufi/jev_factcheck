@@ -115,7 +115,7 @@ $$
 ## 7. Perché ogni scelta, in una riga
 
 | Scelta | Perché |
-|---|---|
+|-------------------------------------|-----------------------------------------------------------|
 | un solo forward, modello congelato | latenza di un decision model (+0,5% misurato); verdetto invariato |
 | preambolo con il claim | nel modello causale le frasi altrimenti non sanno che cosa si verifica |
 | seconda copia del documento | ha già visto tutto il documento e il claim |

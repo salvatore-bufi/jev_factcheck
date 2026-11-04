@@ -9,12 +9,14 @@ Documentazione del sistema **implementato** in [`evidence/`](../../evidence/): f
 | [`pdf/`](pdf/) | tutta la documentazione in un PDF, generato con `sh pdf/build.sh` |
 
 **Da dove partire:**
+
 - [00 overview](testa_per_frase/00_overview.md);
 - [08 testa e loss](testa_per_frase/08_testa_e_loss.md) per l'architettura;
 - [15](testa_per_frase/15_recap_architettura_layer_loss.md) per tutte le formule in una pagina;
 - [13](testa_per_frase/13_checklist.md) per i comandi.
 
 **Riferimenti:**
+
 - Piano originale, con tutte le varianti non implementate: [`../fine_tuning_factcheck_evidence_complete/`](../fine_tuning_factcheck_evidence_complete/testa_per_frase/00_overview.md).
 - Guida pratica al codice: [`evidence/code_report.md`](../../evidence/code_report.md).
 - Stato del lavoro: [`CLAUDE_README.md`](../../CLAUDE_README.md).

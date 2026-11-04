@@ -17,6 +17,7 @@ Senza preambolo il prompt è identico byte per byte a quello del benchmark: è v
 *Figura 5 — Il prompt di KnowLine-Gen5.5 con il preambolo. Le richieste corte sono scritte due volte; le frasi si leggono dalla seconda copia del documento; il verdetto si legge all'ultimo token.*
 
 Lo stato `{"document", "claim"}` diventa **un turno utente** in testo indentato (`knowline_server.render_value`):
+
 - se il documento contiene a capo: `document:` seguito da ogni riga con **due spazi** davanti;
 - altrimenti: `document: <testo>`.
 
@@ -69,7 +70,7 @@ r = kl.render_request({"state": state, "questions": {QUESTION_ID: QUESTION}}, to
 Candidati in `config.PREAMBLES`:
 
 | Nome | Testo |
-|---|---|
+|------------|-------------------------------------------------|
 | `none` | nessuno (il prompt del benchmark) |
 | `P-A` | `Claim under review: {claim}` |
 | `P-B` | `The following document will be checked against this claim: {claim}` |
@@ -99,7 +100,7 @@ Costo misurato del preambolo sulla latenza: +14 ms su circa 323 ms (B − A in [
 ## 5. Codice
 
 | Funzione | File | Ruolo |
-|---|---|---|
+|-------------------------------------|---------------------------------------|---------------------------------------------------------|
 | `frontend` | `evidence/render.py` | tokenizer, `knowline_server`, `knowline_layout`, layout di lettura doppia, id delle etichette |
 | `state_text`, `render` | `evidence/render.py` | prompt con o senza preambolo |
 | `preamble_template`, `PREAMBLES`, `QUESTION` | `evidence/config.py` | candidati e scelta |

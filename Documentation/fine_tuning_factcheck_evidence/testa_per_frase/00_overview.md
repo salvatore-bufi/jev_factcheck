@@ -39,7 +39,7 @@ Tre principi:
 *Figura 1 — I passi e i file che li realizzano. Arancione: richiede il modello sulla GPU. Verde: solo la testa (minuti, anche su CPU).*
 
 | # | Passo | Documento | Codice |
-|---|---|---|---|
+|--------|-------------------------------------------|------------------|-------------------------------------------------|
 | 0 | Dataset con evidenza annotata | [02](02_dati_fonti.md) | `evidence/data/build.py`, `evidence/sentences.py` |
 | 1 | Split per documento e mix di training | [04](04_split_e_mix.md) | `evidence/data/make_splits.py`, `evidence/data/make_mix.py` |
 | 2 | Prompt di KnowLine e posizione delle frasi nei token | [05](05_formato_prompt.md), [06](06_rendering_ed_estrazione.md) | `evidence/render.py` |
@@ -61,7 +61,7 @@ Il passo [03](03_dati_generati.md) (dati generati) è fuori dal perimetro dell'i
 ## 3. Notazione
 
 | Simbolo | Significato | Valore per KnowLine-4B |
-|---|---|---|
+|-------------------|-----------------------------------------------------|---------------------------------|
 | $T$ | posizione dell'ultimo token del prompt (**posizione di risposta**) | |
 | $D$ | dimensione degli stati nascosti | 2.560 |
 | $H^{(l)} \in \mathbb{R}^{(T+1)\times D}$ | uscita del layer $l$ (un vettore per token) | |
@@ -82,7 +82,7 @@ Il passo [03](03_dati_generati.md) (dati generati) è fuori dal perimetro dell'i
 ## 4. Stato dell'implementazione (2026-11-04)
 
 | Parte | Stato |
-|---|---|
+|----------------------------------------------|--------------------------------------------------------|
 | Split e mix | lanciati: `dataset/evidence/splits/`, `dataset/evidence/mixes/ev_head.jsonl` (20.249 righe) |
 | Rendering, hook, forward | verificati sui dati veri ([06](06_rendering_ed_estrazione.md) §8, [01](01_modello_e_hook.md) §6) |
 | Testa, loss, metriche | test unitari superati (`tests/test_evidence_head.py`) |
@@ -94,7 +94,7 @@ I numeri che compaiono in questa documentazione come "prova su 300 righe" dicono
 ## 5. Obiettivi (dal piano)
 
 | Obiettivo | Soglia | Come si misura |
-|---|---|---|
+|------------------------------|------------------------------------------------------|-------------------------------------|
 | Verdetto invariato | identico a quello senza testa | `eval_evidence.py`, sezione `verdict` |
 | F1 per frase | almeno 15 punti sopra E-LEX | `baselines.py` contro `eval_evidence.py` |
 | Insieme completo su HoVer | ≥ 0,65 | `metrics.summarize` → `full_set`, `by_source` |

@@ -9,6 +9,7 @@
 ## 1. Il problema
 
 Il documento nel prompt **non è scritto come l'originale**:
+
 - KnowLine mette due spazi davanti a ogni riga;
 - c'è il preambolo;
 - le richieste corte sono scritte due volte.
@@ -50,7 +51,7 @@ Poi $a_k = \min\{t : \phi(t) = k\}$ e $b_k = \max\{t : \phi(t) = k\}$. La regola
 **Uscita** di `render`:
 
 | Chiave | Contenuto |
-|---|---|
+|-------------------------|------------------------------------------------|
 | `prompt`, `input_ids` | il prompt e i suoi token |
 | `answer_pos` | $T$, indice dell'ultimo token |
 | `sent_tok_spans` | $[a_k, b_k]$ per ogni frase, indici nel prompt, estremi inclusi |
@@ -74,7 +75,7 @@ Per ogni file di righe (un set) si scrive `data/evidence/features/knowline-4b/<s
 Gli shard sono `safetensors`. I tensori sono **concatenati lungo le frasi** delle righe dello shard, con **un tensore per layer**, così chi legge un solo layer legge solo quello:
 
 | Tensore | Forma ($N$ = frasi dello shard, $R$ = righe) | Tipo |
-|---|---|---|
+|-------------------------------------|-----------------------------------------|-------------|
 | `h_end.19`, `h_end.23`, `h_end.27`, `h_end.31` | $[N, D]$ | bf16 |
 | `h_mean.19` … `h_mean.31` | $[N, D]$ | bf16 |
 | `q.19` … `q.31` | $[R, D]$ | fp32 |
@@ -83,6 +84,7 @@ Gli shard sono `safetensors`. I tensori sono **concatenati lungo le frasi** dell
 | `answer_logits` | $[R, 2]$ | fp32 |
 
 Accanto agli shard:
+
 - `index.jsonl`: per ogni riga, shard, riga nello shard, offset della prima frase, $n$, `gold` (0/1 per frase), `evidence_sets`, `evidence_term`, `row_weight`, `omega`, `sent_tok_spans`, `doc_tok_start`, `prompt_tokens`, `twice`, P(supportato) e `shortened`;
 - `meta.json`: modello, revisione, preambolo, layer, domanda e sha256 di `sentences.py`, `render.py` e `model.py`;
 - `skipped.json`: le righe saltate, con il motivo.
@@ -90,6 +92,7 @@ Accanto agli shard:
 **Spazio occupato:** per frase $2 \times L \times D \times 2$ byte $= 2 \times 4 \times 2560 \times 2 = 40\,\text{KB}$, più 256 byte di attenzione. Con circa 46–52 frasi per riga fanno circa 2 MB per riga (misurato sul campione: 572 MB per 300 righe del mix), quindi circa **40 GB per il mix** e circa **50 GB per tutti i set** (mix + dev + test). Il piano indicava 82 KB per frase e 120 GB, ma $2\times4\times2560\times2$ byte fanno 41 KB: la stima corretta è questa.
 
 **Ripresa e sicurezza:**
+
 - uno shard già scritto non si ricalcola;
 - ogni shard si scrive in un `.tmp` e poi si rinomina, così un'interruzione non lascia file rotti;
 - se il codice che definisce le feature è cambiato (sha256 diverso in `meta.json`), il programma avvisa.
@@ -97,6 +100,7 @@ Accanto agli shard:
 ### 3.2 Righe troppo lunghe
 
 Il limite di estrazione è 16.384 token (`config.MAX_TOKENS_EXTRACT`). Nel mix lo superano 5 righe, tutte WiCE.
+
 - **Righe di training** (del mix): vengono **accorciate** con `shorten`. I positivi perdono frasi non gold, a partire da quelle più lontane da ogni frase gold (ordinate per $-\min_{g\in G}\lvert k - g\rvert$); i negativi perdono le ultime frasi. Si toglie a ogni giro una quantità di token pari circa all'eccesso (+5%) e si ri-renderizza.
 - `rebuild(row, keep)` ricostruisce il documento con le frasi tenute: separatore `"\n"` se nell'originale dopo la frase precedente c'era un a capo, altrimenti uno spazio. Rimappa `evidence`, `evidence_sets` e `contra`, e segna `meta.shortened`.
 - **Righe di dev e test**: non si tagliano mai. Si saltano e si contano (`too_long`).
@@ -119,7 +123,7 @@ Gli shard sono aperti con `safe_open`, cioè in mmap: si leggono dal disco solo 
 ## 5. Verifiche
 
 | Verifica | Risultato |
-|---|---|
+|--------------------------------------------------------------|-----------------------------------------------|
 | I token decodificati di ogni frase ridanno la frase (normalizzazione NFKC, al massimo 3 caratteri di bordo) | 1.185 / 1.185 righe di dev e WiCE; 1.500 / 1.500 righe del mix |
 | Documenti con `"`, `\`, tab, `<`, emoji, cirillico, greco, giapponese, `\r\n` | corretti (`tests/test_evidence_render.py`) |
 | Senza preambolo, prompt identico al benchmark | sì |
@@ -129,7 +133,7 @@ Gli shard sono aperti con `safe_open`, cioè in mmap: si leggono dal disco solo 
 ## 6. Codice
 
 | Funzione | File | Ruolo |
-|---|---|---|
+|----------------------------------------------|--------------------|--------------------------------------|
 | `document_in_prompt` | `render.py` | $\tilde x$ e `origin` |
 | `token_char_spans`, `sentence_token_spans` | `render.py` | passi (d) ed (e) |
 | `render`, `render_row`, `check_row` | `render.py` | il rendering completo e il suo controllo |

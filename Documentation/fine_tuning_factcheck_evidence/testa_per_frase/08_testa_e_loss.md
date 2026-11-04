@@ -11,6 +11,7 @@ $$
 e restituisce un punteggio $s_k$ per frase e una soglia $s_\star$ per il documento. La frase $k$ è evidenza se $s_k > s_\star + \delta$.
 
 La rete ha quattro stadi:
+
 - **A**: miscela dei layer;
 - **B**: un vettore per frase;
 - **C**: comunicazione fra le frasi;
@@ -27,7 +28,7 @@ Si addestra con la **loss ZLPR** ([`evidence/losses.py`](../../../evidence/losse
 In un batch di $B$ documenti le frasi sono riempite fino al documento più lungo, $N = \max_b n_b$. La maschera $\mathbf{1}_{b,k}$ vale 1 sulle frasi vere.
 
 | Tensore | Forma | Note |
-|---|---|---|
+|------------------------|--------------------|--------------------------------------|
 | `q` | $[B, L, D]$ | $L = 4$ (o 1 con un solo layer letto) |
 | `h_end`, `h_mean` | $[B, N, L, D]$ | bf16 da disco; la testa lavora in fp32 |
 | `att` | $[B, N, 128]$ | |
@@ -132,7 +133,7 @@ con $\tau$ appreso (iniziale 0,1) e $\mathrm{sg}$ = *stop gradient* (`s.detach()
 ## 3. Parametri (KnowLine-4B, $D = 2560$; calcolati da `EvidenceHead`)
 
 | Componente | Formula | Parametri |
-|---|---|---:|
+|----------------------------------|--------------------------------|-------------------------------:|
 | A. $\alpha$ | $L$ | 4 |
 | A. LayerNorm | $2D$ | 5.120 |
 | B. $W_h, b_h$ | $2D \cdot 256 + 256$ | 1.310.976 |
@@ -155,7 +156,7 @@ con $\tau$ appreso (iniziale 0,1) e $\mathrm{sg}$ = *stop gradient* (`s.detach()
 ## 4. Interruttori e configurazioni
 
 | Opzione di `EvidenceHead` | Default | Effetto | Esperimento |
-|---|---|---|---|
+|-----------------------------|----------------|------------------------------------------|--------------------|
 | `use_mix` | True | False = solo l'ultimo layer letto | H0 / H2a |
 | `use_mean` | True | False = solo $h^{end}$ | H2c |
 | `use_att` | True | False = niente $att_k$ | H2b |
@@ -173,7 +174,7 @@ Le configurazioni stanno in [`evidence/configs/`](../../../evidence/configs/). `
 Ogni riga del mix ([04](04_split_e_mix.md) §4) ha un termine (`TERMS` in `losses.py`), un peso di riga $w_b$ e un peso $\omega$ per le frasi non gold:
 
 | Termine | Righe | Che cosa chiede |
-|---|---|---|
+|----------------------|-----------------------------------------|---------------------------------------|
 | `supervised` (0) | positivi con evidenza nota | le frasi di $G$ sopra $s_\star$, le altre sotto |
 | `mil_neg` (1) | negativi | **nessuna** frase sopra $s_\star$ |
 | `mil_pos` (2) | positivi senza evidenza (non usato di default) | almeno una frase sopra $s_\star$, ma poche |
@@ -260,7 +261,7 @@ $$
 ### 5.5 Esempi numerici (test automatici in `tests/test_evidence_head.py`)
 
 | Caso | Valore |
-|---|---:|
+|-----------------------------------------------------|--------------------------:|
 | `ref_loss`, 40 frasi, gold = {1, 40}, tutte con $\sigma(s) = 0{,}02$, $\alpha = 10$, $\omega = 1$, solo BCE: $(10 \cdot 2 \cdot 3{,}912 + 38 \cdot 0{,}020)/40$ | **1,975** |
 | `zlpr_loss` "prima" (fig. 8): $\log(1 + e^{0{,}5} + 37e^{-3}) + \log(1 + e^{-2} + e^{0{,}5}) = 1{,}502 + 1{,}024$ | **2,526** |
 | `zlpr_loss` "dopo": $\log(1 + e^{-1} + 37e^{-3}) + \log(1 + e^{-2} + e^{-1{,}5}) = 1{,}166 + 0{,}306$ | **1,473** |
@@ -270,7 +271,7 @@ $$
 ## 6. Codice
 
 | Funzione / classe | File | Ruolo |
-|---|---|---|
+|-------------------------------------------|--------------------------------------|-------------------------------------------|
 | `EvidenceHead.__init__`, `forward`, `mixed`, `layer_weights` | `head.py` | stadi A–D, H-PAIR |
 | `build_head`, `load_run` | `head.py` | da configurazione / da run |
 | `ref_loss`, `zlpr_loss`, `pair_loss`, `TERMS` | `losses.py` | §5 |

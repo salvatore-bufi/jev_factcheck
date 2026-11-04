@@ -3,6 +3,7 @@
 ## In breve
 
 Si usano tre dataset pubblici con l'evidenza annotata: **SciFact**, **WiCE** e **HoVer** (il testo delle pagine di HoVer viene da HotpotQA distractor). Ogni fonte viene convertita in uno **stesso formato di riga**:
+
 - il documento è diviso in frasi con il **nostro** divisore;
 - le frasi di evidenza della fonte sono riportate sulle nostre frasi.
 
@@ -15,12 +16,13 @@ python -m evidence.data.build --source scifact wice hover --hover-db-fallback
 ## 1. Le fonti
 
 | Fonte | Righe | Positivi / negativi | Documento | Frasi per documento (mediana) | Frasi gold per positivo |
-|---|---:|---|---|---:|---:|
+|----------------|---------------:|--------------------------|-----------------------------------------|--------------------------------:|-----------------------------:|
 | SciFact | 1.258 | 508 / 750 | titolo + abstract biomedico | 9 | 1,8 |
 | WiCE | 5.294 | 3.100 / 2.194 | pagina web citata da Wikipedia | 68 | 2,6 |
 | HoVer | 22.063 | 12.974 / 9.089 | circa 10 pagine Wikipedia (evidenza + disturbo) | 46 | 3,0 |
 
 **Etichette per fonte:**
+
 - **SciFact**: `SUPPORT` → 1; `CONTRADICT` e `NEI` → 0.
 - **WiCE**: `supported` → 1; `not_supported` → 0; `partially_supported` → 0 senza loss di evidenza (`evidence_term = none`).
 - **HoVer**: `SUPPORTED` → 1; `NOT_SUPPORTED` → 0.
@@ -63,7 +65,7 @@ Se nessuna frase raggiunge la metà, si prende quella con la sovrapposizione mag
 ```
 
 | Campo | Significato | Usato da |
-|---|---|---|
+|----------------------------|---------------------------------------|-------------------------------------|
 | `sentences` | $[s_k, e_k)$ di ogni frase | rendering, metriche, server |
 | `evidence` | $G$ = unione degli insiemi alternativi | loss, metriche |
 | `evidence_sets` | insiemi alternativi (WiCE ne ha più di uno) | metriche "insieme completo" ed "esatto" |

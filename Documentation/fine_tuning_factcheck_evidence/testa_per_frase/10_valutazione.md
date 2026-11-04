@@ -3,6 +3,7 @@
 ## In breve
 
 Per ogni testa si misurano tre cose:
+
 1. le **frasi mostrate** sono quelle giuste, anche lontane fra loro o dall'inizio del documento;
 2. il **verdetto** non è cambiato;
 3. la **latenza** resta quella di un decision model.
@@ -45,7 +46,7 @@ $$
 Esempio: con $\mathcal{S} = \{1,4\}$ e insiemi gold $\{1,4\}$ e $\{7\}$ si ha P = 1, R = 2/3 e F1 = 0,8; l'insieme è completo ed esatto.
 
 | Metrica (chiave) | Definizione | Perché |
-|---|---|---|
+|----------------------------------|--------------------------------------------------------|---------------------------------------------------|
 | `precision`, `recall`, `f1` | media su $\mathcal{E}$ | qualità per frase |
 | `full_set` | media di "completo" | **per l'evidenza multi-frase è quella che conta**: metà evidenza non convince |
 | `exact` | media di "esatto" | |
@@ -97,7 +98,7 @@ Nella fase 1a il modello è congelato, quindi il verdetto **deve** coincidere co
 Stesso processo e stessa GPU, con richieste reali (di default dalle righe di `test_evid_id`; le prime 50 non si contano). Tre condizioni:
 
 | | Prompt | Uscita |
-|---|---|---|
+|------|-----------------------|--------------------------------------------------------|
 | A | senza preambolo | solo verdetto |
 | B | con preambolo | solo verdetto |
 | C | con preambolo | verdetto + evidenza (hook, righe di attenzione, testa, selezione): ciò che fa il server |
@@ -107,7 +108,7 @@ Obiettivo: $C - B \le \max(0{,}03\,B,\ 2\,\text{ms})$. Si misurano a parte anche
 Misurato su RTX 5090 Laptop, 40 richieste di `dev_evid_select` (prova):
 
 | | p50 | p95 |
-|---|---:|---:|
+|-------------------------------|-----------------------------------:|-----------------:|
 | A | 322,9 ms | 480,4 ms |
 | B | 337,0 ms | 484,7 ms |
 | C | 338,9 ms | 490,3 ms |
@@ -119,7 +120,7 @@ Misurato su RTX 5090 Laptop, 40 richieste di `dev_evid_select` (prova):
 ## 6. Codice
 
 | Funzione | File | Ruolo |
-|---|---|---|
+|-------------------------------------|------------------------|-----------------------------------|
 | `select`, `sentence_metrics`, `auprc` | `metrics.py` | selezione e metriche per riga |
 | `sent_bucket`, `tok_bucket`, `gold_tok_last` | `metrics.py` | bucket di distanza |
 | `summarize` | `metrics.py` | tutte le metriche di un set |
