@@ -1,115 +1,117 @@
-# Passo 2 — Documenti divisi in frasi, con le frasi di evidenza
+# Passo 2 — I dati dalle fonti
 
 ## In breve
 
-Per addestrare e valutare la testa servono righe fatte così: un documento, un claim, l'etichetta (supportato o no), il documento **diviso in frasi** e, se il claim è supportato, **quali frasi sono l'evidenza**. Queste righe si costruiscono da dataset pubblici già presenti sulla macchina.
+Per addestrare e valutare la testa servono righe con documento, claim, etichetta, il documento **diviso in frasi** e, per i positivi, **quali frasi sono l'evidenza**. Si usano tre dataset pubblici che hanno già l'evidenza annotata: **SciFact**, **WiCE**, **HoVer** (con HotpotQA distractor per il testo delle pagine).
 
-Si scrivono due file:
-- `evidence/sentences.py`: divide un testo in frasi. È **l'unica** funzione di divisione usata ovunque (dati, training, server): se in produzione le frasi fossero tagliate in modo diverso, la testa sbaglierebbe.
-- `evidence/build_pairs.py`: costruisce le righe, fonte per fonte.
+La costruzione è già scritta e funzionante, in `evidence/data/` (comando `python -m evidence.data.build`), e produce esattamente il formato che serve alla testa per frase: niente da aggiungere.
 
-Uscita: `data/evidence/pairs/<fonte>_<split>.jsonl`.
+## 1. Le fonti
 
-## 1. Una riga
+| Fonte | Da dove | Righe | Positivi / negativi | Documento |
+|---|---|---:|---|---|
+| **SciFact** | `allenai/scifact_entailment` (cache HF), train + validation | 1.258 | 508 / 750 | titolo + abstract biomedico (mediana 9 frasi) |
+| **WiCE** | `tasksource/wice` (cache HF), train + dev + test | 5.294 | 3.100 / 2.194 | la pagina web citata da Wikipedia, una riga per elemento (mediana 68 frasi) |
+| **HoVer** | claim da `dataset/HoVer/data/hover_{train,dev}_release_v1.1.json`; testo da `hotpotqa/hotpot_qa` (distractor) | 22.063 | 12.974 / 9.089 | ~10 pagine Wikipedia: quelle dell'evidenza più pagine di disturbo (mediana 46 frasi) |
 
-```json
-{"id": "fever:train:75397", "source": "fever", "split": "train", "label": 1,
- "claim": "Nikolaj Coster-Waldau worked with the Fox Broadcasting Company.",
- "document": "Nikolaj Coster-Waldau\nNikolaj Coster-Waldau (born 27 July 1970) is a Danish actor ...",
- "sentences": [[0, 21], [22, 134], [135, 290]],
- "evidence": [2], "evidence_sets": [[2]],
- "evidence_quality": "gold", "doc_id": "fever:Nikolaj_Coster-Waldau"}
-```
+### SciFact
+- `SUPPORT` → positivo; le frasi di *rationale* sono l'evidenza.
+- `CONTRADICT` → negativo; le frasi che contraddicono si salvano a parte (`contra`), solo per analisi.
+- `NEI` → negativo.
+- Documento: titolo, a capo, frasi dell'abstract unite da spazio.
 
-| Campo | Contenuto |
-|---|---|
-| `label` | 1 = supportato, 0 = non supportato |
-| `sentences` | dove inizia e finisce ogni frase, in caratteri |
-| `evidence` | numeri delle frasi di evidenza (vuoto se `label = 0`) |
-| `evidence_sets` | se ci sono più modi alternativi di dimostrare il claim (FEVER, WiCE), uno per insieme |
-| `evidence_quality` | da dove viene l'evidenza: `gold` (annotata da persone), `construct` (nota perché i dati sono generati, [03](03_dati_generati.md)), `ablation` (ricavata col modello, [03](03_dati_generati.md)), `none` |
-| `doc_id` | identifica il documento: lo stesso documento non può stare sia in training sia in test |
+### WiCE
+- `supported` → positivo; `supporting_sentences` dà **più insiemi alternativi** di frasi che dimostrano il claim.
+- `not_supported` → negativo.
+- `partially_supported` → etichetta 0 ma **nessuna loss di evidenza** (una parte del claim è supportata, quindi non si può chiedere che nessuna frase si accenda), oppure scartato con `--wice-partial drop`.
+- Documento: gli elementi della pagina (titoli, righe, frasi) uniti da a capo.
+- **WiCE è anche una fonte del test LLM-AggreFact.** Ogni riga ha `meta.aggrefact_overlap`: `"dev"` o `"test"` se la stessa pagina è in AggreFact dev o test, `false` altrimenti. Il confronto si fa sulla pagina, non sul claim, perché AggreFact usa i claim interi e WiCE li divide in pezzi. Misurato: tutto il dev di WiCE è in AggreFact dev, tutto il test di WiCE in AggreFact test, più 2 righe del train. Queste righe non vanno mai in training ([04](04_split_e_mix.md)).
 
-## 2. Come si divide in frasi
+### HoVer con HotpotQA
+- HoVer dà i claim (2–4 "salti" fra pagine), le etichette `SUPPORTED` / `NOT_SUPPORTED` e le frasi di evidenza come (titolo della pagina, numero di frase), con la numerazione di HotpotQA.
+- HotpotQA distractor, collegato con `hpqa_id`, dà per quella domanda le pagine già divise in frasi e ~8 pagine di disturbo. Il documento contiene le pagine dell'evidenza e quelle di disturbo, in ordine casuale fissato dall'id del claim: ogni pagina è titolo, a capo, testo; pagine separate da una riga vuota. L'evidenza è spesso lontana: in 6.608 positivi su 12.974 le frasi gold distano 20 o più frasi.
+- Per i claim a 3–4 salti, HotpotQA non ha tutte le pagine. Con `--hover-db-fallback` le pagine mancanti si prendono dal database Wikipedia di HoVer (`dataset/HoVer/data/wiki_wo_links.db`), e la frase n si trova dividendo il testo con il nostro divisore. Senza questa opzione si perde il 45% dei claim. Misurato su 5.488 frasi di pagine presenti in entrambe le fonti: la frase così trovata è quella giusta nel 98% dei casi; nel 2% è sfasata di una frase. Queste righe hanno `meta.gold_alignment = "db_split"`, le altre `"exact"`.
 
-`sentences.split(testo)` restituisce gli intervalli delle frasi. Regole:
-1. si va sempre a capo su una riga vuota, su un elemento di elenco e dopo un titolo (riga senza punto finale);
-2. dentro ogni blocco si usa NLTK `sent_tokenize`;
-3. frasi oltre 60 parole: si spezzano su `;` o `:` (altrimenti sulla virgola più vicina a metà);
-4. frasi sotto 3 parole: si uniscono alla successiva;
-5. oltre 512 frasi il documento si esclude dal training.
+## 2. Il divisore in frasi
 
-**Le frasi di evidenza si riportano sempre sulla nostra divisione.** Le fonti danno le loro frasi (FEVER, HotpotQA, SciFact, WiCE), ma servono solo a sapere *dove* nel testo sta l'evidenza. Una nostra frase è evidenza se almeno metà dei suoi caratteri, o metà della frase della fonte, cade dentro una frase di evidenza della fonte.
+`evidence/sentences.py`, funzione `split(testo)`, restituisce gli intervalli `[inizio, fine)` di caratteri delle frasi. È **l'unica** divisione usata in tutta la pipeline: dati, rendering, valutazione e server. Le regole:
 
-Controllo: per ogni fonte, almeno il 90% delle frasi di evidenza originali deve corrispondere a una sola nostra frase.
+1. si va sempre a capo dopo una riga vuota, prima di un elemento di elenco (`- `, `* `, `1. `) e dopo una riga che non finisce con punteggiatura (un titolo); una riga che finisce con virgola o trattino continua nella successiva;
+2. dentro ogni blocco si usa NLTK Punkt (modello `punkt_tab`, inglese), con alcune abbreviazioni in più che il modello non conosce: vol, vols, no, fig, figs, eq, eqs, approx, ca, cf, mt, sgt, capt, gov, dept, pp, al, e.g, i.e (così "Vol. 2 No. 25" non viene spezzato);
+3. frasi oltre 60 parole si spezzano su `; ` o `: ` vicino a metà, poi su `, `, poi su uno spazio;
+4. frasi sotto 3 parole si uniscono alla successiva dello stesso paragrafo (alla precedente se sono le ultime);
+5. oltre 512 frasi la riga si esclude.
 
-## 3. FEVER
+**Le frasi di evidenza delle fonti si riportano sulla nostra divisione**: una nostra frase è evidenza se almeno metà dei suoi caratteri, o metà della frase della fonte, cade in una frase di evidenza della fonte. Così training e produzione vedono gli stessi confini. Misurato: la frase della fonte corrisponde a una sola nostra frase nel 96,5% dei casi (SciFact), 97,3% (WiCE), 98,3% (HoVer).
 
-Claim su Wikipedia, con le righe delle pagine che lo dimostrano.
+Se si cambia `sentences.py`, i dataset vanno ricostruiti e le teste riaddestrate: il suo sha256 sta nel manifest.
 
-| Cosa | Dove |
-|---|---|
-| Claim di training | `~/.cache/huggingface/hub/datasets--fever--fever/snapshots/5f57…/v1.0/train/0000.parquet` — **una riga per ogni frase di evidenza**, da raggruppare |
-| Claim di dev e test | `dataset/Fever/data/paper_dev.jsonl`, `paper_test.jsonl` |
-| Pagine | `dataset/Fever/data/wiki-pages/wiki-pages/wiki-*.jsonl`: il campo `lines` contiene le frasi numerate di ogni pagina |
-
-Passi:
-1. Creare una volta un indice sqlite `data/evidence/fever_pages.db` (id pagina → frasi), per trovare le pagine velocemente.
-2. Raggruppare l'evidenza per claim: nel parquet, righe con lo stesso `id` e lo stesso `evidence_annotation_id` formano un insieme di evidenza.
-3. Documento = le pagine citate dagli insiemi, in ordine casuale (seme fisso). Ogni pagina: titolo su una riga, poi le sue frasi.
-4. Il testo di FEVER è "tokenizzato": va rimesso in forma normale. `-LRB-` → `(`, `-RRB-` → `)`, `-LSB-` → `[`, `-RSB-` → `]`, ` `` ` e `''` → `"`, `--` → `–`, niente spazio prima di `, . ; : ! ? ) 's n't`. Anche nel claim.
-5. SUPPORTS → positivo con evidenza. REFUTES → negativo (si annota a parte quali frasi lo contraddicono, campo `contra`, utile in valutazione). NOT ENOUGH INFO → scartato (non ha pagine).
-
-## 4. HoVer
-
-Claim che richiedono 2–4 pagine Wikipedia: il caso tipico di evidenza sparsa.
-
-| Cosa | Dove |
-|---|---|
-| Claim | `dataset/HoVer/data/hover_train_release_v1.1.json`, `hover_dev_release_v1.1.json`; `supporting_facts` = coppie (titolo pagina, numero di frase) |
-| Pagine | `dataset/HoVer/data/wiki_wo_links.db`, tabella `documents(id, text)`: il testo **non** è diviso in frasi |
-| Frasi originali e pagine di disturbo | dataset `hotpot_qa`, configurazione `distractor` (va scaricato: in cache c'è solo il README), cercato con il campo `hpqa_id` |
-
-Il test di HoVer non ha etichette: si divide il dev in due metà (una per dev, una per test).
-
-Passi:
-1. Scaricare `hotpot_qa` (distractor) e indicizzarlo per `hpqa_id`.
-2. Documento = le pagine di `supporting_facts` più le ~8 pagine di disturbo di HotpotQA per quella domanda, in ordine casuale. Così il documento è lungo e le frasi di evidenza sono distanti.
-3. Dove sta l'evidenza: se la pagina è in HotpotQA, la frase numero i è la i-esima frase di HotpotQA, cercata nel testo. Se la pagina non c'è (capita con 3–4 pagine), si divide il testo con `sentences.py` e si prende la frase i, solo se il conto delle frasi è plausibile; altrimenti la riga va etichettata col modello ([03](03_dati_generati.md)) o scartata.
-4. SUPPORTED → positivo; NOT_SUPPORTED → negativo.
-
-Controllo: su 100 pagine presenti in entrambi, il testo del db deve coincidere con le frasi di HotpotQA unite (a meno degli spazi).
-
-## 5. SciFact e WiCE (solo per il test, mai per il training)
-
-| Fonte | File | Cosa si tiene |
-|---|---|---|
-| SciFact | `~/.cache/huggingface/hub/datasets--allenai--scifact_entailment/snapshots/bdc3…/default/validation/0000.parquet` (340 righe): `abstract` (lista di frasi), `evidence` (numeri), `verdict` | documento = titolo + abstract; `SUPPORT` → positivo, `CONTRADICT` → negativo |
-| WiCE | `~/.cache/huggingface/hub/datasets--tasksource--wice/snapshots/4905…/test.jsonl`: `evidence` (frasi), `supporting_sentences` (insiemi), `label` | `supported` → positivo; `not_supported` → negativo; `partially_supported` scartato |
-
-Servono a vedere se la testa funziona su testi diversi da quelli del training (articoli scientifici, pagine web). WiCE fa anche parte di AggreFact: per questo non entra mai nel training.
-
-## 6. MiniCheck C2D e D2C
-
-`~/.cache/huggingface/hub/datasets--lytang--C2D-and-D2C-MiniCheck/…/data/c2d-*.parquet` e `d2c-*.parquet`: documenti generati, con claim ed etichetta ma **senza** evidenza. Si dividono in frasi; ai positivi l'evidenza si aggiunge al passo [03](03_dati_generati.md).
-
-## 7. Comandi
+## 3. Preparazione e comando
 
 ```sh
-python -m evidence.build_pairs --source fever   --split train dev test
-python -m evidence.build_pairs --source hover   --split train dev
-python -m evidence.build_pairs --source scifact --split validation
-python -m evidence.build_pairs --source wice    --split test
-python -m evidence.build_pairs --source c2d d2c
+python -c "import nltk; nltk.download('punkt_tab')"
+chmod -R go-w ~/nltk_data
+hf download hotpotqa/hotpot_qa --repo-type dataset --include "distractor/*"
+python -m evidence.data.build --source scifact wice hover --hover-db-fallback
 ```
 
-Ogni comando scrive anche un `.stats.json`: righe per etichetta, righe scartate e perché, frasi per documento, frasi di evidenza per riga.
+SciFact e WiCE devono essere nella cache HF; HoVer in `dataset/HoVer/`; LLM-AggreFact in `dataset/lytang--LLM-AggreFact/` (per il controllo su WiCE); il tokenizer di KnowLine-4B nella cache HF (per il filtro di lunghezza).
 
-## 8. Controlli
+| Opzione | Default | Cosa fa |
+|---|---|---|
+| `--hover-db-fallback` | spento | pagine HoVer mancanti prese dal db (da tenere acceso) |
+| `--max-tokens N` | 32.768 | scarta le righe il cui prompt supera N token del tokenizer di KnowLine-4B: documento + 2 × claim + 256 (il front end di KnowLine aggiunge 157 token, misurati) |
+| `--wice-partial` | `negative` | WiCE parzialmente supportati: etichetta 0 senza loss di evidenza, o `drop` |
+| `--limit N` | 0 | primi N record per fonte, per prove |
+
+Uscita in `dataset/evidence/`: `<fonte>.jsonl`, `<fonte>.stats.json` (conteggi, scarti con motivo, lunghezze, distanze fra frasi gold, allineamento), `manifest.json` (file letti, revisioni, sha256, opzioni, commit, sha256 di `sentences.py`). Circa un minuto e mezzo.
+
+Con il limite di default non si scarta nessuna riga per lunghezza (il prompt più lungo è di 18.580 token, in WiCE). Con `--max-tokens 8192` si scartano 75 righe di WiCE.
+
+## 4. Il formato di una riga
+
+```json
+{"id": "hover:train:330ca632-…", "source": "hover", "orig_split": "train",
+ "claim": "…", "document": "Kristian Zahrtmann\nKristian Zahrtmann was …\n\nOssian Elgström\n…",
+ "label": 1,
+ "sentences": [[0, 61], [62, 140], "…"],
+ "evidence": [1, 9, 31], "evidence_sets": [[1, 9, 31]],
+ "contra": [],
+ "evidence_quality": "gold", "evidence_term": "supervised",
+ "doc_id": "hover:5ab7a86d5542995dae37e986",
+ "meta": {"orig_label": "SUPPORTED", "gold_alignment": "exact", "doc_tokens": 1534, "prompt_tokens": 1830, "…": "…"}}
+```
+
+| Campo | Significato |
+|---|---|
+| `label` | 1 = supportato, 0 = no |
+| `sentences` | inizio e fine di ogni frase in caratteri (`document[s:e]`), dal nostro divisore |
+| `evidence` | indici delle frasi di evidenza; vuoto se `label = 0` |
+| `evidence_sets` | gruppi alternativi di frasi che dimostrano il claim (WiCE ne ha più di uno); `evidence` è la loro unione |
+| `contra` | frasi che contraddicono il claim (SciFact), solo per analisi |
+| `evidence_term` | che loss riceve la riga ([08](08_testa_e_loss.md) §6): `supervised` (positivo con evidenza), `mil_neg` (negativo: nessuna frase deve superare la soglia), `none` (nessuna loss di evidenza) |
+| `doc_id` | righe con lo stesso documento (lo split si fa per `doc_id`) |
+| `meta.gold_alignment` | `exact` o `db_split` (HoVer) |
+| `meta.prompt_tokens` | lunghezza stimata del prompt in token |
+
+I file si leggono anche con il benchmark della repo, perché hanno `document`, `claim`, `label`, `source`, `id`: `python benchmark.py --dataset evidence --split scifact --model knowline-4b --gpu 0`.
+
+## 5. Statistiche dei dataset costruiti
+
+| | SciFact | WiCE | HoVer |
+|---|---:|---:|---:|
+| Righe | 1.258 | 5.294 | 22.063 |
+| Documenti diversi | 667 | 1.933 | 7.619 |
+| Frasi per documento (mediana) | 9 | 68 | 46 |
+| Frasi di evidenza per positivo (media) | 1,8 | 2,6 | 3,0 |
+| Positivi con ≥ 2 frasi di evidenza | 51% | 70% | 100% |
+| Positivi con frasi gold a ≥ 20 frasi di distanza | 3 | 583 | 6.608 |
+| Token del prompt, mediana / massimo | 590 / 1.739 | 1.668 / 18.580 | 1.690 / 4.099 |
+
+## 6. Controlli
 
 | Controllo | Atteso |
 |---|---|
-| Le frasi coprono tutto il documento, senza sovrapporsi | tutte le righe |
-| Frasi di evidenza originali corrispondenti a una sola nostra frase | ≥ 90% per fonte |
-| 30 righe positive per fonte lette a mano: le frasi marcate dimostrano il claim | ≥ 28 su 30 |
-| 10 documenti FEVER letti a mano | nessun `-LRB-`, spaziatura normale |
+| Le frasi coprono tutto il documento senza sovrapporsi | tutte le righe (lo verifica il build) |
+| Frasi della fonte corrispondenti a una sola nostra frase | ≥ 90% per fonte (il build si ferma se sotto) |
+| 30 positivi per fonte letti a mano (`python -m evidence.data.show --source hover --n 30`) | le frasi marcate dimostrano il claim in almeno 28 su 30 |

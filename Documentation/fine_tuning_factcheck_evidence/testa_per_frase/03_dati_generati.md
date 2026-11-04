@@ -1,20 +1,20 @@
-# Passo 3 — Altri dati con evidenza nota
+# Passo 3 — Dati generati, etichette ricavate col modello, evidenza spostata
 
 ## In breve
 
-Le righe del passo 2 hanno due limiti: l'evidenza annotata viene quasi solo da Wikipedia, e le frasi di evidenza sono spesso vicine fra loro. Per insegnare alla testa a lavorare su altri tipi di testo e a trovare frasi lontane servono tre tipi di dati in più:
+Le tre fonti del passo 2 hanno due limiti: i testi sono quasi solo Wikipedia, pagine web e abstract biomedici, e solo HoVer ha molta evidenza lontana. Tre famiglie di dati in più li correggono. Per le prime prove si possono saltare; servono quando la testa funziona e si vuole migliorarla.
 
-| Tipo | Idea | Script | `evidence_quality` |
+| Famiglia | Idea | Che cosa porta | Script |
 |---|---|---|---|
-| **Generati con posizioni note** | un LLM scrive un articolo che contiene frasi date; si sa dove sono | `evidence/gen_marked.py` | `construct` |
-| **Etichettati col modello** | per documenti senza evidenza, si cerca col modello il gruppo più piccolo di frasi che basta a fargli dire "supportato" | `evidence/label_ablation.py` | `ablation` |
-| **Evidenza spostata** | si prendono righe con evidenza nota e si allontanano le frasi di evidenza, o si inseriscono frasi di disturbo | `evidence/augment_sparse.py` | come la riga di partenza |
+| **Generati con posizioni note** | un LLM scrive un articolo che contiene fatti dati; si sa dove sono | evidenza su testi tipo notizia, anche multi-frase | `evidence/data/gen_marked.py` |
+| **Etichettati col modello** | per documenti senza evidenza annotata, si cerca col modello il gruppo più piccolo di frasi che basta a fargli dire "supportato" | evidenza su testi senza annotazioni | `evidence/data/label_ablation.py` |
+| **Evidenza spostata** | si allontanano le frasi gold, o si inseriscono frasi di disturbo | più casi di evidenza lontana | `evidence/data/augment_sparse.py` |
 
-Tutto si genera **solo da righe di training**. Generatore e giudice LLM sono quelli del piano binario ([../fine_tuning_factcheck/02b_dataset_generazione_llm.md](../fine_tuning_factcheck/02b_dataset_generazione_llm.md)).
+Tutte scrivono righe nel formato del passo 2 (frasi del nostro divisore, indici di evidenza), validate dallo stesso `evidence/data/schema.py`. Si generano **solo da righe di training**.
 
-## 1. Documenti generati con posizioni note (C2D e CG2C)
+## 1. Documenti generati con posizioni note
 
-**C2D.** Nella ricetta C2D del piano binario ogni claim viene scomposto in poche frasi semplici che insieme lo dimostrano. Si chiede al generatore un articolo che le contenga **marcate**:
+Si parte da claim scomposti in fatti semplici (ricetta C2D di MiniCheck: ogni claim è riscritto come 2–4 frasi atomiche che insieme lo implicano). Al generatore (un LLM aperto in locale) si chiede:
 
 ```text
 Write a coherent news-style article of 15 to 40 sentences that includes each of the
@@ -22,83 +22,86 @@ following sentences word for word, each wrapped in its tag: <e1>…</e1>, <e2>�
 Add other context sentences without tags. Do not restate the information of the
 tagged sentences anywhere else in the article. Place the tagged sentences far apart.
 
-<e1>{frase 1}</e1>
-<e2>{frase 2}</e2>
+<e1>{fatto 1}</e1>
+<e2>{fatto 2}</e2>
 ```
 
 Poi:
-1. si controlla che ogni frase marcata ci sia, una volta sola, parola per parola (altrimenti si scarta);
-2. si tolgono i tag ricordando dove stavano;
-3. si divide il testo con `sentences.py`; evidenza = le nostre frasi che contengono i pezzi marcati;
-4. un giudice LLM conferma: "queste frasi, da sole, dimostrano il claim?". Si tengono solo le righe confermate.
+1. ogni `<ei>…</ei>` deve comparire una volta sola e parola per parola, altrimenti la riga si scarta;
+2. si tolgono i tag, registrando l'intervallo di caratteri di ogni testo marcato (con `DocBuilder` di `evidence/data/schema.py`);
+3. si divide il testo con `evidence/sentences.py`; le frasi di evidenza sono quelle che coprono gli intervalli marcati (stessa regola di allineamento del passo 2); se un testo marcato finisce in più di 2 frasi, la riga si scarta;
+4. un giudice LLM diverso conferma: "do these sentences, taken alone, establish the claim? yes/no"; si tengono solo i "yes".
 
-Dallo stesso articolo si ricavano due righe in più:
-- **negativo**: si toglie una frase marcata necessaria → il claim non è più supportato;
-- **claim parziale**: si riscrive il claim usando solo alcune frasi → supportato, e l'evidenza sono solo quelle frasi.
+Varianti dallo stesso articolo:
+- **negativo**: si toglie la frase di un fatto necessario → il claim non è più supportato, `evidence_term = mil_neg`;
+- **claim parziale**: il claim si riscrive usando solo alcuni fatti → supportato, con evidenza = solo le frasi di quei fatti. È un esempio utile: l'evidenza è un sottoinsieme preciso del documento.
 
-**CG2C.** Nella ricetta CG2C del piano binario si estrae un grafo di fatti dal documento e si costruisce il claim seguendo un percorso nel grafo. Basta salvare, per ogni fatto, la frase da cui viene: l'evidenza sono le frasi dei fatti del percorso. Danno evidenza su più frasi fuori da Wikipedia.
+`evidence_quality = construct`, peso della riga 1.
 
 ## 2. Etichette ricavate col modello (ablazione)
 
-Per righe supportate senza evidenza (C2D e D2C come rilasciati, righe HoVer non allineabili) si usa il verdetto di **KnowLine-4B** del piano binario, con il prompt con preambolo ([05](05_formato_prompt.md)). Si cerca il gruppo più piccolo di frasi che, da solo, fa dire "supportato":
+Per righe supportate senza evidenza annotata (per esempio i dati C2D e D2C di MiniCheck come rilasciati). Si usa il verdetto di KnowLine-4B con il prompt con preambolo, e si cerca il gruppo più piccolo di frasi che, da solo, fa dire "supportato":
 
-```text
-1. si parte da un gruppo vuoto
-2. si aggiunge la frase che, insieme al gruppo, dà la P(supportato) più alta
-3. si ripete finché P(supportato) supera la soglia (al massimo 6 frasi; se non basta, la riga si scarta)
-4. pulizia: si toglie ogni frase del gruppo senza la quale P resta sopra soglia
-5. controllo: se anche il documento SENZA il gruppo resta "supportato", l'evidenza è ripetuta altrove
-   → la riga si tiene con peso più basso (ablation_partial)
+```python
+def ablation_label(n_sentences, p_supported, thr, max_k=6):
+    """p_supported(indici) = P(supportato) con il documento ridotto a quelle frasi (nell'ordine originale).
+    -> (indici delle frasi di evidenza, qualità) oppure None."""
+    chosen = []
+    while len(chosen) < max_k:
+        best = max((k for k in range(n_sentences) if k not in chosen), key=lambda k: p_supported(sorted(chosen + [k])))
+        chosen.append(best)
+        if p_supported(sorted(chosen)) > thr:
+            break
+    else:
+        return None                                        # nessun gruppo di al massimo 6 frasi basta: riga scartata
+    for k in list(chosen):                                 # pulizia: via le frasi che non servono
+        rest = [j for j in chosen if j != k]
+        if rest and p_supported(sorted(rest)) > thr:
+            chosen = rest
+    complement = [k for k in range(n_sentences) if k not in chosen]
+    redundant = p_supported(complement) > thr              # l'evidenza è ripetuta altrove nel documento
+    return sorted(chosen), ("ablation_partial" if redundant else "ablation")
 ```
 
-Ogni passo richiede un forward per frase candidata: si mandano tutti insieme e si riusa il calcolo della parte iniziale comune del prompt.
+- Ogni passo greedy manda tutti i documenti ridotti in un batch; KnowLine è causale, quindi si riusa il calcolo della parte iniziale comune del prompt.
+- `thr` = soglia del verdetto.
+- Filtri: un giudice LLM conferma le frasi trovate (atteso almeno l'80% di conferme); su 300 righe si rifà la ricerca con elephant-1, e i gruppi devono coincidere in buona parte (Jaccard medio ≥ 0,7).
+- `evidence_quality = ablation`, peso della riga 0,5 (`ablation_partial`: 0,3).
 
-Filtri:
-- un giudice LLM conferma le frasi trovate; atteso almeno l'80% di conferme, altrimenti si rivede la procedura;
-- su 300 righe si rifà la ricerca con elephant-1: i gruppi trovati devono coincidere in buona parte (Jaccard medio ≥ 0,7). Se no, le etichette dipendono troppo da KnowLine, e per gli altri modelli si usano solo le righe su cui i due concordano.
+L'ablazione rende l'evidenza **fedele al modello** che etichetta: la testa di un altro modello addestrata su queste etichette impara ciò che basta a KnowLine. Il controllo con elephant-1 serve a questo.
 
-```sh
-gpu-run --batch --name ev-ablation-knowline -- bash -c \
-  'python -m evidence.label_ablation --model knowline-4b --pairs c2d_train d2c_train hover_train_unaligned \
-     --out data/evidence/pairs/ablation_knowline.jsonl > logs/ev-ablation-knowline.out 2>&1'
-```
+## 3. Evidenza spostata
 
-Lo script riprende da dove si era fermato se interrotto.
-
-## 3. Evidenza spostata (righe sparse)
-
-Da righe con almeno 2 frasi di evidenza (annotate o generate):
+Da righe con almeno 2 frasi gold:
 
 | Trasformazione | Come |
 |---|---|
-| **Agli estremi** | la prima frase di evidenza va all'inizio del documento, l'ultima alla fine |
-| **Frasi di disturbo** | si inseriscono 5–40 frasi prese da altri documenti di training della stessa fonte fra le frasi di evidenza |
-| **Lontano dal claim del preambolo** | si aggiungono frasi di disturbo all'inizio finché la prima frase di evidenza è oltre 1.024 token (o oltre 4.096) dall'inizio del documento |
-| **Negativi spostati** | le stesse operazioni su righe non supportate |
+| Agli estremi | la prima frase gold va all'inizio del documento, l'ultima alla fine |
+| Frasi di disturbo | 5–40 frasi di altri documenti di training della stessa fonte inserite fra le frasi gold |
+| Lontano dall'inizio | testo di disturbo aggiunto in testa finché la prima frase gold è oltre 1.024 token (o oltre 4.096) |
+| Negativi spostati | le stesse operazioni su righe non supportate |
+
+Il documento nuovo si ricostruisce pezzo per pezzo con `DocBuilder`; poi si ridivide con `sentences.py` e gli indici di evidenza si ricalcolano con la regola di allineamento.
 
 Controlli:
-- una frase che comincia riferendosi alla precedente ("He", "It", "This", "The company"…) non si sposta da sola: si sposta insieme alla precedente, o si scarta la riga;
-- il giudice conferma che l'etichetta del documento modificato non è cambiata.
-
-```sh
-python -m evidence.augment_sparse --pairs fever_train hover_train construct --n 10000 --seed 0
-```
+- una frase gold che inizia riferendosi alla precedente ("He", "It", "This", "The company"…) non si sposta da sola: si sposta con la precedente, o la riga si scarta;
+- il giudice conferma che l'etichetta non è cambiata;
+- le frasi di disturbo vengono solo da documenti di training.
 
 ## 4. Quante righe
 
-| Tipo | Prima prova | Versione completa |
+| Famiglia | Prima prova | Versione completa |
 |---|---:|---:|
-| C2D con posizioni | 2k | 10k |
-| CG2C con posizioni | — | 5–10k |
-| Etichettate col modello | 2k | 10–20k |
-| Evidenza spostata (positivi) | 4k | 10k |
-| Negativi spostati | 1k | 3k |
+| Generati con posizioni note | 2.000 | 10.000 |
+| Etichettati col modello | 2.000 | 10.000 |
+| Evidenza spostata (positivi) | 4.000 | 10.000 |
+| Negativi spostati | 1.000 | 3.000 |
 
 ## 5. Controlli
 
 | Controllo | Atteso |
 |---|---|
-| 30 righe per tipo lette a mano: le frasi di evidenza dimostrano il claim e non ne manca nessuna necessaria | ≥ 27 su 30 |
+| 30 righe per famiglia lette a mano: le frasi di evidenza dimostrano il claim e non ne manca nessuna necessaria | almeno 27 su 30 |
 | Conferme del giudice sull'ablazione | ≥ 80% |
 | Accordo KnowLine–elephant-1 sull'ablazione | Jaccard ≥ 0,7 |
 | Righe spostate con riferimenti rotti (30 lette) | 0 |
