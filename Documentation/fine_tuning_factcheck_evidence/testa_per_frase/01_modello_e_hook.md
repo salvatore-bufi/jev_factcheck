@@ -7,6 +7,92 @@ Il verdetto e le feature delle frasi escono dallo **stesso forward** di KnowLine
 1. **hook** sui layer 19, 23, 27 e 31: mentre il forward passa, riassumono ogni frase in due vettori ($h^{end}_k$, $h^{mean}_k$) e salvano lo stato della posizione di risposta ($q$);
 2. una **funzione di attenzione** registrata in transformers (`sdpa_capture`): fa l'attenzione normale e, negli 8 layer pieni, ricalcola una sola riga di pesi, quella della posizione di risposta verso tutti i token. Da questa riga si ricava quanto il modello "guarda" ogni frase ($att_k$).
 
+
+
+### COSA CI INTERESSA DEL FORWARD (IL RESTO SON DETTAGLI)
+Dalla tabella $H^{(l)}$ di **4 layer** (19, 23, 27, 31) prendiamo, per ogni frase:
+
+- **$h^{end}_k$**: la colonna dell'**ultimo token della frase** (nell'esempio, il token 8, il "."). Siccome il modello è causale, quel token ha letto tutta la frase: è un riassunto naturale.
+- **$h^{mean}_k$**: la **media delle colonne** dei token della frase (dal 4 all'8). È un secondo riassunto, che pesa tutti i token allo stesso modo.
+
+>> da provare 
+**Media pesata con l'attenzione della risposta.** 
+
+Invece della media semplice, ogni token della frase pesa quanto l'attenzione che gli dà l'ultimo token del prompt:
+
+$$
+h^{att}_{k,l} = \frac{\sum_{i \in k} A^{(l,j)}_i \, H^{(l)}_i}{\sum_{i \in k} A^{(l,j)}_i}
+$$
+
+Come scegliere? - una regressione logistica per variante, per esempio $h^{end}$, $h^{mean}$ e "end + mean" su ogni layer, che deve riconoscere le frasi gold. Su 500 righe dà in pochi minuti l'AUPRC di ogni variante, prima di addestrare la testa.
+>> FINE
+- **Pro:** pesa di più i token che il modello ha guardato per decidere (il nome, la data…).
+- **Contro:** esiste solo nei layer ad attenzione piena; va scelta la testa $j$, oppure si fa la media sulle 16 teste.
+- **Costo:** basso. La riga $A$ c'è già negli hook, quindi non servono i vettori di tutti i token su disco. Va però modificato l'hook.
+
+
+esempio promt di 20 token.: 
+```text
+token:     0        1       2   3      4      5     6       7       8    9   ...     19
+        "Claim" "under"   ...  ...  "Rose"  "is"  "an"  "actress"  "."  ...   ...  "Answer:"
+                                    └──────────── frase k ──────────────┘             ↑
+                                     a_k = 4                      b_k = 8      ultimo token T
+```
+
+
+E, una volta per documento:
+
+- **$q$**: la colonna dell'**ultimo token del prompt** (il 19), cioè proprio dove il modello decide il verdetto.
+
+Con i numeri: per un documento di 46 frasi escono `h_end` di forma `[46 frasi, 4 layer, 2560]`, `h_mean` uguale, e `q` di forma `[4 layer, 2560]`.
+
+La formula con $C_t$ (somme cumulative) è solo un **trucco per calcolare velocemente le medie** di tutte le frasi in una volta. Il risultato è identico a "somma i vettori dei token della frase e dividi per quanti sono":
+
+$$
+h^{mean}_{k,l} = \frac{1}{n_k}\sum_{i=a_k}^{b_k} H^{(l)}_i = \frac{C_{b_k+1} - C_{a_k}}{b_k - a_k + 1}, \qquad C_t = \sum_{i<t} H^{(l)}_i
+$$
+
+**Lo facciamo tramite hook**
+Un **hook** è una piccola funzione che si "aggancia" a un layer: PyTorch la chiama automaticamente ogni volta che quel layer ha finito il calcolo, passandole la sua uscita (la tabella $H^{(l)}$). La nostra funzione ritaglia le colonne che servono, le mette da parte, e il forward prosegue identico.
+
+**Riga di attenzione**
+
+```text
+prompt → layer 0 → … → layer 19 ──→ … → layer 23 ──→ … → layer 31 ──→ "Yes"/"No"
+                          │                 │                 │
+                        hook              hook              hook     ← copiano h_end, h_mean, q
+```
+
+
+Nei layer ad attenzione piena, ogni token distribuisce un **100% di attenzione** sui token precedenti. Ci interessa quella dell'**ultimo token** (dove nasce il verdetto): quanta attenzione dà a ogni frase? Per esempio:
+
+```text
+token:        0     1     2     3  |  4     5     6     7     8  |  9   ...   19
+attenzione:  .01   .01   .01   .02 | .04   .10   .05   .07   .03 | .01  ...  .03     (somma = 1)
+                                   └──────── frase k: 0,29 ──────┘
+```
+
+La quota della frase $k$ è la somma sui suoi token, qui 0,29: "per decidere, questa testa ha guardato per il 29% la frase $k$". Lo facciamo per **8 layer × 16 teste = 128 numeri** per frase: è $att_k$.
+
+$$
+att_k[(l, j)] = \sum_{i=a_k}^{b_k} A^{(l,j)}_i, \qquad \sum_{i=0}^{T} A^{(l,j)}_i = 1
+$$
+dove:
+* l e' il layer
+* j e' la testa j-esima all'interno di quel layer (e' un MHA)
+* $a_k$ e $b_k$ sono il primo e l'ultimo token della frase k
+* $A^{(l,j)}_i$ quanta attenzione, l'ultimo token del prompt ( T) da al tokan i, nel layer l, nella testa j
+* $att_k[(l, j)]$ quanta parte di tutta l'attenzione ricevono i token della frase k.
+* La coppia $(l, j)$ individua una delle 128 componenti del vettore $att_k$: 8 valori possibili di $l$ per 16 valori di $j$ fanno 128. 
+
+**Perché serve `sdpa_capture`.** L'attenzione veloce di PyTorch calcola il risultato ma **non restituisce questi pesi**. Chiederli tutti (modalità "eager") vorrebbe dire ogni token verso ogni token: con 16.000 token sono miliardi di numeri, troppi per la memoria. A noi serve **una sola riga**, quella dell'ultimo token. Così `sdpa_capture`:
+
+1. fa l'attenzione normale (il modello va avanti identico);
+2. ricalcola a parte solo quella riga e la salva.
+
+Il dettaglio "4 teste di chiavi, 16 di query" (`repeat_interleave`) è un'ottimizzazione di Qwen: ogni gruppo di 4 teste di query condivide le stesse chiavi. Il codice si limita a ricopiarle per fare il conto.
+
+
 ## 1. Il modello: KnowLine-4B-Gen5.5 su Qwen3.5
 
 KnowLine-4B (`PelaAI/KnowLine-4B-Gen5.5`, revisione `779944d`) è un Qwen3.5-4B fine-tunato dagli autori come decision model. Le impostazioni sono in [`evidence/config.py`](../../../evidence/config.py) (`MODEL_REPO`, `MODEL_REVISION`).
@@ -34,6 +120,8 @@ $$
 \tilde H = H^{(l-1)} + \mathrm{Mixer}_l\big(\mathrm{RMSNorm}(H^{(l-1)})\big), \qquad
 H^{(l)} = \tilde H + \mathrm{MLP}_l\big(\mathrm{RMSNorm}(\tilde H)\big).
 $$
+
+>>$H^{(l)}$ sono gli embedding dei token al layer l. Knowline ha 32 layer. Per ogni token, ogni layer produce un embedding di 2.560. Il verdetto (§1.2). Dopo l'ultimo layer, il modello guarda solo la colonna dell'ultimo token ("Answer:") e chiede: è più probabile che il prossimo token sia "A" (Yes) o "B" (No)? Da lì esce P(supportato).
 
 Il *mixer* è l'unico punto in cui un token riceve informazione dagli altri. Ce ne sono di due tipi.
 
@@ -63,6 +151,76 @@ con $\alpha_t = \exp(g_t) \in (0,1)$ (decadimento appreso: la memoria si affievo
 
 - Quando il modello legge la frase $k$, non ha ancora visto le frasi successive. È per questo che la testa ha un transformer non causale sulle frasi ([08](08_testa_e_loss.md) §3.C).
 - Leggere subito **dopo un layer pieno** (19, 23, 27, 31) dà il vettore più aggiornato: ha appena "guardato" esplicitamente tutto il testo precedente, compreso il claim del preambolo ([05](05_formato_prompt.md)).
+
+
+### COSA CI INTERESSA DEL FORWARD (IL RESTO SON DETTAGLI)
+Dalla tabella $H^{(l)}$ di **4 layer** (19, 23, 27, 31) prendiamo, per ogni frase:
+
+- **$h^{end}_k$**: la colonna dell'**ultimo token della frase** (nell'esempio, il token 8, il "."). Siccome il modello è causale, quel token ha letto tutta la frase: è un riassunto naturale.
+- **$h^{mean}_k$**: la **media delle colonne** dei token della frase (dal 4 all'8). È un secondo riassunto, che pesa tutti i token allo stesso modo.
+
+esempio promt di 20 token.: 
+```text
+token:     0        1       2   3      4      5     6       7       8    9   ...     19
+        "Claim" "under"   ...  ...  "Rose"  "is"  "an"  "actress"  "."  ...   ...  "Answer:"
+                                    └──────────── frase k ──────────────┘             ↑
+                                     a_k = 4                      b_k = 8      ultimo token T
+```
+
+
+E, una volta per documento:
+
+- **$q$**: la colonna dell'**ultimo token del prompt** (il 19), cioè proprio dove il modello decide il verdetto.
+
+Con i numeri: per un documento di 46 frasi escono `h_end` di forma `[46 frasi, 4 layer, 2560]`, `h_mean` uguale, e `q` di forma `[4 layer, 2560]`.
+
+La formula con $C_t$ (somme cumulative) è solo un **trucco per calcolare velocemente le medie** di tutte le frasi in una volta. Il risultato è identico a "somma i vettori dei token della frase e dividi per quanti sono":
+
+$$
+h^{mean}_{k,l} = \frac{1}{n_k}\sum_{i=a_k}^{b_k} H^{(l)}_i = \frac{C_{b_k+1} - C_{a_k}}{b_k - a_k + 1}, \qquad C_t = \sum_{i<t} H^{(l)}_i
+$$
+
+**Lo facciamo tramite hook**
+Un **hook** è una piccola funzione che si "aggancia" a un layer: PyTorch la chiama automaticamente ogni volta che quel layer ha finito il calcolo, passandole la sua uscita (la tabella $H^{(l)}$). La nostra funzione ritaglia le colonne che servono, le mette da parte, e il forward prosegue identico.
+
+**Riga di attenzione**
+
+```text
+prompt → layer 0 → … → layer 19 ──→ … → layer 23 ──→ … → layer 31 ──→ "Yes"/"No"
+                          │                 │                 │
+                        hook              hook              hook     ← copiano h_end, h_mean, q
+```
+
+
+Nei layer ad attenzione piena, ogni token distribuisce un **100% di attenzione** sui token precedenti. Ci interessa quella dell'**ultimo token** (dove nasce il verdetto): quanta attenzione dà a ogni frase? Per esempio:
+
+```text
+token:        0     1     2     3  |  4     5     6     7     8  |  9   ...   19
+attenzione:  .01   .01   .01   .02 | .04   .10   .05   .07   .03 | .01  ...  .03     (somma = 1)
+                                   └──────── frase k: 0,29 ──────┘
+```
+
+La quota della frase $k$ è la somma sui suoi token, qui 0,29: "per decidere, questa testa ha guardato per il 29% la frase $k$". Lo facciamo per **8 layer × 16 teste = 128 numeri** per frase: è $att_k$.
+
+$$
+att_k[(l, j)] = \sum_{i=a_k}^{b_k} A^{(l,j)}_i, \qquad \sum_{i=0}^{T} A^{(l,j)}_i = 1
+$$
+dove:
+* l e' il layer
+* j e' la testa j-esima all'interno di quel layer (e' un MHA)
+* $a_k$ e $b_k$ sono il primo e l'ultimo token della frase k
+* $A^{(l,j)}_i$ quanta attenzione, l'ultimo token del prompt ( T) da al tokan i, nel layer l, nella testa j
+* $att_k[(l, j)]$ quanta parte di tutta l'attenzione ricevono i token della frase k.
+* La coppia $(l, j)$ individua una delle 128 componenti del vettore $att_k$: 8 valori possibili di $l$ per 16 valori di $j$ fanno 128. 
+
+**Perché serve `sdpa_capture`.** L'attenzione veloce di PyTorch calcola il risultato ma **non restituisce questi pesi**. Chiederli tutti (modalità "eager") vorrebbe dire ogni token verso ogni token: con 16.000 token sono miliardi di numeri, troppi per la memoria. A noi serve **una sola riga**, quella dell'ultimo token. Così `sdpa_capture`:
+
+1. fa l'attenzione normale (il modello va avanti identico);
+2. ricalcola a parte solo quella riga e la salva.
+
+Il dettaglio "4 teste di chiavi, 16 di query" (`repeat_interleave`) è un'ottimizzazione di Qwen: ogni gruppo di 4 teste di query condivide le stesse chiavi. Il codice si limita a ricopiarle per fare il conto.
+
+
 
 ### 1.2 Il verdetto
 

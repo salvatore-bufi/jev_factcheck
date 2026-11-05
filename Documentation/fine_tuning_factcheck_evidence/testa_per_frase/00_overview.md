@@ -1,6 +1,6 @@
 # Fact checking con evidenza per frase — documentazione dell'implementazione
 
-> Questa cartella documenta il sistema **così come è implementato** in [`evidence/`](../../../evidence/) per **KnowLine-4B**. Il piano di partenza, con tutte le varianti (altri modelli, dati generati, fase 2), è in [`../../fine_tuning_factcheck_evidence_complete/`](../../fine_tuning_factcheck_evidence_complete/testa_per_frase/00_overview.md). Ogni passo indica i file e le funzioni che lo realizzano. La guida pratica ai comandi è [`evidence/code_report.md`](../../../evidence/code_report.md).
+ Il piano di partenza, con tutte le varianti (altri modelli, dati generati, fase 2), è in [`../../fine_tuning_factcheck_evidence_complete/`](../../fine_tuning_factcheck_evidence_complete/testa_per_frase/00_overview.md). La guida pratica ai comandi è [`evidence/code_report.md`](../../../evidence/code_report.md).
 
 ## 1. Che cosa fa il sistema
 
@@ -12,7 +12,8 @@ $$
 
 dove $\ell_A$ e $\ell_B$ sono i log-punteggi delle etichette "A. Yes" e "B. No" all'ultimo token del prompt.
 
-Aggiungiamo una piccola rete, la **testa di evidenza** (3,7 M parametri contro i 4 miliardi del modello). Dagli stati interni calcolati **in quello stesso forward**, assegna a ogni frase $k$ del documento un punteggio $s_k$ e, al documento, una soglia $s_\star$. Le frasi con $s_k > s_\star$ sono l'evidenza:
+Aggiungiamo una piccola rete, la **testa di evidenza** (tra i 3 e i 5 M di  parametri contro i vs i billion (4b) del modello).
+ Dagli stati interni calcolati **in quello stesso forward**, assegna a ogni frase $k$ del documento un punteggio $s_k$ e, al documento intero un'altro punteggio $s_\star$. Le frasi con $s_k > s_\star$ sono l'evidenza:
 
 ```json
 {"p_supported": 0.9987, "supported": true,
@@ -28,9 +29,9 @@ Il caso difficile è l'**evidenza sparsa**: due frasi lontane che dimostrano il 
 
 Tre principi:
 
-1. **Un solo forward.** La testa usa vettori che il modello calcola comunque. Costo misurato: +1,8 ms su circa 340 ms (+0,5%).
-2. **Il verdetto non cambia.** Il modello è congelato e si addestra solo la testa.
-3. **Le frasi si vedono fra loro.** Nel modello causale la frase 0 non vede la frase 4; nella testa un transformer **non causale** sulle frasi le mette in comunicazione.
+1. **Un solo forward.** La testa usa vettori che il modello calcola comunque. 
+2. **Il verdetto non cambia.** Il modello di base ( decision model) è congelato e si addestra solo la testa.
+3. **Attn non causale.** transformer **non causale** s.t. frase 0 vede anche frase 4
 
 ## 2. La pipeline
 
