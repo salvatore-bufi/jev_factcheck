@@ -192,7 +192,7 @@ $$
 
 Con la loss di riferimento sono attive solo le righe `supervised`; con ZLPR tutte tranne `none`.
 
-### 5.2 Loss di riferimento (H0): per frase, con soglia fissa (`ref_loss`)
+### 5.2 BCE semplice - Loss di riferimento (H0): per frase, con soglia fissa (`ref_loss`)
 
 Ogni frase è un sì/no indipendente. Con $y_k = \mathbb{1}[k \in G]$ e $\mathrm{BCE}(s, y) = -y\log\sigma(s) - (1-y)\log(1-\sigma(s))$:
 
@@ -208,7 +208,11 @@ con $\alpha = 10$, $\gamma = 0{,}5$ e $\mu = 1$:
 
 In uso, la frase è mostrata se $\sigma(s_k) > \tau_e$, con $\tau_e$ scelto sul dev ([09](09_training.md) §3). Qui $s_\star$ non si usa.
 
-### 5.3 Loss principale: ZLPR con soglia del documento (`zlpr_loss`)
+### 5.3 CI INTERESSA - Loss principale: ZLPR con soglia del documento (`zlpr_loss`)
+Zero-bounded Log-sum-exp & Pairwise Rank-based loss
+multi-etichetta, a ogni esempio corrisponde un numero variabile di classi giuste (per noi, di frasi gold), e bisogna decidere quante mostrarne senza una soglia fissa.
+
+Il principio e' che ogni frase gold (G) deve battere le frasi non gold.
 
 Con $d_k = s_k - s_\star$ (distanza dalla soglia):
 
@@ -226,31 +230,6 @@ con $\mu_{neg} = \mu_{pos} = 0{,}3$, $\rho = 0{,}1$ e $\mathrm{LSE}_i\, x_i = \l
 ![ZLPR](../figures/fig07_zlpr.png)
 
 *Figura 8 — La loss ZLPR sull'esempio numerico del test (40 frasi, evidenza = frasi 1 e 40, $\omega = 1$). Prima: la gold 40 è sotto la soglia e una frase simile al claim è sopra, $L = 2{,}526$. Dopo: tutte dal lato giusto, $L = 1{,}473$.*
-
-**Perché funziona.**
-
-1. **È un hinge morbido sul caso peggiore.** Siccome $\log(1+\sum_i e^{x_i}) \approx \max(0, \max_i x_i)$,
-
-   $$
-   \ell_{sup} \approx \big[\max_{i\notin G} d_i\big]_+ + \big[-\min_{j \in G} d_j\big]_+ .
-   $$
-
-   La loss è circa 0 solo quando **tutte** le non gold stanno sotto $s_\star$ e **tutte** le gold sopra. Per l'evidenza sparsa conta proprio questo: una gold sotto soglia (metà evidenza) costa quanto una non gold sopra.
-
-2. **Il gradiente va a chi sbaglia di più.** Per una non gold e una gold:
-
-   $$
-   \frac{\partial \ell_{sup}}{\partial s_i} = \frac{\omega_i e^{d_i}}{1 + \sum_{i'\notin G}\omega_{i'} e^{d_{i'}}}\quad (i\notin G),\qquad
-   \frac{\partial \ell_{sup}}{\partial s_j} = -\frac{e^{-d_j}}{1 + \sum_{j'\in G} e^{-d_{j'}}}\quad (j\in G).
-   $$
-
-   È una softmax in cui la soglia è una "classe" con logit 0: la frase non gold più sopra la soglia riceve la spinta maggiore verso il basso. Le frasi già ben sotto soglia ricevono un gradiente quasi nullo, quindi le 45 frasi irrilevanti di un documento non diluiscono il segnale (con la BCE invece contano tutte).
-
-3. **La soglia si sposta da sola.** $\partial\ell_{sup}/\partial s_\star = -\sum_{i\notin G}\partial\ell/\partial s_i - \sum_{j\in G}\partial\ell/\partial s_j$: $s_\star$ sale se pesano di più le non gold sopra soglia, scende se pesano di più le gold sotto. Il numero di frasi mostrate si adatta al documento.
-
-4. **$\omega < 1$** abbassa la penalità per le frasi non gold sopra soglia. Dove le annotazioni sono incomplete (WiCE, $\omega = 0{,}3$), una frase valida ma non annotata non viene punita troppo.
-
-5. **`mil_neg`** è lo stesso primo termine con tutte le frasi. Sui claim non supportati nessuna frase deve superare la soglia, anche se somiglia al claim. È ciò che fa scendere i "negativi accesi" (sul campione di 300 righe da 0,95 con H0 a 0,35 con H2c).
 
 **Rischio.** $x_\star$ conosce il verdetto, quindi con `mil_neg` la testa può imparare "se il verdetto è no, alza la soglia". È coerente con l'obiettivo, perché l'evidenza si mostra solo sui supportati. Sui positivi **incerti** ($P$ appena sopra 0,5), però, la testa può spegnersi. Per questo si misura `recall_uncertain` ([10](10_valutazione.md)) e, se serve, si abbassa $\mu_{neg}$.
 

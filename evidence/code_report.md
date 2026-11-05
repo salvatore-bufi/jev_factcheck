@@ -133,6 +133,11 @@ for c in h0 h_loss h_mil h2a h2b h2c; do
       --dev $F/dev_evid_select --confirm $F/dev_evid_confirm --dev-neg $F/dev_evid_neg
 done
 cat data/evidence/runs/registry.md        # i numeri per decidere; la colonna "decision" la compili tu
+#    curve live, mentre il training gira (in un altro terminale):
+#      --eval-every N   loss e metriche su train (campione di --train-eval righe, default 2000) e dev ogni N epoche -> log.jsonl
+#      --log-steps N    loss media del train ogni N step -> steps.jsonl
+tail -f data/evidence/runs/knowline-4b/h0/log.jsonl              # senza installare nulla
+pip install tensorboard && tensorboard --logdir data/evidence/runs # grafici: loss/train vs loss/dev, f1/train vs f1/dev
 
 # 9. valutazione della configurazione scelta (sui dev; i test una volta sola, a configurazione congelata)
 python -m evidence.eval_evidence --run data/evidence/runs/knowline-4b/<id> --features $F/dev_evid_select \

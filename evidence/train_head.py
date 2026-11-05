@@ -9,7 +9,8 @@ Run:
         --train data/evidence/features/knowline-4b/ev_head \
         --dev data/evidence/features/knowline-4b/dev_evid_select \
         --confirm data/evidence/features/knowline-4b/dev_evid_confirm \
-        --dev-neg data/evidence/features/knowline-4b/dev_evid_neg
+        --dev-neg data/evidence/features/knowline-4b/dev_evid_neg \
+        --eval-every 1 --log-steps 20 --train-eval 2000      # (these three are the defaults)
     python -m evidence.train_head --config evidence/configs/h0.json --train <features> --overfit 64
         # sanity check before any real run: the head must learn 64 rows by heart (F1 close to 1)
 
@@ -24,7 +25,9 @@ Writes data/evidence/runs/knowline-4b/<config id>[_<tag>]/:
     config.json        the config + the feature folders + their meta
     head.safetensors   the weights of the best epoch
     selection.json     the selection rule chosen on dev (doc 09 §2): delta (document threshold) or tau (fixed)
-    log.jsonl          one line per epoch (loss, dev metrics)
+    log.jsonl          one line per evaluation (every --eval-every epochs): train / dev loss, F1, full set
+    steps.jsonl        the training loss every --log-steps optimizer steps (live: tail -f)
+    tb/                the same curves for TensorBoard, if installed (live: tensorboard --logdir data/evidence/runs)
     dev_metrics.json   metrics on dev_evid_select, dev_evid_confirm and dev_evid_neg with the chosen rule
 and appends one line to data/evidence/runs/registry.md (doc 11).
 """
@@ -126,6 +129,88 @@ def batch_loss(head, batch, loss_cfg):
     return loss
 
 
+@torch.no_grad()
+def mean_loss(head, rows, loss_cfg, device, size=32):
+    """Average loss on a list of rows, in eval mode (no dropout, no gradients): the "error" on train or dev.
+
+    Input:  head, rows (dicts from FeatureStore.get), loss_cfg, device, size (rows per forward).
+    Output: float, the mean of the batch losses weighted by the number of rows (None if rows is empty).
+    """
+    if not rows:
+        return None
+    head.eval()
+    total = 0.0
+    for i in range(0, len(rows), size):
+        chunk = rows[i:i + size]
+        total += batch_loss(head, collate(chunk, device), loss_cfg).item() * len(chunk)
+    return total / len(rows)
+
+
+# ------------------------------------------------------------------ logging
+class RunLogger:
+    """Writes the training curves while the run goes on, so they can be watched live.
+
+    Two files in the run folder, one JSON per line (readable with `tail -f`):
+        steps.jsonl  every `every` optimizer steps: {"step", "epoch", "loss", "lr"}
+        log.jsonl    every evaluation (every --eval-every epochs): train / dev loss and metrics
+    plus, if the `tensorboard` package is installed, the same numbers in <run>/tb
+    (watch them with `tensorboard --logdir data/evidence/runs`).
+    With run_dir=None (overfit check) it only prints.
+    """
+
+    def __init__(self, run_dir=None, every=20):
+        """Input: run_dir (folder of the run, or None), every (log the step loss every N steps)."""
+        self.every, self.writer, self.steps_path, self.log_path = every, None, None, None
+        self._acc = []                                  # step losses since the last step line
+        if run_dir is None:
+            return
+        self.steps_path, self.log_path = run_dir / "steps.jsonl", run_dir / "log.jsonl"
+        self.steps_path.write_text("")                  # a new run with the same id starts from empty files
+        self.log_path.write_text("")
+        try:
+            import shutil
+            from torch.utils.tensorboard import SummaryWriter
+            shutil.rmtree(run_dir / "tb", ignore_errors=True)   # old curves of the same run id would mix
+            self.writer = SummaryWriter(str(run_dir / "tb"))
+        except ImportError:
+            print("tensorboard not installed: curves only in steps.jsonl / log.jsonl (pip install tensorboard)")
+
+    def step(self, step, epoch, loss, lr):
+        """Record the loss of one optimizer step; write the mean of the last `every` steps."""
+        self._acc.append(loss)
+        if len(self._acc) < self.every:
+            return
+        entry = {"step": step, "epoch": epoch, "loss": round(sum(self._acc) / len(self._acc), 5), "lr": lr}
+        self._acc = []
+        if self.steps_path:
+            with open(self.steps_path, "a") as handle:
+                handle.write(json.dumps(entry) + "\n")
+        if self.writer:
+            self.writer.add_scalar("loss/train_step", entry["loss"], step)
+            self.writer.add_scalar("lr", lr, step)
+            self.writer.flush()
+
+    def epoch(self, entry, step):
+        """Record one evaluation (dict with train_* and dev_* numbers): print, log.jsonl, TensorBoard."""
+        print(json.dumps(entry))
+        if self.log_path:
+            with open(self.log_path, "a") as handle:
+                handle.write(json.dumps(entry) + "\n")
+        if self.writer:
+            for split in ("train", "dev"):              # same chart for train and dev -> easy to compare
+                for name in ("loss", "f1", "full_set", "score"):
+                    value = entry.get(f"{split}_{name}")
+                    if value is not None:
+                        self.writer.add_scalar(f"{name}/{split}", value, entry["epoch"])
+            self.writer.add_scalar("loss/train_running", entry["train_loss_running"], entry["epoch"])
+            self.writer.flush()
+
+    def close(self):
+        """Close the TensorBoard writer (if any)."""
+        if self.writer:
+            self.writer.close()
+
+
 # ------------------------------------------------------------------ predictions
 @torch.no_grad()
 def scores_of(head, rows, device, size=32):
@@ -193,13 +278,18 @@ def load_rows(store, cfg, terms=None, limit=0):
     return [store.get(i, cfg["layers_read"], tuple(cfg["parts"])) for i in idx]
 
 
-def train(cfg, train_rows, dev_rows, device, log=print):
-    """Train the head; keep the best epoch on dev (early stopping).
+def train(cfg, train_rows, dev_rows, device, logger=None, eval_every=1, train_eval_rows=None):
+    """Train the head; keep the best evaluated epoch on dev (early stopping).
 
     Input:  cfg (experiment config), train_rows, dev_rows (rows of dev_evid_select; may be the train rows for the
-            overfit check), device, log (function printing / recording one dict per epoch).
-    Output: (head with the best weights, best dev score, list of epoch logs).
+            overfit check), device,
+            logger (RunLogger; None -> print only),
+            eval_every (evaluate train and dev every N epochs; the last epoch is always evaluated),
+            train_eval_rows (rows of the train set on which the train loss / F1 are measured; None -> no train metrics).
+    Output: (head with the best weights, best dev score, list of evaluation logs).
+    Early stopping: `patience` counts evaluations without improvement (= epochs when eval_every is 1).
     """
+    logger = logger or RunLogger()
     t = cfg["train"]
     torch.manual_seed(t.get("seed", config.SEED))
     d_model = train_rows[0]["q"].shape[1]
@@ -211,7 +301,7 @@ def train(cfg, train_rows, dev_rows, device, log=print):
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda k: min(1.0, (k + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(k, steps) / steps)))
     lengths = [r["n"] for r in train_rows]
-    best, best_state, bad, history = -1.0, None, 0, []
+    best, best_state, bad, history, step = -1.0, None, 0, [], 0
     for epoch in range(t["epochs"]):
         head.train()
         t0, losses = time.time(), []
@@ -224,13 +314,25 @@ def train(cfg, train_rows, dev_rows, device, log=print):
             opt.step()
             sched.step()
             losses.append(loss.item())
+            step += 1
+            logger.step(step, epoch, losses[-1], sched.get_last_lr()[0])
+        if (epoch + 1) % eval_every != 0 and epoch != t["epochs"] - 1:
+            continue                                    # no evaluation this epoch
+        # dev: loss + metrics with the rule chosen on dev
         scored = scores_of(head, dev_rows, device)
         rule, m = choose_rule(dev_rows, scored, cfg["loss"]["name"])
-        entry = {"epoch": epoch, "loss": round(sum(losses) / len(losses), 4), "dev_f1": m["f1"],
-                 "dev_full_set": m["full_set"], "dev_score": m["score"], "rule": rule,
-                 "seconds": round(time.time() - t0, 1), "layer_weights": head.layer_weights()}
+        entry = {"epoch": epoch, "step": step,
+                 "train_loss_running": round(sum(losses) / len(losses), 5),   # mean over the epoch, with dropout
+                 "dev_loss": round(mean_loss(head, dev_rows, cfg["loss"], device), 5),
+                 "dev_f1": m["f1"], "dev_full_set": m["full_set"], "dev_score": m["score"], "rule": rule}
+        # train: the same numbers on a fixed sample of training rows, same rule -> compare with dev (overfitting)
+        if train_eval_rows:
+            m_tr = summarize(predictions(train_eval_rows, scores_of(head, train_eval_rows, device), rule))
+            entry.update(train_loss=round(mean_loss(head, train_eval_rows, cfg["loss"], device), 5),
+                         train_f1=m_tr["f1"], train_full_set=m_tr["full_set"], train_score=m_tr["score"])
+        entry.update(seconds=round(time.time() - t0, 1), layer_weights=head.layer_weights())
         history.append(entry)
-        log(entry)
+        logger.epoch(entry, step)
         score = m["score"] or 0.0
         if score > best:
             best, bad = score, 0
@@ -271,6 +373,9 @@ def main(argv=None):
     p.add_argument("--seed", type=int, help="overrides train.seed")
     p.add_argument("--overfit", type=int, default=0, help="train and evaluate on the first N supervised rows")
     p.add_argument("--limit", type=int, default=0, help="first N training rows (quick runs)")
+    p.add_argument("--eval-every", type=int, default=1, help="evaluate train and dev loss / metrics every N epochs")
+    p.add_argument("--log-steps", type=int, default=20, help="write the mean step loss every N steps (steps.jsonl)")
+    p.add_argument("--train-eval", type=int, default=2000, help="training rows sampled for the train loss / F1")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     opts = p.parse_args(argv)
 
@@ -283,7 +388,7 @@ def main(argv=None):
     if opts.overfit:
         rows = load_rows(train_store, cfg, terms={"supervised"}, limit=opts.overfit)
         cfg["train"].update(epochs=max(cfg["train"]["epochs"], 30), patience=1000, batch=min(16, len(rows)))
-        head, best, _ = train(cfg, rows, rows, opts.device)
+        head, best, _ = train(cfg, rows, rows, opts.device, eval_every=opts.eval_every)
         print(f"overfit on {len(rows)} rows: best train score (mean of F1 and full set) {best:.3f} (want ~1)")
         return
 
@@ -298,15 +403,15 @@ def main(argv=None):
 
     run_dir = config.RUNS / config.MODEL_NAME / (cfg["id"] + (f"_{opts.tag}" if opts.tag else ""))
     run_dir.mkdir(parents=True, exist_ok=True)
-    log_path = run_dir / "log.jsonl"
-    log_path.write_text("")
+    logger = RunLogger(run_dir, every=opts.log_steps)
+    # fixed random sample of the training rows for the train loss / F1 (the whole mix would be slow to score)
+    sample = random.Random(cfg["train"].get("seed", config.SEED)).sample(
+        train_rows, min(opts.train_eval, len(train_rows)))
+    print(f"curves -> {run_dir}/log.jsonl (every {opts.eval_every} epochs), {run_dir}/steps.jsonl "
+          f"(every {opts.log_steps} steps); train metrics on {len(sample)} rows")
 
-    def log(entry):
-        print(json.dumps(entry))
-        with open(log_path, "a") as handle:
-            handle.write(json.dumps(entry) + "\n")
-
-    head, best, _ = train(cfg, train_rows, dev_rows, opts.device, log)
+    head, best, _ = train(cfg, train_rows, dev_rows, opts.device, logger, opts.eval_every, sample)
+    logger.close()
 
     # selection rule on dev_evid_select, then metrics on every dev set with that rule
     rule, m_select = choose_rule(dev_rows, scores_of(head, dev_rows, opts.device), cfg["loss"]["name"])
