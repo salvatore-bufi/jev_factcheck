@@ -75,4 +75,14 @@ Se nessuna frase raggiunge la metà, si prende quella con la sovrapposizione mag
 | `meta.aggrefact_overlap` | sovrapposizione con LLM-AggreFact (WiCE) | split, mix |
 | `meta.prompt_tokens` | lunghezza stimata del prompt | statistiche |
 
+O meglio:
+* evidence_sets: [[6], [8], [2, 3]]
+evidence:      [2, 3, 6, 8]
+* evidence_sets ed evidence: quali frasi dimostrano il claim
+
+Gli annotatori di WiCE hanno indicato più modi alternativi di dimostrare il claim:
+[6] da sola basta ("…Director of the Center for Translational Bioinformatics…");
+[8] da sola basta ("…developing novel bioinformatics tools…");
+[2, 3] servono insieme: la 2 dice chi è la persona, la 3 il ruolo in bioinformatica.
+
 Validazione: `schema.validate(row)`. Le frasi devono coprire tutto il documento senza sovrapporsi, e `evidence` deve essere l'unione di `evidence_sets`. Test: `tests/test_evidence_data.py`.

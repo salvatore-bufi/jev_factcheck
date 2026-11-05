@@ -9,6 +9,18 @@
 python -m evidence.data.make_splits                                   # ~4 s
 python -m evidence.data.make_mix --recipe evidence/recipes/ev_head.json
 ```
+File outpu:
+```text
+dev   ─┬─ positivi ─┬─ metà A (per documento) → dev_evid_select     391   ← qui si sceglie TUTTO
+       │            └─ metà B                 → dev_evid_confirm    391   ← qui si controlla che la scelta regga
+       └─ negativi                            → dev_evid_neg        394   ← la testa accende frasi dove non dovrebbe?
+
+test  ─┬─ SciFact + HoVer                     → test_evid_id      1.902   (stesso tipo di testi del training)
+       └─ WiCE                                → test_evid_ood     1.884   (testi diversi: pagine web)
+
+train                                         → train            20.717   (va al mix)
+```
+
 
 ## 1. Assegnazione deterministica per documento
 

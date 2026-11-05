@@ -23,6 +23,10 @@ Si addestra con la **loss ZLPR** ([`evidence/losses.py`](../../../evidence/losse
 
 *Figura 7 — La testa di evidenza. Gli ingressi (blu) vengono dal forward del modello; tutto il resto (verde) è addestrato.*
 
+>> Ricordiamo $q$ è lo stato nascosto dell'ultimo token del prompt, cioè della posizione dove KnowLine legge il verdetto, preso nei 4 layer 19, 23, 27 e 31.
+
+>> Forse due matrici di proiezione diverse uno per end e uno per mean.
+>> Forse eliminare vettore posizione K ( da testare ) 
 ## 1. Forme dei tensori
 
 In un batch di $B$ documenti le frasi sono riempite fino al documento più lungo, $N = \max_b n_b$. La maschera $\mathbf{1}_{b,k}$ vale 1 sulle frasi vere.
